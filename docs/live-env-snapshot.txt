@@ -1,0 +1,49 @@
+CMUX_WORKSPACE_ID=239B43BA-B848-4A72-9B38-5A3275A37852
+CMUX_SURFACE_ID=A1ACD0AD-0D4F-40F8-AE2B-209ACDFCEDC6
+CMUX_TAB_ID=239B43BA-B848-4A72-9B38-5A3275A37852
+HERDR_WORKSPACE_ID=w2
+HERDR_TAB_ID=w2:t17
+HERDR_PANE_ID=w2:p34
+window window:1 [current] ◀ active
+├── workspace workspace:1 "🏠 Home"
+│   └── pane pane:1 [focused]
+│       └── surface surface:1 [terminal] "…/Code/personal/home" [selected] tty=ttys033
+├── workspace workspace:2 "🔳 Oh My OpenCode"
+│   ├── pane pane:2 [focused]
+│   │   └── surface surface:2 [terminal] "ravi@macbook16:~/code/personal/opencode" [selected] tty=ttys007
+│   └── pane pane:3
+│       ├── surface surface:3 [terminal] "Plugins" tty=ttys008
+│       ├── surface surface:4 [terminal] "Skills" tty=ttys009
+│       ├── surface surface:5 [terminal] "🧩 Telegram Bot" tty=ttys010
+│       └── surface surface:6 [terminal] "ravi@macbook16:~/code/personal/opencode" [selected] tty=ttys011
+├── workspace workspace:3 "🧠 Memory"
+│   ├── pane pane:4 [focused]
+│   │   └── surface surface:7 [terminal] "ravi@macbook16:~/code/personal/memorix" [selected] tty=ttys014
+│   └── pane pane:5
+│       └── surface surface:8 [terminal] "ravi@macbook16:~/code/personal/memorix" [selected] tty=ttys015
+├── workspace workspace:4 "🔥 OMC & OMX"
+│   └── pane pane:6 [focused]
+│       └── surface surface:9 [terminal] "ravi@macbook16:~/code/personal/omc-omx" [selected] tty=ttys016
+├── workspace workspace:5 "🦞 OpenClaw"
+│   └── pane pane:7 [focused]
+│       └── surface surface:10 [terminal] "✳ Home Assistant Installation" [selected] tty=ttys026
+├── workspace workspace:6 "👧 Hermes"
+│   └── pane pane:8 [focused]
+│       └── surface surface:11 [terminal] "ravi@macbook16:~/Code/personal/hermes-agent" [selected] tty=ttys022
+├── workspace workspace:7 "📎 Paperclip"
+│   └── pane pane:9 [focused]
+│       └── surface surface:12 [terminal] "ravi@macbook16:~/code/personal/paperclip" [selected] tty=ttys020
+├── workspace workspace:8 "🎛️ Mission Cotrol"
+│   └── pane pane:10 [focused]
+│       └── surface surface:13 [terminal] "tmux new -t missioncontrol" [selected] tty=ttys013
+├── workspace workspace:9 "Webflow"
+│   └── pane pane:11 [focused]
+│       └── surface surface:14 [terminal] "ravi@macbook16:~/code/work/webflow" [selected] tty=ttys034
+├── workspace workspace:10 "🏢 Viraline"
+│   └── pane pane:12 [focused]
+│       └── surface surface:15 [terminal] "ravi@macbook16:~/code/work/viraline" [selected] tty=ttys035
+├── workspace workspace:11 "🏢 KirchenID"
+│   └── pane pane:13 [focused]
+--- herdr ---
+{"id":"cli:workspace:list","result":{"type":"workspace_list","workspaces":[{"active_tab_id":"w2:t2","agent_status":"done","focused":true,"label":"Workspace","number":1,"pane_count":25,"tab_count":18,"workspace_id":"w2"},{"active_tab_id":"w3:t1","agent_status":"unknown","focused":false,"label":"Homelab","number":2,"pane_count":1,"tab_count":1,"workspace_id":"w3"},{"active_tab_id":"w4:t1","agent_status":"unknown","focused":false,"label":"VIRA","number":3,"pane_count":1,"tab_count":1,"workspace_id":"w4"}]}}
+{"id":"cli:tab:list","result":{"tabs":[{"agent_status":"working","focused":false,"label":"Orchestration","number":37,"pane_count":1,"tab_id":"w2:t15","workspace_id":"w2"},{"agent_status":"working","focused":false,"label":"CMUX","number":39,"pane_count":1,"tab_id":"w2:t17","workspace_id":"w2"},{"agent_status":"working","focused":true,"label":"Herdr","number":2,"pane_count":4,"tab_id":"w2:t2","workspace_id":"w2"},{"agent_status":"working","focused":false,"label":"Pi","number":33,"pane_count":2,"tab_id":"w2:t11","workspace_id":"w2"},{"agent_status":"working","focused":false,"label":"OmniRoute","number":3,"pane_count":3,"tab_id":"w2:t3","workspace_id":"w2"},{"agent_status":"working","focused":false,"label":"CLIProxyAPI","number":38,"pane_count":1,"tab_id":"w2:t16","workspace_id":"w2"},{"agent_status":"idle","focused":false,"label":"Claude","number":15,"pane_count":2,"tab_id":"w2:tF","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"Data & Scraping","number":6,"pane_count":1,"tab_id":"w2:t6","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"Chezmoi","number":8,"pane_count":1,"tab_id":"w2:t8","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"Enable maximum thinking","number":10,"pane_count":1,"tab_id":"w2:tA","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"Free X and Reddit search","number":17,"pane_count":1,"tab_id":"w2:tH","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"Restore tmux tabs and panes","number":19,"pane_count":1,"tab_id":"w2:tK","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"Former teammate session","number":20,"pane_count":1,"tab_id":"w2:tM","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"Memory","number":22,"pane_count":1,"tab_id":"w2:tP","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"tmux-07-api-orchestration","number":29,"pane_count":1,"tab_id":"w2:tX","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"tmux-12-subagents","number":30,"pane_count":1,"tab_id":"w2:tY","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"Homelab","number":35,"pane_count":1,"tab_id":"w2:t13","workspace_id":"w2"},{"agent_status":"done","focused":false,"label":"Research agent memory","number":36,"pane_count":1,"tab_id":"w2:t14","workspace_id":"w2"},{"agent_status":"unknown","focused":false,"label":"1","number":1,"pane_count":1,"tab_id":"w3:t1","workspace_id":"w3"},{"agent_status":"unknown","focused":false,"label":"1","number":1,"pane_count":1,"tab_id":"w4:t1","workspace_id":"w4"}],"type":"tab_list"}}

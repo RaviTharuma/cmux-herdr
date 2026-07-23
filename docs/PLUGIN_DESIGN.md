@@ -1,0 +1,93 @@
+# Plugin design: cmux-herdr
+
+## Problem
+
+On this machine, **herdr runs nested inside cmux**. Outer cmux users/agents only see one surface titled roughly `herdr`, while the real multi-agent topology (tabs/panes/statuses) lives inside herdr. Without a bridge, cmux sidebars and automation are blind to inner agents.
+
+## Two-path strategy
+
+| Path | What | When |
+|------|------|------|
+| **Plugin (now)** | User-controlled repo: CLI + bridge + optional sidebar + agent skill | Works today, **no cmux upstream PR** |
+| **Upstream (later)** | Native cmux awareness of nested herdr (first-class tree/status) | Requires cmux changes; plugin stays as fallback/compat |
+
+This repo implements the plugin path only. It must not depend on unmerged cmux patches.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│ cmux (outer)                                │
+│  window → workspace → pane → surface        │
+│       ▲ status pills / progress             │
+│       │ cmux set-status / set-progress      │
+└───────┼─────────────────────────────────────┘
+        │
+   cmux-herdr sync|watch
+        │
+┌───────┼─────────────────────────────────────┐
+│ herdr (inner)                               │
+│  workspace → tab → pane → agent             │
+│  herdr pane list / agent list (JSON)        │
+└─────────────────────────────────────────────┘
+```
+
+### Components
+
+1. **`bridge/cmux_herdr_bridge.py`** — pure-ish library:
+   - `fetch_panes` / `fetch_snapshot`
+   - `map_status_to_style`
+   - `resolve_cmux_workspace` (nested env is often wrong)
+   - `sync_to_cmux`
+2. **`bin/cmux-herdr`** — user CLI (`status`, `tree`, `sync`, `watch`, focus helpers, …)
+3. **`sidebars/herdr.swift`** — best-effort custom sidebar (navigator + instructions; live agent rows come from status pills written by the bridge)
+4. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy
+5. **`scripts/install.sh` / `uninstall.sh`** — symlink CLI, install sidebar + skill
+
+## Why status pills (not a full nested tree in cmux)
+
+Custom sidebars run in a **restricted Swift interpreter** and primarily see the **cmux workspace model**. They may not shell out to `herdr`. Therefore:
+
+- The bridge pushes live agent state into `cmux set-status` keys (`herdr:<pane_id>`).
+- The sidebar explains dual hierarchy and lists outer workspaces / progress labels.
+- Full inner topology remains available via `cmux-herdr tree` and `herdr …` for agents/humans in-terminal.
+
+## Workspace resolution caveat
+
+When a shell is inside herdr inside cmux, `CMUX_WORKSPACE_ID` is sometimes stale or equal to a tab id. The bridge:
+
+1. Reads `cmux identify --json` focused workspace ref
+2. Parses `cmux tree --id-format both` for selected/active and `"herdr"`-named workspaces
+3. Probes `cmux list-status --workspace …` until one succeeds
+4. Falls back to env
+
+Callers can override with `cmux-herdr sync --workspace …`.
+
+## Status mapping
+
+| herdr `agent_status` | icon | color | priority |
+|----------------------|------|-------|----------|
+| working | hammer | `#ff9500` | 80 |
+| idle | pause.circle | `#8e8e93` | 40 |
+| done | checkmark.circle | `#34c759` | 30 |
+| blocked | exclamationmark.triangle | `#ff3b30` | 90 |
+| unknown | questionmark.circle | `#8e8e93` | 10 |
+
+Progress bar: `working / (working+idle+done+blocked)`.
+
+## Non-goals (plugin path)
+
+- Patching cmux.app or shipping a signed sidebar bundle
+- Re-implementing herdr layout inside cmux
+- Network calls
+- Requiring root or Homebrew formula (plain user install is enough)
+
+## Upstream path (future)
+
+Native parity would ideally:
+
+- Surface nested herdr topology in cmux tree/API
+- Auto-forward agent status without a user watch loop
+- Keep this plugin as a thin client or retire `watch` into a cmux-managed helper
+
+Until then, `cmux-herdr watch` is the supported live mirror.
