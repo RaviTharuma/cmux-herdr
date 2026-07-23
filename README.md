@@ -130,3 +130,8 @@ The standalone bridge intentionally does not pretend that inner Herdr panes are 
 - [Incremental PR plan](docs/upstream/PR_PLAN.md)
 
 No issue or PR is opened automatically.
+
+## Upstream tracking
+
+- Native design issue: [manaflow-ai/cmux#8737](https://github.com/manaflow-ai/cmux/issues/8737)
+- First native compatibility PR: [manaflow-ai/cmux#8736](https://github.com/manaflow-ai/cmux/pull/8736)
