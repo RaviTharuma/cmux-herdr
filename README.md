@@ -110,6 +110,10 @@ bridge/test_bridge_unit.py  pure unit tests
 tests/                      mocked CLI and behavior tests
 scripts/install.sh          idempotent user install
 scripts/uninstall.sh        scoped uninstall
+scripts/test.sh              stdlib unittest runner (no pytest)
+scripts/com.cmux-herdr.watch.plist   sample LaunchAgent
+scripts/install-watch-service.sh     load watch LaunchAgent
+scripts/uninstall-watch-service.sh   unload watch LaunchAgent
 sidebars/herdr.swift        optional cmux custom sidebar
 agent-skill/SKILL.md        dual-hierarchy agent instructions
 docs/PLUGIN_DESIGN.md       standalone plugin architecture
@@ -124,12 +128,20 @@ shims/README.md              optional shim guidance
 - Polling is the portable fallback. Native integration should subscribe to Herdr events and resynchronize from snapshots.
 - Nested shells may carry stale outer cmux IDs. The bridge resolves the live containing workspace before writing status.
 - The bridge does not inject a fake `tmux` binary by default; see [shims/README.md](shims/README.md).
-- `watch` is manual (no LaunchAgent). Titles/renames are owned by Herdr title tracks, not this plugin.
+- Continuous `watch` is optional: run in a pane, or install the sample LaunchAgent (`./scripts/install-watch-service.sh`). Titles/renames are owned by Herdr title tracks, not this plugin.
 - PR [#8736](https://github.com/manaflow-ai/cmux/pull/8736) is a hidden compat dispatcher only — not full native parity.
 
 Full stopgap inventory and open checklist: **[OPEN.md](OPEN.md)**.
 
 ## Development and verification
+
+**Tests are stdlib `unittest` only — no pytest.** Prefer the wrapper:
+
+```bash
+./scripts/test.sh
+```
+
+Equivalent manual commands:
 
 ```bash
 python3 -m py_compile bin/cmux-herdr bridge/cmux_herdr_bridge.py

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Sample LaunchAgent for continuous cmux-herdr status mirroring.
+
+  Install (preferred):
+    ./scripts/install-watch-service.sh
+
+  Manual:
+    1. Copy this file to ~/Library/LaunchAgents/com.cmux-herdr.watch.plist
+    2. Ensure ~/.local/bin/cmux-herdr is installed (./scripts/install.sh)
+    3. launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.cmux-herdr.watch.plist
+       (older macOS: launchctl load ~/Library/LaunchAgents/com.cmux-herdr.watch.plist)
+
+  Notes:
+  - watch needs Herdr + cmux CLI context. Prefer nesting: run from a Herdr session
+    so HERDR_* env and sockets exist. This agent uses a login shell so PATH picks up
+    ~/.local/bin and typical user tools; it does not inject Herdr env itself.
+  - Logs: ~/Library/Logs/cmux-herdr-watch.{out,err}.log
+  - Uninstall: ./scripts/uninstall-watch-service.sh
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.cmux-herdr.watch</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>exec "$HOME/.local/bin/cmux-herdr" watch --interval 3</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/PLACEHOLDER/Library/Logs/cmux-herdr-watch.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/PLACEHOLDER/Library/Logs/cmux-herdr-watch.err.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/PLACEHOLDER/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>

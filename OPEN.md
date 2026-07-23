@@ -69,10 +69,12 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 
 ### A. Plugin residual (this repo)
 
-- [ ] Optional: document or ship a sample `launchd` plist / LaunchAgent for `cmux-herdr watch`.
+- [x] Sample `launchd` LaunchAgent for `cmux-herdr watch` (`scripts/com.cmux-herdr.watch.plist` + install/uninstall helpers).
 - [ ] Optional: multi-parent binding when several Herdr surfaces live in different cmux workspaces
       (today: one binding file; good enough for the single nested host case).
 - [ ] Keep README / this file in sync when PR #8736 merges or #8737 moves.
+- [x] Upstream draft banners point at live #8737 / #8736 (prefer GitHub over local drafts).
+- [x] `./scripts/test.sh` — stdlib unittest only (no pytest).
 - [ ] Consider a tagged release + short changelog once the MVP PR lands or is rejected
       (so the fallback story is versioned either way).
 
@@ -131,4 +133,13 @@ cmux-herdr sync
 ### cmux (`manaflow-ai/cmux`)
 - https://github.com/manaflow-ai/cmux/issues/8743 — PATH resolver treats directories as executables
 - https://github.com/manaflow-ai/cmux/issues/8744 — CLI hygiene: launch errors, locales, missing-PATH tests, command-list dedupe
+
+### this plugin (`RaviTharuma/cmux-herdr`)
+- https://github.com/RaviTharuma/cmux-herdr/issues/1 — LaunchAgent for `watch` (**sample + install scripts shipped**)
+- https://github.com/RaviTharuma/cmux-herdr/issues/2 — multi-parent binding collisions (still open; optional)
+- https://github.com/RaviTharuma/cmux-herdr/issues/3 — no tagged release (wait for MVP PR outcome)
+- https://github.com/RaviTharuma/cmux-herdr/issues/4 — upstream draft drift (**canonical banners added**)
+- https://github.com/RaviTharuma/cmux-herdr/issues/5 — PR #8736 missing-PATH residual (native WT; not this repo)
+- https://github.com/RaviTharuma/cmux-herdr/issues/6 — unittest vs pytest docs (**test.sh + README note**)
+- https://github.com/RaviTharuma/cmux-herdr/issues/7 — dual-chat worktree thrash (process note; OPEN.md coordination table)
 

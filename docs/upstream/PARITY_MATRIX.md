@@ -1,3 +1,11 @@
+> **Canonical source of truth is GitHub**, not this draft.
+>
+> - Full nested topology: https://github.com/manaflow-ai/cmux/issues/8737
+> - Hidden compat MVP: https://github.com/manaflow-ai/cmux/pull/8736
+> - Update GitHub first when trackers move; then sync this file if still useful.
+>
+> This file is a paste-ready / design package kept for dual-path history. Prefer the live issue/PR over local text if they diverge.
+
 # cmux ↔ Herdr native parity matrix
 
 This matrix distinguishes the current nested stopgap from the proposed native adapter. “Native” means provider-owned virtual descendants under a cmux host terminal, not conversion into Bonsplit panes.
