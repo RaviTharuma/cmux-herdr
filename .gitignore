@@ -1,3 +1,7 @@
 __pycache__/
 *.py[cod]
 .DS_Store
+
+# editor/agent refine backups
+*.bak
+*.bak-*

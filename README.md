@@ -17,9 +17,10 @@ When Herdr runs nested inside a cmux terminal, cmux sees one terminal surface wh
 | Path | Status |
 |---|---|
 | **Plugin (this repo)** | Implemented — CLI, bridge, sidebar, skill, installer, and tests |
-| **Upstream native parity** | Designed and proposed — first-class nested topology in cmux; plugin remains fallback |
+| **Upstream native MVP** | [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) — hidden `cmux __herdr-compat` dispatcher (`exec` into Herdr) |
+| **Upstream native parity** | [Issue #8737](https://github.com/manaflow-ai/cmux/issues/8737) — first-class nested topology; plugin remains fallback |
 
-See [plugin design](docs/PLUGIN_DESIGN.md), [concept map](mapping/concept-map.md), and the paste-ready [upstream issue/design package](docs/upstream/).
+See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [concept map](mapping/concept-map.md), and the paste-ready [upstream issue/design package](docs/upstream/).
 
 ## Requirements
 
@@ -103,10 +104,14 @@ shims/README.md              optional shim guidance
 
 ## Limitations
 
-- The plugin cannot turn inner Herdr panes into native Bonsplit panes; that needs the upstream nested-topology work.
+- The plugin cannot turn inner Herdr panes into native Bonsplit panes; that needs the upstream nested-topology work ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)).
 - Polling is the portable fallback. Native integration should subscribe to Herdr events and resynchronize from snapshots.
 - Nested shells may carry stale outer cmux IDs. The bridge resolves the live containing workspace before writing status.
 - The bridge does not inject a fake `tmux` binary by default; see [shims/README.md](shims/README.md).
+- `watch` is manual (no LaunchAgent). Titles/renames are owned by Herdr title tracks, not this plugin.
+- PR [#8736](https://github.com/manaflow-ai/cmux/pull/8736) is a hidden compat dispatcher only — not full native parity.
+
+Full stopgap inventory and open checklist: **[OPEN.md](OPEN.md)**.
 
 ## Development and verification
 
@@ -121,6 +126,8 @@ cmux sidebar validate herdr --json
 ```
 
 ## Native integration proposal
+
+Live trackers: [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) (MVP dispatcher) and [issue #8737](https://github.com/manaflow-ai/cmux/issues/8737) (full nested topology). Design drafts also live in [docs/upstream/](docs/upstream/).
 
 The standalone bridge intentionally does not pretend that inner Herdr panes are native cmux panes. The upstream package proposes a capability-negotiated nested-topology provider:
 
