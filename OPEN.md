@@ -124,3 +124,25 @@ cmux-herdr status
 cmux-herdr tree
 cmux-herdr sync
 ```
+
+
+## Filed annoyance issues (2026-07-23)
+
+### cmux (`manaflow-ai/cmux`)
+- https://github.com/manaflow-ai/cmux/issues/8743 — PATH resolver treats directories as executables
+- https://github.com/manaflow-ai/cmux/issues/8744 — CLI hygiene: launch errors, locales, missing-PATH tests, command-list dedupe
+
+### herdr fork (`RaviTharuma/herdr`) — upstream create was 403 Blocked
+- https://github.com/RaviTharuma/herdr/issues/1 — `pane send-text` has no `--submit`
+- https://github.com/RaviTharuma/herdr/issues/2 — `agent list --json` invalid; default list is JSON
+- https://github.com/RaviTharuma/herdr/issues/3 — inconsistent CLI help / flag discovery
+- https://github.com/RaviTharuma/herdr/issues/4 — upstream issue create 403 Blocked
+
+### this plugin (`RaviTharuma/cmux-herdr`)
+- https://github.com/RaviTharuma/cmux-herdr/issues/1 — LaunchAgent for `watch`
+- https://github.com/RaviTharuma/cmux-herdr/issues/2 — multi-parent binding collisions
+- https://github.com/RaviTharuma/cmux-herdr/issues/3 — no tagged release
+- https://github.com/RaviTharuma/cmux-herdr/issues/4 — upstream draft drift
+- https://github.com/RaviTharuma/cmux-herdr/issues/5 — PR #8736 missing-PATH test residual
+- https://github.com/RaviTharuma/cmux-herdr/issues/6 — unittest vs pytest docs
+- https://github.com/RaviTharuma/cmux-herdr/issues/7 — dual-chat worktree thrash risk
