@@ -47,6 +47,10 @@ class Pane:
     cwd: Optional[str] = None
     focused: bool = False
     terminal_title: Optional[str] = None
+    agent_session_path: Optional[str] = None
+    agent_session_id: Optional[str] = None
+    agent_session_kind: Optional[str] = None
+    revision: Optional[int] = None
     raw: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -221,6 +225,23 @@ def status_value_for_pane(
 
 
 def _pane_from_raw(raw: Dict[str, Any]) -> Pane:
+    session = raw.get("agent_session") if isinstance(raw.get("agent_session"), dict) else {}
+    session_path = None
+    session_id = None
+    session_kind = None
+    if session:
+        kind = session.get("kind")
+        value = session.get("value")
+        session_kind = str(kind) if kind else None
+        if kind == "path" and isinstance(value, str):
+            session_path = value
+        elif kind == "id" and isinstance(value, str):
+            session_id = value
+        elif isinstance(value, str) and value.endswith(".jsonl"):
+            session_path = value
+        elif isinstance(value, str):
+            session_id = value
+    revision = raw.get("revision")
     return Pane(
         pane_id=str(raw.get("pane_id") or ""),
         tab_id=str(raw.get("tab_id") or ""),
@@ -231,6 +252,10 @@ def _pane_from_raw(raw: Dict[str, Any]) -> Pane:
         cwd=raw.get("cwd") or raw.get("foreground_cwd"),
         focused=bool(raw.get("focused")),
         terminal_title=raw.get("terminal_title_stripped") or raw.get("terminal_title"),
+        agent_session_path=session_path,
+        agent_session_id=session_id,
+        agent_session_kind=session_kind,
+        revision=int(revision) if isinstance(revision, int) else None,
         raw=raw,
     )
 
@@ -398,6 +423,127 @@ def _workspace_from_identify(surface: Optional[str] = None) -> Optional[str]:
     return None
 
 
+
+def _association_path() -> str:
+    return os.path.join(_state_dir(), f"associations-{_parent_key()}.json")
+
+
+def _load_association_map() -> Dict[str, Any]:
+    """Load the hybrid pane/session association cache (best-effort)."""
+    try:
+        with open(_association_path(), "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        if isinstance(data, dict) and data.get("version") == 1 and isinstance(data.get("panes"), dict):
+            return data
+    except (OSError, ValueError, TypeError):
+        pass
+    return {
+        "version": 1,
+        "panes": {},
+        "cmux_workspace": None,
+        "herdr_socket_path": os.environ.get("HERDR_SOCKET_PATH"),
+        "herdr_workspace_id": os.environ.get("HERDR_WORKSPACE_ID"),
+        "cmux_surface_id": os.environ.get("CMUX_SURFACE_ID"),
+        "updated_at": None,
+    }
+
+
+def _save_association_map(state: Dict[str, Any]) -> None:
+    directory = _state_dir()
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    state = dict(state)
+    state["version"] = 1
+    state["updated_at"] = time.time()
+    state["herdr_socket_path"] = os.environ.get("HERDR_SOCKET_PATH")
+    state["herdr_workspace_id"] = os.environ.get("HERDR_WORKSPACE_ID")
+    state["cmux_surface_id"] = os.environ.get("CMUX_SURFACE_ID")
+    with _binding_lock:
+        fd, temporary = tempfile.mkstemp(prefix=".assoc-", suffix=".tmp", dir=directory)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump(state, handle, indent=2, sort_keys=True)
+                handle.write("\n")
+            os.chmod(temporary, 0o600)
+            os.replace(temporary, _association_path())
+        finally:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+
+
+def update_association_map(
+    snapshot: Snapshot,
+    *,
+    cmux_workspace: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Rewrite the hybrid association cache from a live Herdr snapshot.
+
+    Production data pattern:
+    - parent binding (outer cmux workspace) is locked separately
+    - this map tracks inner pane_id → status_key/session/status for restore + pruning
+    - treated as cache only; never authoritative restore state for native cmux
+    """
+    state = _load_association_map()
+    previous = state.get("panes") if isinstance(state.get("panes"), dict) else {}
+    live: Dict[str, Any] = {}
+    for pane in snapshot.panes:
+        if not pane.pane_id:
+            continue
+        prior = previous.get(pane.pane_id) if isinstance(previous.get(pane.pane_id), dict) else {}
+        live[pane.pane_id] = {
+            "pane_id": pane.pane_id,
+            "tab_id": pane.tab_id,
+            "workspace_id": pane.workspace_id,
+            "agent": pane.agent,
+            "agent_status": pane.agent_status,
+            "status_key": pane.status_key,
+            "label": pane.label,
+            "cwd": pane.cwd,
+            "focused": pane.focused,
+            "agent_session_path": pane.agent_session_path,
+            "agent_session_id": pane.agent_session_id,
+            "agent_session_kind": pane.agent_session_kind,
+            "revision": pane.revision,
+            "first_seen_at": prior.get("first_seen_at") or time.time(),
+            "last_seen_at": time.time(),
+        }
+    pruned = sorted(set(previous) - set(live))
+    state["panes"] = live
+    state["cmux_workspace"] = cmux_workspace or state.get("cmux_workspace")
+    state["pruned_pane_ids"] = pruned
+    _save_association_map(state)
+    return {
+        "path": _association_path(),
+        "pane_count": len(live),
+        "pruned": pruned,
+        "cmux_workspace": state.get("cmux_workspace"),
+    }
+
+
+def format_associations(state: Optional[Dict[str, Any]] = None) -> str:
+    data = state or _load_association_map()
+    panes = data.get("panes") if isinstance(data.get("panes"), dict) else {}
+    lines = [
+        f"associations: {len(panes)} panes",
+        f"  cmux_workspace={data.get('cmux_workspace') or '-'}",
+        f"  herdr_workspace={data.get('herdr_workspace_id') or '-'}",
+        f"  surface={data.get('cmux_surface_id') or '-'}",
+        f"  file={_association_path()}",
+    ]
+    for pane_id in sorted(panes):
+        entry = panes[pane_id] if isinstance(panes[pane_id], dict) else {}
+        session = entry.get("agent_session_path") or entry.get("agent_session_id") or "-"
+        if isinstance(session, str) and len(session) > 60:
+            session = "…" + session[-57:]
+        lines.append(
+            f"  {pane_id:10}  {(entry.get('agent_status') or '?'):8}  "
+            f"{(entry.get('agent') or '-'):8}  {entry.get('status_key') or '-'}  "
+            f"session={session}"
+        )
+    return "\n".join(lines)
+
+
 def resolve_cmux_workspace() -> Optional[str]:
     """Resolve and lock the outer cmux workspace containing this Herdr session."""
     if not which("cmux"):
@@ -543,6 +689,7 @@ def sync_to_cmux(
         except Exception:
             pass
 
+    association = update_association_map(snap, cmux_workspace=ws)
     return {
         "workspace": ws,
         "applied": applied,
@@ -553,6 +700,7 @@ def sync_to_cmux(
         "summary": summary_line,
         "pane_count": len(snap.panes),
         "agent_count": len(panes),
+        "associations": association,
     }
 
 

@@ -264,3 +264,57 @@ class ParentWorkspaceBindingTests(unittest.TestCase):
             bridge._save_parent_binding("workspace:old")
             self.assertEqual(bridge.resolve_cmux_workspace(), "workspace:new")
             self.assertEqual(bridge._load_parent_binding(), "workspace:new")
+
+
+class AssociationSyncTests(unittest.TestCase):
+    def test_sync_writes_association_cache(self):
+        import json
+        import os
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+
+        from bridge import cmux_herdr_bridge as bridge
+
+        pane = bridge.Pane(
+            pane_id="w2:p34",
+            tab_id="w2:t17",
+            workspace_id="w2",
+            agent="pi",
+            agent_status="working",
+            agent_session_path="/tmp/sess.jsonl",
+            agent_session_kind="path",
+        )
+        snap = bridge.Snapshot(panes=[pane], tabs=[], workspaces=[])
+
+        def fake_cmux(args, workspace=None):
+            class R:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+            return R()
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+                "HERDR_WORKSPACE_ID": "w2",
+                "CMUX_SURFACE_ID": "surface-uuid",
+                "CMUX_WORKSPACE_ID": "workspace:7",
+            },
+            clear=False,
+        ), mock.patch.object(bridge, "cmux_cmd", side_effect=fake_cmux), mock.patch.object(
+            bridge, "fetch_snapshot", return_value=snap
+        ), mock.patch.object(
+            bridge, "list_cmux_herdr_keys", return_value=[]
+        ):
+            summary = bridge.sync_to_cmux(snapshot=snap, workspace="workspace:7", log=False)
+            self.assertIn("associations", summary)
+            self.assertEqual(summary["associations"]["pane_count"], 1)
+            assoc_path = Path(summary["associations"]["path"])
+            self.assertTrue(assoc_path.exists())
+            data = json.loads(assoc_path.read_text())
+            self.assertEqual(data["panes"]["w2:p34"]["status_key"], "herdr:w2:p34")
+            self.assertEqual(data["cmux_workspace"], "workspace:7")
+

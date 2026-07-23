@@ -51,7 +51,8 @@ cmux-herdr status
 - Mirror agents into outer sidebar: `cmux-herdr sync` or `cmux-herdr watch`
 - Compact agent list: `cmux-herdr agents`
 - Focus helpers: `cmux-herdr focus-tab <id|label>`, `cmux-herdr focus-pane <pane_id>`
-- Clear mirrored pills: `cmux-herdr clear`
+- Clear mirrored pills: `cmux-herdr associations
+cmux-herdr clear`
 
 ## Safe agent splitting
 
@@ -94,3 +95,7 @@ herdr pane list
 cmux tree --id-format both
 cmux list-status --workspace <resolved>
 ```
+
+## Hybrid association cache
+
+`cmux-herdr sync` rewrites `~/.local/state/cmux-herdr/associations-*.json` with live pane→session/status keys and prunes gone panes. Inspect with `cmux-herdr associations`. Treat it as cache only.

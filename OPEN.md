@@ -11,6 +11,7 @@ does **not** claim to solve, and what is still open on each path.
 | Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open |
 | Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open |
 | This plugin | https://github.com/RaviTharuma/cmux-herdr | Implemented |
+| Thrash / annoyance report | [docs/upstream/ANNOYANCES.md](./docs/upstream/ANNOYANCES.md) | Living doc |
 
 Cross-links: PR and issue reference each other; both point back here as the fallback.
 
@@ -22,6 +23,7 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - Skip ordinary shell panes (no agent) so they are not mirrored as agents.
 - Clear stale `herdr:*` keys on each sync while leaving unrelated cmux statuses alone.
 - Optional custom sidebar + agent skill documenting the dual hierarchy.
+- Hybrid pane/session association cache (`cmux-herdr associations`), pruned each sync.
 - Idempotent install / scoped uninstall.
 
 ## Explicit limitations (not bugs)

@@ -22,12 +22,14 @@ if str(_ROOT) not in sys.path:
 
 from bridge.cmux_herdr_bridge import (  # noqa: E402
     BridgeError,
+    _load_association_map,
     clear_cmux_herdr_statuses,
     dual_status,
     fetch_agents,
     fetch_snapshot,
     focus_pane,
     focus_tab,
+    format_associations,
     format_tree,
     herdr_available,
     resolve_cmux_workspace,
@@ -230,6 +232,16 @@ def cmd_agents(args: argparse.Namespace) -> int:
     return 0
 
 
+
+def cmd_associations(args: argparse.Namespace) -> int:
+    """Show hybrid pane/session association cache for this Herdr+cmux parent."""
+    state = _load_association_map()
+    if args.json:
+        print(json.dumps(state, indent=2, default=str))
+    else:
+        print(format_associations(state))
+    return 0
+
 def cmd_clear(args: argparse.Namespace) -> int:
     try:
         cleared = clear_cmux_herdr_statuses(args.workspace)
@@ -353,6 +365,13 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("agents", help="List herdr agents compactly")
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_agents)
+
+    s = sub.add_parser(
+        "associations",
+        help="Show hybrid pane/session association cache (parent map + status keys)",
+    )
+    s.add_argument("--json", action="store_true", help="machine-readable output")
+    s.set_defaults(func=cmd_associations)
 
     s = sub.add_parser("clear", help="Clear all cmux statuses with herdr: prefix")
     s.add_argument("--workspace", help="cmux workspace id/ref")

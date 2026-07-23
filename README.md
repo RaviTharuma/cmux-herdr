@@ -22,6 +22,21 @@ When Herdr runs nested inside a cmux terminal, cmux sees one terminal surface wh
 
 See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [concept map](mapping/concept-map.md), and the paste-ready [upstream issue/design package](docs/upstream/).
 
+
+## Hybrid association state
+
+`sync` / `watch` keep a user-owned cache under `$XDG_STATE_HOME/cmux-herdr/` (default `~/.local/state/cmux-herdr/`):
+
+- `parent-*.json` — locked outer cmux workspace binding for this Herdr socket/workspace
+- `associations-*.json` — live inner `pane_id → status_key / agent_session / status` map, pruned each sync
+
+This is the production stopgap data pattern while native nested topology lands. It is cache-only and not authoritative restore state for cmux.
+
+```bash
+cmux-herdr associations
+cmux-herdr associations --json
+```
+
 ## Requirements
 
 - macOS with `cmux` and `herdr` on `PATH`
@@ -45,12 +60,13 @@ Uninstall:
 ## Quick start
 
 ```bash
-cmux-herdr status      # dual context + socket health
-cmux-herdr tree        # Herdr workspaces → tabs → panes → agents
-cmux-herdr agents      # compact agent list
-cmux-herdr sync        # one-shot mirror → cmux set-status
-cmux-herdr watch       # loop every 3s (Ctrl-C to stop)
-cmux-herdr clear       # remove herdr:* status pills
+cmux-herdr status         # dual context + socket health
+cmux-herdr tree           # Herdr workspaces → tabs → panes → agents
+cmux-herdr agents         # compact agent list
+cmux-herdr sync           # one-shot mirror → cmux set-status
+cmux-herdr watch          # loop every 3s (Ctrl-C to stop)
+cmux-herdr associations   # hybrid pane/session association cache
+cmux-herdr clear          # remove herdr:* status pills
 ```
 
 Control helpers:
@@ -132,6 +148,7 @@ Live trackers: [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) (MVP di
 The standalone bridge intentionally does not pretend that inner Herdr panes are native cmux panes. The upstream package proposes a capability-negotiated nested-topology provider:
 
 - [Paste-ready GitHub issue](docs/upstream/ISSUE.md)
+- [Annoyances / thrash report](docs/upstream/ANNOYANCES.md)
 - [Technical design](docs/upstream/DESIGN.md)
 - [Parity matrix](docs/upstream/PARITY_MATRIX.md)
 - [Incremental PR plan](docs/upstream/PR_PLAN.md)
