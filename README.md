@@ -2,7 +2,7 @@
 
 User-controlled **plugin bridge** between [Herdr](https://github.com/ogulcancelik/herdr) (inner agent terminal mux) and [cmux](https://github.com/manaflow-ai/cmux) (outer macOS terminal workspace).
 
-It works **today without any cmux upstream PR**.
+It works **today without any cmux upstream PR**. Current stopgap release target: **v0.1.0** (see [CHANGELOG.md](CHANGELOG.md), [RELEASE.md](RELEASE.md)).
 
 ## Why
 
@@ -16,8 +16,8 @@ When Herdr runs nested inside a cmux terminal, cmux sees one terminal surface wh
 
 | Path | Status |
 |---|---|
-| **Plugin (this repo)** | Implemented — CLI, bridge, sidebar, skill, installer, and tests |
-| **Upstream native MVP** | [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) — hidden `cmux __herdr-compat` dispatcher (`exec` into Herdr) |
+| **Plugin (this repo)** | Implemented — CLI, bridge, sidebar, skill, installer, LaunchAgent, tests |
+| **Upstream native MVP** | [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) — open + mergeable; hidden `cmux __herdr-compat` dispatcher (`exec` into Herdr) |
 | **Upstream native parity** | [Issue #8737](https://github.com/manaflow-ai/cmux/issues/8737) — first-class nested topology; plugin remains fallback |
 
 See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [concept map](mapping/concept-map.md), and the paste-ready [upstream issue/design package](docs/upstream/).
@@ -43,6 +43,7 @@ cmux-herdr associations --json
 - Python 3.10+ (stdlib only; no pip dependencies)
 - A working Herdr socket (usual when `HERDR_ENV=1`)
 - Run `sync`/`watch` from a Herdr pane nested in cmux so both socket contexts are available; `tree` and `agents` still work without cmux
+- Herdr **0.8+** supported (agent name may live under `agent_session.agent`)
 
 ## Install
 
@@ -51,15 +52,38 @@ cmux-herdr associations --json
 # installs ~/.local/bin/cmux-herdr, the sidebar, and the agent skill
 ```
 
+Optional continuous mirroring (LaunchAgent sample — issue [#1](https://github.com/RaviTharuma/cmux-herdr/issues/1) closed):
+
+```bash
+./scripts/install-watch-service.sh
+# plist → ~/Library/LaunchAgents/com.cmux-herdr.watch.plist
+# logs  → ~/Library/Logs/cmux-herdr-watch.{out,err}.log
+```
+
 Uninstall:
 
 ```bash
+./scripts/uninstall-watch-service.sh   # if you installed the LaunchAgent
 ./scripts/uninstall.sh
 ```
+
+Tagged install after `v0.1.0` exists: see [RELEASE.md](RELEASE.md).
+
+### Install paths
+
+| Artifact | Path |
+|---|---|
+| CLI | `~/.local/bin/cmux-herdr` |
+| Sidebar | `~/.config/cmux/sidebars/herdr.swift` |
+| Agent skill | `~/.agents/skills/cmux-herdr/` (and/or `~/.pi/agent/skills/cmux-herdr/`) |
+| Association cache | `~/.local/state/cmux-herdr/` |
+| LaunchAgent | `~/Library/LaunchAgents/com.cmux-herdr.watch.plist` |
+| Watch logs | `~/Library/Logs/cmux-herdr-watch.{out,err}.log` |
 
 ## Quick start
 
 ```bash
+cmux-herdr --version      # reads VERSION (e.g. 0.1.0)
 cmux-herdr status         # dual context + socket health
 cmux-herdr tree           # Herdr workspaces → tabs → panes → agents
 cmux-herdr agents         # compact agent list
@@ -99,18 +123,22 @@ The sidebar is a valid cmux interpreted-Swift sidebar and navigates outer cmux w
 | blocked | red | `exclamationmark.triangle` |
 | unknown | gray | `questionmark.circle` |
 
-Status keys use `herdr:<pane_id>`. Every sync removes stale `herdr:*` keys while preserving unrelated cmux status entries. Progress reports the fraction of agents still working.
+Status keys use `herdr:<pane_id>`. Every sync removes stale `herdr:*` keys while preserving unrelated cmux status entries. Progress reports the fraction of agents still working. Pill content depends on Herdr `agent_status`.
 
 ## Layout
 
 ```text
+VERSION                     version source of truth (e.g. 0.1.0)
+CHANGELOG.md                release notes
+RELEASE.md                  tag / gh release / install-from-tag steps
+OPEN.md                     stopgap inventory + open checklist
 bin/cmux-herdr              CLI (Python, stdlib only)
 bridge/cmux_herdr_bridge.py fetch/map/sync library
 bridge/test_bridge_unit.py  pure unit tests
 tests/                      mocked CLI and behavior tests
 scripts/install.sh          idempotent user install
 scripts/uninstall.sh        scoped uninstall
-scripts/test.sh              stdlib unittest runner (no pytest)
+scripts/test.sh             stdlib unittest runner (no pytest)
 scripts/com.cmux-herdr.watch.plist   sample LaunchAgent
 scripts/install-watch-service.sh     load watch LaunchAgent
 scripts/uninstall-watch-service.sh   unload watch LaunchAgent
@@ -118,8 +146,8 @@ sidebars/herdr.swift        optional cmux custom sidebar
 agent-skill/SKILL.md        dual-hierarchy agent instructions
 docs/PLUGIN_DESIGN.md       standalone plugin architecture
 docs/upstream/              issue, native design, parity matrix, PR plan
-mapping/concept-map.md       cmux ↔ Herdr ↔ tmux concepts
-shims/README.md              optional shim guidance
+mapping/concept-map.md      cmux ↔ Herdr ↔ tmux concepts
+shims/README.md             optional shim guidance
 ```
 
 ## Limitations
@@ -127,9 +155,10 @@ shims/README.md              optional shim guidance
 - The plugin cannot turn inner Herdr panes into native Bonsplit panes; that needs the upstream nested-topology work ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)).
 - Polling is the portable fallback. Native integration should subscribe to Herdr events and resynchronize from snapshots.
 - Nested shells may carry stale outer cmux IDs. The bridge resolves the live containing workspace before writing status.
+- Status pills depend on Herdr `agent_status`; multi-parent binding collisions remain an open enhancement ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)).
 - The bridge does not inject a fake `tmux` binary by default; see [shims/README.md](shims/README.md).
-- Continuous `watch` is optional: run in a pane, or install the sample LaunchAgent (`./scripts/install-watch-service.sh`). Titles/renames are owned by Herdr title tracks, not this plugin.
-- PR [#8736](https://github.com/manaflow-ai/cmux/pull/8736) is a hidden compat dispatcher only — not full native parity.
+- Continuous `watch` can run in a pane, or via the shipped LaunchAgent (`./scripts/install-watch-service.sh`). Titles/renames are owned by Herdr title tracks, not this plugin.
+- PR [#8736](https://github.com/manaflow-ai/cmux/pull/8736) is a hidden compat dispatcher only — not full native parity. Its tip already covers the missing-`herdr`-on-PATH hermetic test (plugin issue [#5](https://github.com/RaviTharuma/cmux-herdr/issues/5) is not an open residual).
 
 Full stopgap inventory and open checklist: **[OPEN.md](OPEN.md)**.
 
@@ -147,6 +176,7 @@ Equivalent manual commands:
 python3 -m py_compile bin/cmux-herdr bridge/cmux_herdr_bridge.py
 PYTHONPATH=bridge python3 -m unittest discover -s bridge -p 'test_*.py' -v
 PYTHONPATH=bridge python3 -m unittest discover -s tests -p 'test_*.py' -v
+./bin/cmux-herdr --version
 ./bin/cmux-herdr status
 ./bin/cmux-herdr tree
 ./bin/cmux-herdr sync
@@ -155,7 +185,7 @@ cmux sidebar validate herdr --json
 
 ## Native integration proposal
 
-Live trackers: [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) (MVP dispatcher) and [issue #8737](https://github.com/manaflow-ai/cmux/issues/8737) (full nested topology). Design drafts also live in [docs/upstream/](docs/upstream/).
+Live trackers: [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) (MVP dispatcher, open + mergeable) and [issue #8737](https://github.com/manaflow-ai/cmux/issues/8737) (full nested topology). Design drafts also live in [docs/upstream/](docs/upstream/).
 
 The standalone bridge intentionally does not pretend that inner Herdr panes are native cmux panes. The upstream package proposes a capability-negotiated nested-topology provider:
 
@@ -165,7 +195,7 @@ The standalone bridge intentionally does not pretend that inner Herdr panes are 
 - [Parity matrix](docs/upstream/PARITY_MATRIX.md)
 - [Incremental PR plan](docs/upstream/PR_PLAN.md)
 
-No issue or PR is opened automatically.
+No issue or PR is opened automatically. This plugin does **not** implement #8737.
 
 ## Upstream tracking
 
