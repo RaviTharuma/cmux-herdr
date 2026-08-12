@@ -20,7 +20,9 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 ## What this plugin solves today
 
 - Mirror Herdr agent state into cmux workspace **status pills** (`herdr:<pane_id>`) and progress.
-- CLI for topology and control: `status`, `tree`, `agents`, `sync`, `watch`, `clear`, focus helpers, `split`, `json-dump`.
+- CLI for topology and control: `status`, `doctor`, `tree`, `agents`, `sync`, `watch`,
+  `clear`, focus helpers (`focus-workspace` / `focus-tab` / `focus-pane` / `focus-agent`),
+  `read-pane` / `read-agent`, `split`, `json-dump`.
 - Persist per-host-fingerprint Herdr-parent → cmux-workspace bindings so outer focus
   changes do not thrash status writes and multi-window hosts do not collide.
 - Skip ordinary shell panes (no agent) so they are not mirrored as agents.
@@ -81,6 +83,8 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] Multi-parent host-fingerprint bindings when several Herdr surfaces live in different
       cmux windows/workspaces (`parent-<fingerprint>.json` / `associations-<fingerprint>.json`;
       sync/watch select the invoking env) — issue [#2](https://github.com/RaviTharuma/cmux-herdr/issues/2).
+- [x] v0.2 CLI pack: `doctor`, `read-pane` / `read-agent`, `focus-workspace` / `focus-agent`,
+      hardened `focus-pane` (no zoom fallback).
 - [x] Upstream draft banners point at live #8737 / #8736 (prefer GitHub over local drafts).
 - [x] `./scripts/test.sh` — stdlib unittest only (no pytest).
 - [x] Herdr 0.8 `agent_session.agent` parsing.
@@ -133,6 +137,7 @@ Start only after MVP lands or maintainers signal interest on #8737.
 ```bash
 ./scripts/test.sh
 ./bin/cmux-herdr --version
+cmux-herdr doctor
 cmux-herdr status
 cmux-herdr tree
 cmux-herdr sync

@@ -427,6 +427,194 @@ class AssociationSyncTests(unittest.TestCase):
             self.assertEqual(json.loads(path_b.read_text())["cmux_workspace"], "workspace:B")
 
 
+class FocusAndReadTests(unittest.TestCase):
+    @mock.patch.object(bridge, "run_cmd")
+    @mock.patch.object(bridge, "which", return_value="/mock/herdr")
+    def test_focus_pane_does_not_use_zoom_fallback(self, _which, run_cmd):
+        run_cmd.side_effect = [
+            completed(returncode=1, stderr="agent focus denied"),
+            completed(stdout='{"result": {"pane_id": "w2:p1"}}'),
+        ]
+        with self.assertRaisesRegex(bridge.BridgeError, "agent focus denied"):
+            bridge.focus_pane("w2:p1")
+        calls = [c.args[0] for c in run_cmd.call_args_list]
+        self.assertEqual(calls[0], ["herdr", "agent", "focus", "w2:p1"])
+        self.assertEqual(calls[1][:3], ["herdr", "pane", "get"])
+        self.assertFalse(any("zoom" in c for c in calls))
+
+    @mock.patch.object(bridge, "run_cmd")
+    @mock.patch.object(bridge, "which", return_value="/mock/herdr")
+    def test_focus_workspace_and_agent(self, _which, run_cmd):
+        run_cmd.return_value = completed(returncode=0)
+        self.assertEqual(bridge.focus_workspace("w2"), "w2")
+        run_cmd.assert_called_with(["herdr", "workspace", "focus", "w2"])
+        self.assertEqual(bridge.focus_agent("reviewer"), "reviewer")
+        run_cmd.assert_called_with(["herdr", "agent", "focus", "reviewer"])
+
+    @mock.patch.object(bridge, "run_cmd")
+    @mock.patch.object(bridge, "which", return_value="/mock/herdr")
+    def test_read_pane_and_agent_pass_flags(self, _which, run_cmd):
+        run_cmd.return_value = completed(returncode=0, stdout="hello\n")
+        proc = bridge.read_pane(
+            "w2:p1",
+            source="recent-unwrapped",
+            lines=40,
+            format="text",
+            ansi=True,
+            raw=True,
+        )
+        self.assertEqual(proc.stdout, "hello\n")
+        run_cmd.assert_called_with(
+            [
+                "herdr",
+                "pane",
+                "read",
+                "w2:p1",
+                "--source",
+                "recent-unwrapped",
+                "--lines",
+                "40",
+                "--format",
+                "text",
+                "--ansi",
+                "--raw",
+            ]
+        )
+        bridge.read_agent("bot", source="visible", lines=10)
+        run_cmd.assert_called_with(
+            [
+                "herdr",
+                "agent",
+                "read",
+                "bot",
+                "--source",
+                "visible",
+                "--lines",
+                "10",
+            ]
+        )
+
+
+class DoctorTests(unittest.TestCase):
+    def test_doctor_hard_fails_when_herdr_missing(self):
+        with mock.patch.object(bridge, "which", return_value=None), mock.patch.dict(
+            os.environ, {}, clear=True
+        ):
+            report = bridge.diagnose_install()
+        self.assertFalse(report["ok"])
+        self.assertTrue(
+            any("herdr not found" in item for item in report["hard_failures"])
+        )
+        names = [c["name"] for c in report["checks"]]
+        self.assertIn("herdr_cli", names)
+        self.assertIn("dry_sync", names)
+
+    def test_doctor_hard_fails_incomplete_fingerprint_when_nested(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(
+            bridge, "which", side_effect=lambda cmd: "/mock/herdr" if cmd == "herdr" else None
+        ), mock.patch.object(
+            bridge, "_herdr_cli_version", return_value="herdr 0.8.0"
+        ), mock.patch.object(
+            bridge, "herdr_available", return_value=False
+        ), mock.patch.dict(
+            os.environ,
+            {
+                "HOME": tmp,
+                "XDG_STATE_HOME": str(Path(tmp) / "state"),
+                "HERDR_ENV": "1",
+                # Intentionally omit CMUX_SURFACE_ID / HERDR_SOCKET_PATH
+            },
+            clear=True,
+        ):
+            report = bridge.diagnose_install()
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("incomplete host fingerprint" in f for f in report["hard_failures"]))
+        fp_check = next(c for c in report["checks"] if c["name"] == "host_fingerprint")
+        self.assertFalse(fp_check["ok"])
+        self.assertTrue(fp_check["hard"])
+        self.assertIn("CMUX_SURFACE_ID", fp_check["missing"])
+        self.assertIn("HERDR_SOCKET_PATH", fp_check["missing"])
+
+    def test_doctor_ok_with_complete_fingerprint_and_binding(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            state = home / "state"
+            sock = home / "herdr.sock"
+            sock.write_text("", encoding="utf-8")
+            os.chmod(sock, 0o600)
+            sidebar = home / ".config" / "cmux" / "sidebars" / "herdr.swift"
+            sidebar.parent.mkdir(parents=True)
+            sidebar.write_text("// sidebar\n", encoding="utf-8")
+            env = {
+                "HOME": str(home),
+                "XDG_STATE_HOME": str(state),
+                "HERDR_ENV": "1",
+                "HERDR_SOCKET_PATH": str(sock),
+                "CMUX_SURFACE_ID": "surface-doctor",
+                "HERDR_WORKSPACE_ID": "w2",
+            }
+            with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(
+                bridge, "which", side_effect=lambda cmd: "/mock/herdr" if cmd == "herdr" else None
+            ), mock.patch.object(
+                bridge, "_herdr_cli_version", return_value="herdr 0.8.0"
+            ), mock.patch.object(
+                bridge, "herdr_available", return_value=True
+            ), mock.patch.object(
+                bridge,
+                "fetch_snapshot",
+                return_value=bridge.Snapshot(
+                    panes=[
+                        bridge.Pane(
+                            pane_id="w2:p1",
+                            tab_id="w2:t1",
+                            workspace_id="w2",
+                            agent="pi",
+                            agent_status="working",
+                        )
+                    ],
+                    tabs=[],
+                    workspaces=[],
+                ),
+            ), mock.patch.object(
+                bridge, "resolve_cmux_workspace", return_value="workspace:9"
+            ), mock.patch.object(
+                bridge,
+                "_launchagent_status",
+                return_value={
+                    "label": bridge.LAUNCH_AGENT_LABEL,
+                    "checked": False,
+                    "skipped": True,
+                    "reason": "not macOS",
+                    "loaded": None,
+                },
+            ):
+                bridge._save_parent_binding("workspace:9")
+                report = bridge.diagnose_install()
+
+            self.assertTrue(report["ok"], report.get("hard_failures"))
+            by_name = {c["name"]: c for c in report["checks"]}
+            self.assertTrue(by_name["herdr_cli"]["ok"])
+            self.assertTrue(by_name["herdr_socket"]["ok"])
+            self.assertIn("mode=", by_name["herdr_socket"]["detail"])
+            self.assertTrue(by_name["host_fingerprint"]["ok"])
+            self.assertIn("matching parent binding=yes", by_name["state_binding"]["detail"])
+            self.assertIn("skipped", by_name["launch_agent"]["detail"])
+            self.assertTrue(by_name["sidebar"]["exists"])
+            self.assertFalse(by_name["dry_sync"]["dry_sync"]["skipped"])
+            self.assertEqual(by_name["dry_sync"]["dry_sync"]["agent_count"], 1)
+
+    def test_doctor_does_not_invent_fingerprint_hosts(self):
+        with mock.patch.object(bridge, "which", return_value="/mock/herdr"), mock.patch.object(
+            bridge, "_herdr_cli_version", return_value="herdr 0.8.0"
+        ), mock.patch.object(bridge, "herdr_available", return_value=False), mock.patch.dict(
+            os.environ, {"HERDR_ENV": "1"}, clear=True
+        ):
+            report = bridge.diagnose_install()
+        fp = report["host_fingerprint"]
+        self.assertIsNone(fp.get("cmux_surface_id"))
+        self.assertIsNone(fp.get("herdr_socket_path"))
+
+
 if __name__ == "__main__":
     unittest.main()
 

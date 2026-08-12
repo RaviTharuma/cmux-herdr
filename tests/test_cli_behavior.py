@@ -16,6 +16,59 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "bin" / "cmux-herdr"
 
+FAKE_HERDR_FULL = r'''#!/usr/bin/env python3
+import json
+import sys
+
+argv = sys.argv[1:]
+if argv[:1] == ["--version"]:
+    print("herdr 0.8.0")
+    raise SystemExit(0)
+if argv[:1] == ["status"]:
+    print(json.dumps({"status": "ok"}))
+    raise SystemExit(0)
+
+command = argv[:2] if len(argv) >= 2 else argv
+if command == ["pane", "list"]:
+    result = {
+        "panes": [
+            {
+                "pane_id": "p1",
+                "tab_id": "t1",
+                "workspace_id": "w1",
+                "agent": "pi",
+                "agent_status": "idle",
+            }
+        ]
+    }
+elif command == ["tab", "list"]:
+    result = {"tabs": [{"tab_id": "t1", "workspace_id": "w1", "label": "Tests"}]}
+elif command == ["workspace", "list"]:
+    result = {"workspaces": [{"workspace_id": "w1", "label": "Demo"}]}
+elif command == ["pane", "read"]:
+    print("pane-output-line")
+    raise SystemExit(0)
+elif command == ["agent", "read"]:
+    print("agent-output-line")
+    raise SystemExit(0)
+elif command == ["agent", "focus"]:
+    print(json.dumps({"result": {"focused": argv[2] if len(argv) > 2 else ""}}))
+    raise SystemExit(0)
+elif command == ["workspace", "focus"]:
+    print(json.dumps({"result": {"workspace_id": argv[2] if len(argv) > 2 else ""}}))
+    raise SystemExit(0)
+elif command == ["pane", "get"]:
+    print(json.dumps({"result": {"pane_id": argv[2] if len(argv) > 2 else "p1"}}))
+    raise SystemExit(0)
+elif command == ["pane", "zoom"]:
+    print("zoom should not be used as focus", file=sys.stderr)
+    raise SystemExit(9)
+else:
+    print("unexpected command: " + " ".join(argv), file=sys.stderr)
+    raise SystemExit(9)
+print(json.dumps({"result": result}))
+'''
+
 
 def write_executable(path: Path, content: str) -> None:
     path.write_text(textwrap.dedent(content), encoding="utf-8")
@@ -23,10 +76,12 @@ def write_executable(path: Path, content: str) -> None:
 
 
 class CliBehaviorTests(unittest.TestCase):
-    def run_cli(self, *args: str, path: str | None = None):
+    def run_cli(self, *args: str, path: str | None = None, env_extra: dict | None = None):
         env = os.environ.copy()
         if path is not None:
             env["PATH"] = path
+        if env_extra:
+            env.update(env_extra)
         return subprocess.run(
             [os.fspath(CLI), *args],
             cwd=ROOT,
@@ -42,6 +97,11 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("status", result.stdout)
         self.assertIn("sync", result.stdout)
         self.assertIn("json-dump", result.stdout)
+        self.assertIn("doctor", result.stdout)
+        self.assertIn("read-pane", result.stdout)
+        self.assertIn("read-agent", result.stdout)
+        self.assertIn("focus-workspace", result.stdout)
+        self.assertIn("focus-agent", result.stdout)
 
     def test_unknown_command_is_argparse_error(self):
         result = self.run_cli("does-not-exist")
@@ -149,6 +209,144 @@ if sys.argv[1:2] == ["list-status"]:
         self.assertEqual(result.returncode, 1)
         self.assertIn("herdr not available", result.stderr)
         self.assertNotIn("Traceback", result.stderr)
+
+    def test_doctor_fails_when_herdr_missing(self):
+        result = self.run_cli(
+            "doctor",
+            path=os.fspath(Path(sys.executable).parent),
+            env_extra={"HERDR_ENV": "", "CMUX_SURFACE_ID": "", "HERDR_SOCKET_PATH": ""},
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("herdr_cli", result.stdout)
+        self.assertIn("FAIL", result.stdout)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_doctor_ok_with_fake_herdr_and_fingerprint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fake_bin = root / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            sock = root / "herdr.sock"
+            sock.write_text("", encoding="utf-8")
+            state = root / "state"
+            env_extra = {
+                "HOME": str(root),
+                "XDG_STATE_HOME": str(state),
+                "HERDR_ENV": "1",
+                "HERDR_SOCKET_PATH": str(sock),
+                "CMUX_SURFACE_ID": "surface-cli",
+                "HERDR_WORKSPACE_ID": "w1",
+            }
+            result = self.run_cli(
+                "doctor",
+                "--json",
+                path=f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
+                env_extra=env_extra,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertIn("[ok  ] herdr_cli", result.stdout)
+        self.assertIn("host_fingerprint", result.stdout)
+        # JSON blob is appended; ensure ok=true appears
+        self.assertIn('"ok": true', result.stdout)
+
+    def test_doctor_fails_nested_incomplete_fingerprint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            result = self.run_cli(
+                "doctor",
+                path=f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
+                env_extra={
+                    "HOME": tmp,
+                    "XDG_STATE_HOME": str(Path(tmp) / "state"),
+                    "HERDR_ENV": "1",
+                    "HERDR_SOCKET_PATH": "",
+                    "CMUX_SURFACE_ID": "",
+                },
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("FAIL", result.stdout)
+        self.assertIn("incomplete host fingerprint", result.stdout)
+
+    def test_read_pane_and_read_agent_wrappers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            path = f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}"
+            pane = self.run_cli(
+                "read-pane",
+                "p1",
+                "--source",
+                "recent",
+                "--lines",
+                "20",
+                path=path,
+            )
+            agent = self.run_cli(
+                "read-agent",
+                "p1",
+                "--source",
+                "visible",
+                path=path,
+            )
+        self.assertEqual(pane.returncode, 0, pane.stderr)
+        self.assertIn("pane-output-line", pane.stdout)
+        self.assertEqual(agent.returncode, 0, agent.stderr)
+        self.assertIn("agent-output-line", agent.stdout)
+
+    def test_focus_workspace_agent_and_pane(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            path = f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}"
+            ws = self.run_cli("focus-workspace", "w1", path=path)
+            agent = self.run_cli("focus-agent", "p1", path=path)
+            pane = self.run_cli("focus-pane", "p1", path=path)
+        self.assertEqual(ws.returncode, 0, ws.stderr)
+        self.assertIn("focused workspace w1", ws.stdout)
+        self.assertEqual(agent.returncode, 0, agent.stderr)
+        self.assertIn("focused agent p1", agent.stdout)
+        self.assertEqual(pane.returncode, 0, pane.stderr)
+        self.assertIn("focused pane p1", pane.stdout)
+
+    def test_focus_pane_reports_error_without_zoom_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(
+                fake_bin / "herdr",
+                r'''#!/usr/bin/env python3
+import json
+import sys
+argv = sys.argv[1:]
+if argv[:1] == ["status"]:
+    print(json.dumps({"status": "ok"}))
+    raise SystemExit(0)
+if argv[:2] == ["agent", "focus"]:
+    print("focus refused", file=sys.stderr)
+    raise SystemExit(3)
+if argv[:2] == ["pane", "get"]:
+    print(json.dumps({"result": {"pane_id": argv[2]}}))
+    raise SystemExit(0)
+if argv[:2] == ["pane", "zoom"]:
+    # Zoom succeeding must NOT be treated as focus success.
+    raise SystemExit(0)
+print("unexpected", argv, file=sys.stderr)
+raise SystemExit(9)
+''',
+            )
+            result = self.run_cli(
+                "focus-pane",
+                "p1",
+                path=f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("focus refused", result.stderr)
+        self.assertNotIn("focused pane", result.stdout)
 
 
 if __name__ == "__main__":

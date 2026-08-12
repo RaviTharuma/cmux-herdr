@@ -95,6 +95,7 @@ Tagged install after `v0.1.0` exists: see [RELEASE.md](RELEASE.md).
 
 ```bash
 cmux-herdr --version      # reads VERSION (e.g. 0.1.0)
+cmux-herdr doctor         # diagnose install / fingerprint / LaunchAgent / dry sync
 cmux-herdr status         # dual context + socket health
 cmux-herdr tree           # Herdr workspaces → tabs → panes → agents
 cmux-herdr agents         # compact agent list
@@ -104,11 +105,15 @@ cmux-herdr associations   # hybrid pane/session association cache
 cmux-herdr clear          # remove herdr:* status pills
 ```
 
-Control helpers:
+Control / read helpers:
 
 ```bash
+cmux-herdr focus-workspace w2
 cmux-herdr focus-tab Orchestration
 cmux-herdr focus-pane w2:p34
+cmux-herdr focus-agent w2:p34
+cmux-herdr read-pane w2:p34 --source recent-unwrapped --lines 80
+cmux-herdr read-agent reviewer --source recent --lines 40
 cmux-herdr split --direction right
 cmux-herdr json-dump
 ```
@@ -188,6 +193,7 @@ python3 -m py_compile bin/cmux-herdr bridge/cmux_herdr_bridge.py
 PYTHONPATH=bridge python3 -m unittest discover -s bridge -p 'test_*.py' -v
 PYTHONPATH=bridge python3 -m unittest discover -s tests -p 'test_*.py' -v
 ./bin/cmux-herdr --version
+./bin/cmux-herdr doctor
 ./bin/cmux-herdr status
 ./bin/cmux-herdr tree
 ./bin/cmux-herdr sync

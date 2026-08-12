@@ -46,13 +46,14 @@ cmux-herdr status
 - App settings/docs: `cmux docs …`
 
 ### Use `cmux-herdr` when you need to…
+- Diagnose install / fingerprint / LaunchAgent: `cmux-herdr doctor`
 - See both contexts: `cmux-herdr status`
 - Pretty inner topology: `cmux-herdr tree`
 - Mirror agents into outer sidebar: `cmux-herdr sync` or `cmux-herdr watch`
 - Compact agent list: `cmux-herdr agents`
-- Focus helpers: `cmux-herdr focus-tab <id|label>`, `cmux-herdr focus-pane <pane_id>`
-- Clear mirrored pills: `cmux-herdr associations
-cmux-herdr clear`
+- Focus helpers: `focus-workspace`, `focus-tab`, `focus-pane`, `focus-agent`
+- Read helpers: `read-pane <pane_id>`, `read-agent <target>`
+- Inspect / clear mirrored pills: `cmux-herdr associations`, `cmux-herdr clear`
 
 ## Safe agent splitting
 

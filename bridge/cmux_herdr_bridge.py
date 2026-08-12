@@ -1034,22 +1034,502 @@ def focus_tab(tab_id_or_label: str) -> str:
 
 
 def focus_pane(pane_id: str) -> str:
-    """Focus a pane by id via agent focus (pane focus only supports direction)."""
-    # Prefer agent focus — accepts pane ids that host agents
+    """Focus a pane by id via ``herdr agent focus``.
+
+    Herdr ``pane focus`` only accepts a direction, so agent focus is the correct
+    id-based path. Do not fall back to ``pane zoom`` — zoom is not focus and
+    previously produced misleading success when focus failed.
+    """
+    if not which("herdr"):
+        raise BridgeError("herdr not found on PATH")
     proc = run_cmd(["herdr", "agent", "focus", pane_id])
     if proc.returncode == 0:
         return pane_id
-    # Fallback: zoom (brings pane to attention in some layouts)
-    proc2 = run_cmd(["herdr", "pane", "zoom", pane_id, "--off"])
-    # Try reading pane to validate id, then report agent focus error
+    err = (proc.stderr or proc.stdout or "").strip()
+    # Best-effort: distinguish a missing pane from a genuine focus failure.
     try:
         herdr_json(["pane", "get", pane_id])
     except BridgeError as exc:
-        raise BridgeError(f"pane not found: {pane_id}") from exc
-    err = (proc.stderr or proc.stdout or "").strip()
-    if proc2.returncode == 0:
-        return pane_id
-    raise BridgeError(err or f"could not focus pane {pane_id}")
+        detail = str(exc).lower()
+        if "not found" in detail or "unknown" in detail or "no such" in detail:
+            raise BridgeError(f"pane not found: {pane_id}") from exc
+    raise BridgeError(err or f"herdr agent focus failed for pane {pane_id}")
+
+
+def focus_workspace(workspace_id: str) -> str:
+    """Focus a Herdr workspace by id via ``herdr workspace focus``."""
+    if not which("herdr"):
+        raise BridgeError("herdr not found on PATH")
+    proc = run_cmd(["herdr", "workspace", "focus", workspace_id])
+    if proc.returncode != 0:
+        raise BridgeError(
+            (proc.stderr or proc.stdout or "workspace focus failed").strip()
+        )
+    return workspace_id
+
+
+def focus_agent(target: str) -> str:
+    """Focus a Herdr agent by pane id / label via ``herdr agent focus``."""
+    if not which("herdr"):
+        raise BridgeError("herdr not found on PATH")
+    proc = run_cmd(["herdr", "agent", "focus", target])
+    if proc.returncode != 0:
+        raise BridgeError(
+            (proc.stderr or proc.stdout or "agent focus failed").strip()
+        )
+    return target
+
+
+def _append_read_flags(
+    args: List[str],
+    *,
+    source: Optional[str] = None,
+    lines: Optional[int] = None,
+    format: Optional[str] = None,
+    ansi: bool = False,
+    raw: bool = False,
+) -> List[str]:
+    """Append shared ``pane read`` / ``agent read`` flags to *args*."""
+    if source:
+        args.extend(["--source", source])
+    if lines is not None:
+        args.extend(["--lines", str(int(lines))])
+    if format:
+        args.extend(["--format", format])
+    if ansi:
+        args.append("--ansi")
+    if raw:
+        args.append("--raw")
+    return args
+
+
+def read_pane(
+    pane_id: str,
+    *,
+    source: Optional[str] = None,
+    lines: Optional[int] = None,
+    format: Optional[str] = None,
+    ansi: bool = False,
+    raw: bool = False,
+) -> subprocess.CompletedProcess:
+    """Thin wrapper over ``herdr pane read`` (stdout is text, not JSON)."""
+    if not which("herdr"):
+        raise BridgeError("herdr not found on PATH")
+    args = _append_read_flags(
+        ["herdr", "pane", "read", pane_id],
+        source=source,
+        lines=lines,
+        format=format,
+        ansi=ansi,
+        raw=raw,
+    )
+    return run_cmd(args)
+
+
+def read_agent(
+    target: str,
+    *,
+    source: Optional[str] = None,
+    lines: Optional[int] = None,
+    format: Optional[str] = None,
+    ansi: bool = False,
+) -> subprocess.CompletedProcess:
+    """Thin wrapper over ``herdr agent read`` (stdout is text, not JSON)."""
+    if not which("herdr"):
+        raise BridgeError("herdr not found on PATH")
+    args = _append_read_flags(
+        ["herdr", "agent", "read", target],
+        source=source,
+        lines=lines,
+        format=format,
+        ansi=ansi,
+        raw=False,
+    )
+    return run_cmd(args)
+
+
+LAUNCH_AGENT_LABEL = "com.cmux-herdr.watch"
+
+
+def default_herdr_socket_path() -> str:
+    """Return the usual Herdr default socket path (does not invent a host)."""
+    return os.path.expanduser("~/.config/herdr/herdr.sock")
+
+
+def sidebar_install_path() -> str:
+    """Return the optional cmux custom-sidebar install path."""
+    return os.path.expanduser("~/.config/cmux/sidebars/herdr.swift")
+
+
+def _socket_stat_info(path: str) -> Dict[str, Any]:
+    """Return existence / mode / owner for a socket path (best-effort)."""
+    info: Dict[str, Any] = {
+        "path": path,
+        "exists": os.path.exists(path),
+        "mode": None,
+        "owner": None,
+        "uid": None,
+        "gid": None,
+    }
+    if not info["exists"]:
+        return info
+    try:
+        st = os.stat(path)
+        info["mode"] = oct(st.st_mode & 0o777)
+        info["uid"] = st.st_uid
+        info["gid"] = st.st_gid
+        try:
+            import pwd  # stdlib; may be unavailable on some platforms
+
+            info["owner"] = pwd.getpwuid(st.st_uid).pw_name
+        except Exception:
+            info["owner"] = str(st.st_uid)
+    except OSError as exc:
+        info["stat_error"] = str(exc)
+    return info
+
+
+def _herdr_cli_version() -> Optional[str]:
+    """Best-effort ``herdr --version`` string, or None when unavailable."""
+    if not which("herdr"):
+        return None
+    try:
+        proc = run_cmd(["herdr", "--version"], timeout=5.0)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    text = (proc.stdout or proc.stderr or "").strip()
+    if proc.returncode != 0 or not text:
+        return None
+    return text.splitlines()[0].strip()
+
+
+def _launchagent_status() -> Dict[str, Any]:
+    """Best-effort LaunchAgent loaded check (macOS only; skip elsewhere)."""
+    label = LAUNCH_AGENT_LABEL
+    if sys.platform != "darwin":
+        return {
+            "label": label,
+            "checked": False,
+            "skipped": True,
+            "reason": f"not macOS (platform={sys.platform})",
+            "loaded": None,
+        }
+    if not which("launchctl"):
+        return {
+            "label": label,
+            "checked": False,
+            "skipped": True,
+            "reason": "launchctl not on PATH",
+            "loaded": None,
+        }
+    try:
+        uid = os.getuid()
+        proc = run_cmd(["launchctl", "print", f"gui/{uid}/{label}"], timeout=5.0)
+        if proc.returncode == 0:
+            return {
+                "label": label,
+                "checked": True,
+                "skipped": False,
+                "loaded": True,
+            }
+        proc2 = run_cmd(["launchctl", "list", label], timeout=5.0)
+        loaded = proc2.returncode == 0
+        return {
+            "label": label,
+            "checked": True,
+            "skipped": False,
+            "loaded": loaded,
+        }
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {
+            "label": label,
+            "checked": False,
+            "skipped": True,
+            "reason": str(exc),
+            "loaded": None,
+        }
+
+
+def dry_sync_preview() -> Dict[str, Any]:
+    """One-shot dry sync summary: fetch topology, do not write cmux statuses."""
+    if not herdr_available():
+        reasons: List[str] = []
+        if not which("herdr"):
+            reasons.append("herdr not on PATH")
+        else:
+            sock = os.environ.get("HERDR_SOCKET_PATH")
+            if sock and not os.path.exists(sock):
+                reasons.append(f"HERDR_SOCKET_PATH missing on disk: {sock}")
+            elif not sock and not os.path.exists(default_herdr_socket_path()):
+                reasons.append(
+                    "no HERDR_SOCKET_PATH and default socket absent "
+                    f"({default_herdr_socket_path()})"
+                )
+            else:
+                reasons.append("herdr status probe failed / socket unhealthy")
+        return {"skipped": True, "reasons": reasons}
+
+    try:
+        snap = fetch_snapshot()
+    except BridgeError as exc:
+        return {"skipped": True, "reasons": [f"snapshot failed: {exc}"]}
+
+    agent_panes = [p for p in snap.panes if p.agent]
+    if not agent_panes:
+        agent_panes = [
+            p
+            for p in snap.panes
+            if p.agent_status in ("working", "idle", "done", "blocked")
+        ]
+    counts: Dict[str, int] = {
+        "working": 0,
+        "idle": 0,
+        "done": 0,
+        "blocked": 0,
+        "unknown": 0,
+    }
+    for pane in agent_panes:
+        st = (pane.agent_status or "unknown").lower()
+        if st in counts:
+            counts[st] += 1
+        else:
+            counts["unknown"] += 1
+
+    workspace: Optional[str] = None
+    workspace_error: Optional[str] = None
+    missing = fingerprint_missing_fields()
+    if missing:
+        workspace_error = (
+            "incomplete host fingerprint (missing "
+            + ", ".join(missing)
+            + "); dry sync cannot auto-resolve outer workspace"
+        )
+    else:
+        try:
+            workspace = resolve_cmux_workspace()
+        except BridgeError as exc:
+            workspace_error = str(exc)
+        except Exception as exc:  # noqa: BLE001
+            workspace_error = str(exc)
+
+    return {
+        "skipped": False,
+        "pane_count": len(snap.panes),
+        "agent_count": len(agent_panes),
+        "counts": counts,
+        "workspace": workspace,
+        "workspace_error": workspace_error,
+        "summary": (
+            f"dry sync: {len(agent_panes)} agent panes "
+            f"(working={counts['working']} idle={counts['idle']} "
+            f"done={counts['done']} blocked={counts['blocked']})"
+            + (f" → ws={workspace}" if workspace else "")
+        ),
+    }
+
+
+def _state_binding_detail(
+    state_dir: str,
+    state_exists: bool,
+    fingerprint_complete: bool,
+    binding_exists: bool,
+    bound_workspace: Optional[str],
+) -> str:
+    """Human-readable state/binding summary for doctor output."""
+    prefix = f"state={state_dir} exists={state_exists}"
+    if not fingerprint_complete:
+        return f"{prefix}; binding check skipped (incomplete fingerprint)"
+    if bound_workspace:
+        return f"{prefix}; matching parent binding=yes ({bound_workspace})"
+    if binding_exists:
+        return f"{prefix}; matching parent binding=file present (workspace unset)"
+    return f"{prefix}; matching parent binding=none"
+
+
+def diagnose_install() -> Dict[str, Any]:
+    """Diagnose third-party install health for ``cmux-herdr doctor``.
+
+    Hard failures (``ok=False``):
+    - herdr missing from PATH
+    - incomplete host fingerprint while claiming a nested env (``HERDR_ENV`` set)
+    """
+    checks: List[Dict[str, Any]] = []
+    hard_failures: List[str] = []
+
+    herdr_path = which("herdr")
+    version = _herdr_cli_version() if herdr_path else None
+    herdr_ok = bool(herdr_path)
+    checks.append(
+        {
+            "name": "herdr_cli",
+            "ok": herdr_ok,
+            "hard": True,
+            "path": herdr_path,
+            "version": version,
+            "detail": (
+                f"herdr on PATH ({version or 'version unknown'})"
+                if herdr_ok
+                else "herdr not found on PATH"
+            ),
+        }
+    )
+    if not herdr_ok:
+        hard_failures.append("herdr not found on PATH")
+
+    env_socket = os.environ.get("HERDR_SOCKET_PATH")
+    default_socket = default_herdr_socket_path()
+    socket_path = env_socket or default_socket
+    socket_info = _socket_stat_info(socket_path)
+    socket_info["from_env"] = bool(env_socket)
+    socket_info["default_path"] = default_socket
+    # Socket presence is advisory here; hard fails come from herdr-on-PATH /
+    # nested fingerprint completeness. Still mark ok=False when the env socket
+    # is explicitly set but missing on disk.
+    socket_check_ok = bool(socket_info["exists"]) if env_socket else True
+    checks.append(
+        {
+            "name": "herdr_socket",
+            "ok": socket_check_ok,
+            "hard": False,
+            "socket": socket_info,
+            "detail": (
+                f"socket {socket_path} exists "
+                f"mode={socket_info.get('mode') or '-'} "
+                f"owner={socket_info.get('owner') or '-'}"
+                if socket_info["exists"]
+                else (
+                    f"HERDR_SOCKET_PATH set but missing: {socket_path}"
+                    if env_socket
+                    else f"default socket absent: {socket_path} (ok if unused)"
+                )
+            ),
+        }
+    )
+
+    fp = collect_host_fingerprint()
+    missing = fingerprint_missing_fields(fp)
+    claiming_nested = bool(os.environ.get("HERDR_ENV"))
+    fingerprint_complete = not missing
+    # Never invent surface/socket hosts — only report what the env provides.
+    fp_ok = fingerprint_complete or not claiming_nested
+    fp_detail = (
+        f"complete key={_parent_key(fp)}"
+        if fingerprint_complete
+        else (
+            "incomplete (missing "
+            + ", ".join(missing)
+            + ")"
+            + (
+                "; hard fail because HERDR_ENV claims nested context"
+                if claiming_nested
+                else "; ok for non-nested inspect commands"
+            )
+        )
+    )
+    checks.append(
+        {
+            "name": "host_fingerprint",
+            "ok": fp_ok,
+            "hard": claiming_nested and not fingerprint_complete,
+            "fingerprint": fp,
+            "fingerprint_key": _parent_key(fp) if fingerprint_complete else None,
+            "missing": missing,
+            "claiming_nested": claiming_nested,
+            "detail": fp_detail,
+        }
+    )
+    if claiming_nested and not fingerprint_complete:
+        hard_failures.append(
+            "incomplete host fingerprint while HERDR_ENV claims nested env "
+            "(missing " + ", ".join(missing) + ")"
+        )
+
+    state_dir = _state_dir()
+    state_exists = os.path.isdir(state_dir)
+    binding_path = _binding_path(fp) if fingerprint_complete else None
+    binding_exists = bool(binding_path and os.path.isfile(binding_path))
+    bound_workspace = _load_parent_binding(fp) if fingerprint_complete else None
+    checks.append(
+        {
+            "name": "state_binding",
+            "ok": True,  # advisory: missing binding is not a hard failure
+            "hard": False,
+            "state_dir": state_dir,
+            "state_dir_exists": state_exists,
+            "binding_path": binding_path,
+            "binding_exists": binding_exists,
+            "bound_workspace": bound_workspace,
+            "detail": _state_binding_detail(
+                state_dir,
+                state_exists,
+                fingerprint_complete,
+                binding_exists,
+                bound_workspace,
+            ),
+        }
+    )
+
+    launch = _launchagent_status()
+    checks.append(
+        {
+            "name": "launch_agent",
+            "ok": True if launch.get("skipped") else bool(launch.get("loaded")),
+            "hard": False,
+            "launch_agent": launch,
+            "detail": (
+                f"LaunchAgent {launch['label']}: skipped ({launch.get('reason')})"
+                if launch.get("skipped")
+                else (
+                    f"LaunchAgent {launch['label']}: "
+                    + ("loaded" if launch.get("loaded") else "not loaded")
+                )
+            ),
+        }
+    )
+
+    sidebar_path = sidebar_install_path()
+    sidebar_exists = os.path.isfile(sidebar_path)
+    checks.append(
+        {
+            "name": "sidebar",
+            "ok": True,  # optional install
+            "hard": False,
+            "path": sidebar_path,
+            "exists": sidebar_exists,
+            "detail": (
+                f"sidebar present: {sidebar_path}"
+                if sidebar_exists
+                else f"sidebar absent (optional): {sidebar_path}"
+            ),
+        }
+    )
+
+    dry = dry_sync_preview()
+    dry_ok = not dry.get("skipped")
+    checks.append(
+        {
+            "name": "dry_sync",
+            "ok": dry_ok or not herdr_ok,  # if herdr missing, already hard-failed
+            "hard": False,
+            "dry_sync": dry,
+            "detail": (
+                dry.get("summary")
+                if dry_ok
+                else "dry sync skipped: "
+                + "; ".join(dry.get("reasons") or ["unknown"])
+            ),
+        }
+    )
+
+    ok = not hard_failures
+    return {
+        "ok": ok,
+        "hard_failures": hard_failures,
+        "checks": checks,
+        "claiming_nested": claiming_nested,
+        "host_fingerprint": fp,
+        "host_fingerprint_missing": missing,
+    }
 
 
 def split_pane(direction: str = "right") -> Any:
