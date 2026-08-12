@@ -21,6 +21,7 @@ from bridge.cmux_herdr_bridge import (
     status_value_for_pane,
     update_association_map,
     _load_association_map,
+    _pane_from_raw,
 )
 
 
@@ -68,6 +69,37 @@ class PaneTests(unittest.TestCase):
         val = status_value_for_pane(p)
         self.assertIn("pi/working", val)
         self.assertIn("Bot", val)
+
+    def test_pane_from_raw_reads_agent_from_agent_session(self):
+        """Herdr 0.8 nests agent under agent_session when top-level agent is absent."""
+        pane = _pane_from_raw(
+            {
+                "pane_id": "w2:p9",
+                "tab_id": "w2:t3",
+                "workspace_id": "w2",
+                "agent_status": "working",
+                "agent_session": {
+                    "agent": "claude",
+                    "kind": "path",
+                    "value": "/tmp/session-claude.jsonl",
+                },
+            }
+        )
+        self.assertEqual(pane.agent, "claude")
+        self.assertEqual(pane.agent_session_path, "/tmp/session-claude.jsonl")
+        self.assertEqual(pane.agent_session_kind, "path")
+
+    def test_pane_from_raw_prefers_top_level_agent(self):
+        pane = _pane_from_raw(
+            {
+                "pane_id": "w2:p9",
+                "tab_id": "w2:t3",
+                "workspace_id": "w2",
+                "agent": "pi",
+                "agent_session": {"agent": "claude", "kind": "id", "value": "sess-1"},
+            }
+        )
+        self.assertEqual(pane.agent, "pi")
 
 
 if __name__ == "__main__":

@@ -242,11 +242,17 @@ def _pane_from_raw(raw: Dict[str, Any]) -> Pane:
         elif isinstance(value, str):
             session_id = value
     revision = raw.get("revision")
+    # Herdr 0.8 nests the agent name under agent_session.agent; prefer top-level.
+    agent = raw.get("agent") or session.get("agent")
+    if isinstance(agent, str):
+        agent = agent.strip() or None
+    else:
+        agent = None
     return Pane(
         pane_id=str(raw.get("pane_id") or ""),
         tab_id=str(raw.get("tab_id") or ""),
         workspace_id=str(raw.get("workspace_id") or ""),
-        agent=raw.get("agent"),
+        agent=agent,
         agent_status=str(raw.get("agent_status") or "unknown"),
         label=raw.get("label"),
         cwd=raw.get("cwd") or raw.get("foreground_cwd"),
