@@ -7,6 +7,21 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased] — 0.2 prep
 
+### Added
+
+- **`cmux-herdr doctor`**: diagnose third-party install health — herdr on PATH /
+  version, socket path (env or default) with mode/owner, host fingerprint
+  completeness (never invents hosts), `$XDG_STATE_HOME/cmux-herdr/` binding state,
+  LaunchAgent `com.cmux-herdr.watch` (macOS `launchctl` best-effort; skipped
+  elsewhere), optional sidebar install path, and a one-shot dry sync summary.
+  Exits non-zero on hard failures (herdr missing, or incomplete fingerprint when
+  `HERDR_ENV` claims a nested env).
+- **`cmux-herdr read-pane <pane_id>`** / **`read-agent <target>`**: thin wrappers
+  over `herdr pane read` / `herdr agent read` with `--source` / `--lines` /
+  `--format` / `--ansi` (and `--raw` for pane).
+- **`cmux-herdr focus-workspace <id>`** / **`focus-agent <target>`**: complete the
+  focus helpers alongside existing `focus-tab` / `focus-pane`.
+
 ### Fixed
 
 - **Multi-parent host fingerprint bindings** ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)):
@@ -19,6 +34,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Auto-resolve fails loudly when fingerprint pieces are missing (never probes the
   bare focused workspace / random host). Incomplete fingerprint with `--workspace`
   logs a warning that association keys may collide.
+- **`focus-pane`**: remove misleading `herdr pane zoom … --off` “focus” fallback;
+  report a clear error when `herdr agent focus` fails.
 
 ## [0.1.0] — 2026-08-12
 

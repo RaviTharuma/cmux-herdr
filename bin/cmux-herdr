@@ -24,14 +24,19 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
     BridgeError,
     _load_association_map,
     clear_cmux_herdr_statuses,
+    diagnose_install,
     dual_status,
     fetch_agents,
     fetch_snapshot,
+    focus_agent,
     focus_pane,
     focus_tab,
+    focus_workspace,
     format_associations,
     format_tree,
     herdr_available,
+    read_agent,
+    read_pane,
     resolve_cmux_workspace,
     split_pane,
     sync_to_cmux,
@@ -109,6 +114,32 @@ def cmd_status(_args: argparse.Namespace) -> int:
     if _args.json:
         print(json.dumps(info, indent=2, default=str))
     return 0
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    """Diagnose third-party install; exit non-zero on hard failures."""
+    report = diagnose_install()
+    print("cmux-herdr doctor")
+    print("─────────────────")
+    for check in report.get("checks") or []:
+        name = check.get("name") or "?"
+        ok = bool(check.get("ok"))
+        hard = bool(check.get("hard"))
+        if ok:
+            mark = "ok"
+        elif hard:
+            mark = "FAIL"
+        else:
+            mark = "warn"
+        print(f"[{mark:4}] {name}: {check.get('detail')}")
+    if report.get("hard_failures"):
+        print()
+        print("hard failures:")
+        for item in report["hard_failures"]:
+            print(f"  - {item}")
+    if args.json:
+        print(json.dumps(report, indent=2, default=str))
+    return 0 if report.get("ok") else 1
 
 
 def cmd_tree(args: argparse.Namespace) -> int:
@@ -215,6 +246,71 @@ def cmd_focus_pane(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_focus_workspace(args: argparse.Namespace) -> int:
+    _ensure_herdr()
+    try:
+        wid = focus_workspace(args.workspace_id)
+    except BridgeError as exc:
+        _die(str(exc))
+    print(f"focused workspace {wid}")
+    return 0
+
+
+def cmd_focus_agent(args: argparse.Namespace) -> int:
+    _ensure_herdr()
+    try:
+        target = focus_agent(args.target)
+    except BridgeError as exc:
+        _die(str(exc))
+    print(f"focused agent {target}")
+    return 0
+
+
+def _passthrough_read(proc) -> int:
+    """Write herdr read stdout/stderr and return its exit code."""
+    if proc.stdout:
+        sys.stdout.write(proc.stdout)
+        if not proc.stdout.endswith("\n"):
+            sys.stdout.write("\n")
+    if proc.stderr:
+        sys.stderr.write(proc.stderr)
+        if not proc.stderr.endswith("\n"):
+            sys.stderr.write("\n")
+    code = int(proc.returncode or 0)
+    return code if code != 0 else 0
+
+
+def cmd_read_pane(args: argparse.Namespace) -> int:
+    _ensure_herdr()
+    try:
+        proc = read_pane(
+            args.pane_id,
+            source=args.source,
+            lines=args.lines,
+            format=args.format,
+            ansi=args.ansi,
+            raw=args.raw,
+        )
+    except BridgeError as exc:
+        _die(str(exc))
+    return _passthrough_read(proc)
+
+
+def cmd_read_agent(args: argparse.Namespace) -> int:
+    _ensure_herdr()
+    try:
+        proc = read_agent(
+            args.target,
+            source=args.source,
+            lines=args.lines,
+            format=args.format,
+            ansi=args.ansi,
+        )
+    except BridgeError as exc:
+        _die(str(exc))
+    return _passthrough_read(proc)
+
+
 def cmd_split(args: argparse.Namespace) -> int:
     _ensure_herdr()
     try:
@@ -251,7 +347,6 @@ def cmd_agents(args: argparse.Namespace) -> int:
     return 0
 
 
-
 def cmd_associations(args: argparse.Namespace) -> int:
     """Show hybrid pane/session association cache for this Herdr+cmux parent."""
     state = _load_association_map()
@@ -260,6 +355,7 @@ def cmd_associations(args: argparse.Namespace) -> int:
     else:
         print(format_associations(state))
     return 0
+
 
 def cmd_clear(args: argparse.Namespace) -> int:
     try:
@@ -307,6 +403,36 @@ def cmd_json_dump(args: argparse.Namespace) -> int:
     return 0
 
 
+def _add_read_flags(sp: argparse.ArgumentParser, *, include_raw: bool) -> None:
+    """Shared flags for read-pane / read-agent (herdr pass-through)."""
+    sp.add_argument(
+        "--source",
+        choices=("visible", "recent", "recent-unwrapped", "detection"),
+        help="herdr read source (default: herdr's own default)",
+    )
+    sp.add_argument(
+        "--lines",
+        type=int,
+        help="limit to last N lines/rows (herdr --lines)",
+    )
+    sp.add_argument(
+        "--format",
+        choices=("text", "ansi"),
+        help="output format (herdr --format)",
+    )
+    sp.add_argument(
+        "--ansi",
+        action="store_true",
+        help="preserve ANSI (herdr --ansi)",
+    )
+    if include_raw:
+        sp.add_argument(
+            "--raw",
+            action="store_true",
+            help="raw ANSI without stripping (herdr pane read --raw)",
+        )
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cmux-herdr",
@@ -322,6 +448,13 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("status", help="Show dual cmux+herdr context")
     s.add_argument("--json", action="store_true", help="Also print raw JSON blob")
     s.set_defaults(func=cmd_status)
+
+    s = sub.add_parser(
+        "doctor",
+        help="Diagnose third-party install (herdr, socket, fingerprint, LaunchAgent, sidebar)",
+    )
+    s.add_argument("--json", action="store_true", help="Also print raw JSON report")
+    s.set_defaults(func=cmd_doctor)
 
     s = sub.add_parser("tree", help="Pretty-print herdr workspaces/tabs/panes/agents")
     s.add_argument("--json", action="store_true")
@@ -373,9 +506,36 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("target", help="tab_id or label")
     s.set_defaults(func=cmd_focus_tab)
 
-    s = sub.add_parser("focus-pane", help="Focus herdr pane by id (via agent focus)")
+    s = sub.add_parser(
+        "focus-pane",
+        help="Focus herdr pane by id (via herdr agent focus; no zoom fallback)",
+    )
     s.add_argument("pane_id")
     s.set_defaults(func=cmd_focus_pane)
+
+    s = sub.add_parser("focus-workspace", help="Focus herdr workspace by id")
+    s.add_argument("workspace_id")
+    s.set_defaults(func=cmd_focus_workspace)
+
+    s = sub.add_parser("focus-agent", help="Focus herdr agent by pane id or label")
+    s.add_argument("target", help="pane_id or agent label")
+    s.set_defaults(func=cmd_focus_agent)
+
+    s = sub.add_parser(
+        "read-pane",
+        help="Read herdr pane output (thin wrapper over herdr pane read)",
+    )
+    s.add_argument("pane_id")
+    _add_read_flags(s, include_raw=True)
+    s.set_defaults(func=cmd_read_pane)
+
+    s = sub.add_parser(
+        "read-agent",
+        help="Read herdr agent output (thin wrapper over herdr agent read)",
+    )
+    s.add_argument("target", help="pane_id or agent label")
+    _add_read_flags(s, include_raw=False)
+    s.set_defaults(func=cmd_read_agent)
 
     s = sub.add_parser("split", help="Split current herdr pane")
     s.add_argument(

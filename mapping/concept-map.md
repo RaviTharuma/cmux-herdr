@@ -40,8 +40,11 @@ CMUX_BUNDLE_ID=com.cmuxterm.app
 |--------|--------|
 | Outer tree | `cmux tree` |
 | Inner tree | `cmux-herdr tree` / `herdr pane list` |
+| Diagnose install | `cmux-herdr doctor` |
 | Mirror agents to sidebar | `cmux-herdr sync` / `watch` |
 | Split agent | `herdr pane split --current` / `cmux-herdr split` |
+| Focus inner workspace | `herdr workspace focus` / `cmux-herdr focus-workspace` |
 | Focus inner tab | `herdr tab focus` / `cmux-herdr focus-tab` |
-| Focus agent pane | `herdr agent focus` / `cmux-herdr focus-pane` |
+| Focus agent pane | `herdr agent focus` / `cmux-herdr focus-pane` / `focus-agent` |
+| Read pane / agent output | `cmux-herdr read-pane` / `read-agent` |
 | Outer workspace select | `cmux` workspace APIs / custom sidebar button |
