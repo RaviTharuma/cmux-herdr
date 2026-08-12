@@ -57,7 +57,10 @@ class CliBehaviorTests(unittest.TestCase):
 import json
 import sys
 command = sys.argv[1:3]
-if command == ["pane", "list"]:
+if sys.argv[1:2] == ["status"]:
+    print(json.dumps({"status": "ok"}))
+    raise SystemExit(0)
+elif command == ["pane", "list"]:
     result = {"panes": [{"pane_id": "p1", "tab_id": "t1", "workspace_id": "w1", "agent": "pi", "agent_status": "idle"}]}
 elif command == ["tab", "list"]:
     result = {"tabs": [{"tab_id": "t1", "workspace_id": "w1", "label": "Tests"}]}
@@ -91,7 +94,10 @@ print(json.dumps({"result": result}))
 import json
 import sys
 command = sys.argv[1:3]
-if command == ["pane", "list"]:
+if sys.argv[1:2] == ["status"]:
+    print(json.dumps({"status": "ok"}))
+    raise SystemExit(0)
+elif command == ["pane", "list"]:
     result = {"panes": [{"pane_id": "p1", "tab_id": "t1", "workspace_id": "w1", "agent": "pi", "agent_status": "working", "label": "Bot"}]}
 elif command == ["tab", "list"]:
     result = {"tabs": []}
