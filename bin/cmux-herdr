@@ -81,6 +81,7 @@ def cmd_status(_args: argparse.Namespace) -> int:
     print(f"  tab          : {h.get('tab_id')}")
     print(f"  pane         : {h.get('pane_id')}")
     print(f"  socket       : {h.get('socket_path')} (exists={h.get('socket_exists')})")
+    print(f"  server pid   : {h.get('server_pid') or '-'}")
     if h.get("pane_count") is not None:
         print(
             f"  topology     : workspaces={h.get('workspace_count')} "
@@ -101,6 +102,10 @@ def cmd_status(_args: argparse.Namespace) -> int:
     print(f"  resolved ws  : {c.get('resolved_workspace')}")
     if c.get("resolve_error"):
         print(f"  resolve err  : {c['resolve_error']}")
+    print("host fingerprint:")
+    print(f"  key          : {info.get('host_fingerprint_key') or '-'}")
+    missing = info.get("host_fingerprint_missing") or []
+    print(f"  missing      : {', '.join(missing) if missing else '(none)'}")
     if _args.json:
         print(json.dumps(info, indent=2, default=str))
     return 0

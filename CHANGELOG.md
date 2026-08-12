@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 0.2 prep
+
+### Fixed
+
+- **Multi-parent host fingerprint bindings** ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)):
+  parent / association files are keyed by a stable host fingerprint
+  (`CMUX_SURFACE_ID` + `HERDR_SOCKET_PATH` + optional Herdr server pid +
+  `HERDR_WORKSPACE_ID`) so multiple outer cmux windows/surfaces keep concurrent
+  `parent-<fingerprint>.json` / `associations-<fingerprint>.json` files under
+  `$XDG_STATE_HOME/cmux-herdr/`. `sync` / `watch` select the binding for the
+  invoking environment; `--workspace` remains an explicit override.
+- Auto-resolve fails loudly when fingerprint pieces are missing (never probes the
+  bare focused workspace / random host). Incomplete fingerprint with `--workspace`
+  logs a warning that association keys may collide.
+
 ## [0.1.0] — 2026-08-12
 
 First tagged stopgap release of the user-controlled cmux ↔ Herdr plugin bridge.
@@ -43,8 +58,8 @@ Works today without any cmux upstream merge.
 - Upstream PR [#8736](https://github.com/manaflow-ai/cmux/pull/8736) tip includes the
   missing-`herdr`-on-PATH hermetic coverage tracked by plugin issue
   [#5](https://github.com/RaviTharuma/cmux-herdr/issues/5); that residual is closed in docs.
-- Multi-parent binding ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)) remains
-  an open enhancement — not in this release.
+- Multi-parent binding ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)) was
+  deferred from this release; see **Unreleased / 0.2 prep**.
 - Native nested topology ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)) is
   intentionally out of scope for the plugin.
 

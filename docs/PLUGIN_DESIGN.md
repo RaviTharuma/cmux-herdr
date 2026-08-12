@@ -56,12 +56,12 @@ Custom sidebars run in a **restricted Swift interpreter** and primarily see the 
 
 When a shell is inside herdr inside cmux, `CMUX_WORKSPACE_ID` is sometimes stale or equal to a tab id. The bridge:
 
-1. Reads `cmux identify --json` focused workspace ref
-2. Parses `cmux tree --id-format both` for selected/active and `"herdr"`-named workspaces
-3. Probes `cmux list-status --workspace …` until one succeeds
-4. Falls back to env
+1. Requires a host fingerprint (`CMUX_SURFACE_ID` + `HERDR_SOCKET_PATH`; optional Herdr server pid)
+2. Loads `parent-<fingerprint>.json` for that invoking environment when still valid
+3. Resolves via `cmux identify --surface <CMUX_SURFACE_ID> --json`, then a validated `CMUX_WORKSPACE_ID`
+4. Persists a new binding for that fingerprint only (never probes the bare focused workspace)
 
-Callers can override with `cmux-herdr sync --workspace …`.
+Callers can override with `cmux-herdr sync --workspace …`. Missing fingerprint pieces fail loudly on auto-resolve.
 
 ## Status mapping
 

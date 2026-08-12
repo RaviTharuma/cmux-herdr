@@ -212,9 +212,6 @@ class InstallScriptTests(unittest.TestCase):
             self.assertIn("Done.", install.stdout)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 class ParentWorkspaceBindingTests(unittest.TestCase):
     def test_plain_unknown_shell_is_not_an_agent(self):
         pane = bridge.Pane(
@@ -254,6 +251,7 @@ class ParentWorkspaceBindingTests(unittest.TestCase):
                 "XDG_STATE_HOME": tmp,
                 "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
                 "HERDR_WORKSPACE_ID": "w1",
+                "CMUX_SURFACE_ID": "surface-uuid",
             },
             clear=False,
         ), mock.patch.object(bridge, "which", return_value="/mock/cmux"), mock.patch.object(
@@ -265,17 +263,87 @@ class ParentWorkspaceBindingTests(unittest.TestCase):
             self.assertEqual(bridge.resolve_cmux_workspace(), "workspace:new")
             self.assertEqual(bridge._load_parent_binding(), "workspace:new")
 
+    def test_missing_fingerprint_refuses_auto_resolve(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+                "HERDR_WORKSPACE_ID": "w1",
+            },
+            clear=True,
+        ), mock.patch.object(bridge, "which", return_value="/mock/cmux"), mock.patch.object(
+            bridge, "_workspace_from_identify"
+        ) as identify:
+            with self.assertRaisesRegex(bridge.BridgeError, "incomplete host fingerprint"):
+                bridge.resolve_cmux_workspace()
+            identify.assert_not_called()
+
+    def test_two_hosts_keep_distinct_parent_bindings(self):
+        """Two fake outer surfaces sharing a Herdr socket must not collide."""
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            host_a = {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/shared-herdr.sock",
+                "HERDR_WORKSPACE_ID": "w1",
+                "CMUX_SURFACE_ID": "surface-host-a",
+                "HERDR_SERVER_PID": "1001",
+            }
+            host_b = {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/shared-herdr.sock",
+                "HERDR_WORKSPACE_ID": "w1",
+                "CMUX_SURFACE_ID": "surface-host-b",
+                "HERDR_SERVER_PID": "1001",
+            }
+
+            with mock.patch.dict(os.environ, host_a, clear=True), mock.patch.object(
+                bridge, "which", return_value="/mock/cmux"
+            ), mock.patch.object(
+                bridge, "_workspace_is_valid", return_value=True
+            ), mock.patch.object(
+                bridge, "_workspace_from_identify", return_value="workspace:A"
+            ):
+                self.assertEqual(bridge.resolve_cmux_workspace(), "workspace:A")
+                key_a = bridge._parent_key()
+                path_a = Path(bridge._binding_path())
+
+            with mock.patch.dict(os.environ, host_b, clear=True), mock.patch.object(
+                bridge, "which", return_value="/mock/cmux"
+            ), mock.patch.object(
+                bridge, "_workspace_is_valid", return_value=True
+            ), mock.patch.object(
+                bridge, "_workspace_from_identify", return_value="workspace:B"
+            ):
+                self.assertEqual(bridge.resolve_cmux_workspace(), "workspace:B")
+                key_b = bridge._parent_key()
+                path_b = Path(bridge._binding_path())
+
+            self.assertNotEqual(key_a, key_b)
+            self.assertNotEqual(path_a, path_b)
+            self.assertTrue(path_a.exists())
+            self.assertTrue(path_b.exists())
+            self.assertEqual(json.loads(path_a.read_text())["workspace_ref"], "workspace:A")
+            self.assertEqual(json.loads(path_b.read_text())["workspace_ref"], "workspace:B")
+
+            # Invoking env selects its own binding; the other host file stays intact.
+            with mock.patch.dict(os.environ, host_a, clear=True), mock.patch.object(
+                bridge, "which", return_value="/mock/cmux"
+            ), mock.patch.object(
+                bridge, "_workspace_is_valid", return_value=True
+            ), mock.patch.object(
+                bridge, "_workspace_from_identify"
+            ) as identify:
+                self.assertEqual(bridge.resolve_cmux_workspace(), "workspace:A")
+                identify.assert_not_called()
+
+            parents = sorted(p.name for p in state.joinpath("cmux-herdr").glob("parent-*.json"))
+            self.assertEqual(len(parents), 2)
+
 
 class AssociationSyncTests(unittest.TestCase):
     def test_sync_writes_association_cache(self):
-        import json
-        import os
-        import tempfile
-        from pathlib import Path
-        from unittest import mock
-
-        from bridge import cmux_herdr_bridge as bridge
-
         pane = bridge.Pane(
             pane_id="w2:p34",
             tab_id="w2:t17",
@@ -292,6 +360,7 @@ class AssociationSyncTests(unittest.TestCase):
                 returncode = 0
                 stdout = ""
                 stderr = ""
+
             return R()
 
         with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
@@ -317,4 +386,47 @@ class AssociationSyncTests(unittest.TestCase):
             data = json.loads(assoc_path.read_text())
             self.assertEqual(data["panes"]["w2:p34"]["status_key"], "herdr:w2:p34")
             self.assertEqual(data["cmux_workspace"], "workspace:7")
+            self.assertEqual(data["cmux_surface_id"], "surface-uuid")
+            self.assertIn("host_fingerprint_key", data)
+
+    def test_two_hosts_keep_distinct_association_files(self):
+        pane = bridge.Pane(
+            pane_id="w2:p1",
+            tab_id="w2:t1",
+            workspace_id="w2",
+            agent="pi",
+            agent_status="idle",
+        )
+        snap = bridge.Snapshot(panes=[pane], tabs=[], workspaces=[])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env_a = {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/shared-herdr.sock",
+                "HERDR_WORKSPACE_ID": "w2",
+                "CMUX_SURFACE_ID": "surface-host-a",
+            }
+            env_b = {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/shared-herdr.sock",
+                "HERDR_WORKSPACE_ID": "w2",
+                "CMUX_SURFACE_ID": "surface-host-b",
+            }
+            with mock.patch.dict(os.environ, env_a, clear=True):
+                path_a = Path(
+                    bridge.update_association_map(snap, cmux_workspace="workspace:A")["path"]
+                )
+            with mock.patch.dict(os.environ, env_b, clear=True):
+                path_b = Path(
+                    bridge.update_association_map(snap, cmux_workspace="workspace:B")["path"]
+                )
+            self.assertNotEqual(path_a, path_b)
+            self.assertTrue(path_a.exists())
+            self.assertTrue(path_b.exists())
+            self.assertEqual(json.loads(path_a.read_text())["cmux_workspace"], "workspace:A")
+            self.assertEqual(json.loads(path_b.read_text())["cmux_workspace"], "workspace:B")
+
+
+if __name__ == "__main__":
+    unittest.main()
 

@@ -76,7 +76,7 @@ Install paths (after `install.sh`):
 
 - Close plugin issue [#3](https://github.com/RaviTharuma/cmux-herdr/issues/3) (tagged release)
   after the GitHub Release exists.
-- Leave [#2](https://github.com/RaviTharuma/cmux-herdr/issues/2) (multi-parent binding) open.
+- Close [#2](https://github.com/RaviTharuma/cmux-herdr/issues/2) (multi-parent host fingerprint bindings) when that fix is merged (Unreleased / 0.2 prep).
 - Do not expand into [manaflow-ai/cmux#8737](https://github.com/manaflow-ai/cmux/issues/8737).
 
 ## Version bump for later releases

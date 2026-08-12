@@ -12,16 +12,20 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from bridge.cmux_herdr_bridge import (
-
     STATUS_PREFIX,
+    BridgeError,
     Pane,
     Snapshot,
+    collect_host_fingerprint,
+    fingerprint_missing_fields,
     format_associations,
     map_status_to_style,
+    require_host_fingerprint,
     status_value_for_pane,
     update_association_map,
     _load_association_map,
     _pane_from_raw,
+    _parent_key,
 )
 
 
@@ -102,8 +106,39 @@ class PaneTests(unittest.TestCase):
         self.assertEqual(pane.agent, "pi")
 
 
-if __name__ == "__main__":
-    unittest.main()
+class HostFingerprintTests(unittest.TestCase):
+    def test_parent_keys_differ_for_two_surfaces(self):
+        import os
+        from unittest import mock
+
+        shared = {
+            "HERDR_SOCKET_PATH": "/tmp/shared.sock",
+            "HERDR_WORKSPACE_ID": "w1",
+            "HERDR_SERVER_PID": "42",
+        }
+        with mock.patch.dict(
+            os.environ, {**shared, "CMUX_SURFACE_ID": "surface-a"}, clear=False
+        ):
+            key_a = _parent_key()
+            fp_a = collect_host_fingerprint()
+        with mock.patch.dict(
+            os.environ, {**shared, "CMUX_SURFACE_ID": "surface-b"}, clear=False
+        ):
+            key_b = _parent_key()
+            fp_b = collect_host_fingerprint()
+        self.assertNotEqual(key_a, key_b)
+        self.assertEqual(fp_a["herdr_server_pid"], 42)
+        self.assertEqual(fp_b["cmux_surface_id"], "surface-b")
+        self.assertEqual(fingerprint_missing_fields(fp_a), [])
+
+    def test_require_host_fingerprint_lists_missing_fields(self):
+        import os
+        from unittest import mock
+
+        with mock.patch.dict(os.environ, {"HERDR_SOCKET_PATH": "/tmp/h.sock"}, clear=True):
+            self.assertEqual(fingerprint_missing_fields(), ["CMUX_SURFACE_ID"])
+            with self.assertRaisesRegex(BridgeError, "CMUX_SURFACE_ID"):
+                require_host_fingerprint()
 
 
 class AssociationMapTests(unittest.TestCase):
@@ -164,4 +199,8 @@ class AssociationMapTests(unittest.TestCase):
             self.assertIn("associations: 1 panes", rendered)
             self.assertIn("w2:p1", rendered)
             self.assertNotIn("w2:p2  ", rendered)
+
+
+if __name__ == "__main__":
+    unittest.main()
 

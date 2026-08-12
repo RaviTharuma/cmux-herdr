@@ -21,7 +21,8 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 
 - Mirror Herdr agent state into cmux workspace **status pills** (`herdr:<pane_id>`) and progress.
 - CLI for topology and control: `status`, `tree`, `agents`, `sync`, `watch`, `clear`, focus helpers, `split`, `json-dump`.
-- Persist Herdr-parent → cmux-workspace binding so outer focus changes do not thrash status writes.
+- Persist per-host-fingerprint Herdr-parent → cmux-workspace bindings so outer focus
+  changes do not thrash status writes and multi-window hosts do not collide.
 - Skip ordinary shell panes (no agent) so they are not mirrored as agents.
 - Clear stale `herdr:*` keys on each sync while leaving unrelated cmux statuses alone.
 - Optional custom sidebar + agent skill documenting the dual hierarchy.
@@ -46,11 +47,11 @@ Cross-links: PR and issue reference each other; both point back here as the fall
    Parent binding is best-effort local state under `~/.local/state/cmux-herdr/`. There is no
    cmux-owned surface↔provider session identity. That is part of the native design.
 
-4. **One outer workspace projection.**
-   Multi-window / multi-surface Herdr hosts can collide if multiple Herdr parents map into
-   the same cmux workspace, or if outer workspace IDs rotate. Binding persistence mitigates
-   the common nested-shell case; it is not a full multi-parent model
-   ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2) still open).
+4. **Flat outer workspace projection (not nested hierarchy).**
+   Status pills are still a flat projection onto one outer workspace per host fingerprint.
+   Multi-window / multi-surface Herdr hosts keep distinct `parent-<fingerprint>.json`
+   bindings (issue [#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)); full nested
+   hierarchy remains [#8737](https://github.com/manaflow-ai/cmux/issues/8737).
 
 5. **No upstream install channel.**
    Install is `./scripts/install.sh` from this repo (or a tagged clone). There is no Homebrew
@@ -77,8 +78,9 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 ### A. Plugin residual (this repo)
 
 - [x] Sample `launchd` LaunchAgent for `cmux-herdr watch` (`scripts/com.cmux-herdr.watch.plist` + install/uninstall helpers). Users can install with `./scripts/install-watch-service.sh`.
-- [ ] Optional: multi-parent binding when several Herdr surfaces live in different cmux workspaces
-      (today: one binding file; good enough for the single nested host case) — issue [#2](https://github.com/RaviTharuma/cmux-herdr/issues/2).
+- [x] Multi-parent host-fingerprint bindings when several Herdr surfaces live in different
+      cmux windows/workspaces (`parent-<fingerprint>.json` / `associations-<fingerprint>.json`;
+      sync/watch select the invoking env) — issue [#2](https://github.com/RaviTharuma/cmux-herdr/issues/2).
 - [x] Upstream draft banners point at live #8737 / #8736 (prefer GitHub over local drafts).
 - [x] `./scripts/test.sh` — stdlib unittest only (no pytest).
 - [x] Herdr 0.8 `agent_session.agent` parsing.
@@ -145,7 +147,7 @@ cmux-herdr sync
 
 ### this plugin (`RaviTharuma/cmux-herdr`)
 - https://github.com/RaviTharuma/cmux-herdr/issues/1 — LaunchAgent for `watch` (**closed**; sample + `install-watch-service.sh` shipped)
-- https://github.com/RaviTharuma/cmux-herdr/issues/2 — multi-parent binding collisions (**still open**; optional enhancement — not in v0.1.0)
+- https://github.com/RaviTharuma/cmux-herdr/issues/2 — multi-parent binding collisions (**closable** when host-fingerprint PR merges; prep for 0.2)
 - https://github.com/RaviTharuma/cmux-herdr/issues/3 — no tagged release (close after tagging v0.1.0 per [RELEASE.md](./RELEASE.md))
 - https://github.com/RaviTharuma/cmux-herdr/issues/4 — upstream draft drift (**closed**; canonical banners added)
 - https://github.com/RaviTharuma/cmux-herdr/issues/5 — PR #8736 missing-PATH residual (**done on PR tip**; docs closed — not a plugin runtime gap)
