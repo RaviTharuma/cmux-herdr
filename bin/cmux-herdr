@@ -37,6 +37,20 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
     sync_to_cmux,
 )
 
+__version__ = "0.1.0"
+
+
+def _read_version() -> str:
+    """Return package version from VERSION (source of truth) with a safe fallback."""
+    version_file = _ROOT / "VERSION"
+    try:
+        text = version_file.read_text(encoding="utf-8").strip()
+        if text:
+            return text
+    except OSError:
+        pass
+    return __version__
+
 
 def _die(msg: str, code: int = 1) -> None:
     print(f"cmux-herdr: {msg}", file=sys.stderr)
@@ -293,7 +307,11 @@ def build_parser() -> argparse.ArgumentParser:
         prog="cmux-herdr",
         description="Bridge herdr agent/tab state into cmux (user plugin, no upstream PR).",
     )
-    p.add_argument("--version", action="version", version="cmux-herdr 0.1.0")
+    p.add_argument(
+        "--version",
+        action="version",
+        version=f"cmux-herdr {_read_version()}",
+    )
     sub = p.add_subparsers(dest="command", required=True)
 
     s = sub.add_parser("status", help="Show dual cmux+herdr context")
