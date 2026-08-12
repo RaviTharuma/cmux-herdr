@@ -7,11 +7,13 @@ Stdlib only.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -351,21 +353,129 @@ def _state_dir() -> str:
     return os.path.join(root, "cmux-herdr")
 
 
-def _parent_key() -> str:
-    socket_path = os.environ.get("HERDR_SOCKET_PATH", "default")
-    workspace = os.environ.get("HERDR_WORKSPACE_ID", "default")
-    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", f"{socket_path}:{workspace}")
-    return safe[-180:]
+def _herdr_server_pid() -> Optional[int]:
+    """Return Herdr server pid when cheaply available (env or sidecar pid file)."""
+    raw = os.environ.get("HERDR_SERVER_PID")
+    if raw and raw.isdigit():
+        return int(raw)
+    sock = os.environ.get("HERDR_SOCKET_PATH")
+    if not sock:
+        return None
+    candidates = (
+        f"{sock}.pid",
+        os.path.join(os.path.dirname(sock), "herdr.pid"),
+    )
+    for path in candidates:
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                text = handle.read().strip()
+            if text.isdigit():
+                return int(text)
+        except OSError:
+            continue
+    return None
 
 
-def _binding_path() -> str:
-    return os.path.join(_state_dir(), f"parent-{_parent_key()}.json")
+def collect_host_fingerprint() -> Dict[str, Any]:
+    """Collect the invoking-environment host fingerprint fields.
+
+    Fingerprint pieces (best → required for auto-bind):
+    - CMUX_SURFACE_ID — outer cmux surface / host identity
+    - HERDR_SOCKET_PATH — Herdr provider endpoint
+    - herdr_server_pid — optional; HERDR_SERVER_PID or socket sidecar pid file
+    - HERDR_WORKSPACE_ID — scopes associations within one Herdr host
+    """
+    return {
+        "cmux_surface_id": os.environ.get("CMUX_SURFACE_ID") or None,
+        "herdr_socket_path": os.environ.get("HERDR_SOCKET_PATH") or None,
+        "herdr_server_pid": _herdr_server_pid(),
+        "herdr_workspace_id": os.environ.get("HERDR_WORKSPACE_ID") or None,
+    }
 
 
-def _load_parent_binding() -> Optional[str]:
+def fingerprint_missing_fields(fp: Optional[Dict[str, Any]] = None) -> List[str]:
+    """Return required fingerprint env names that are unset."""
+    data = fp if fp is not None else collect_host_fingerprint()
+    missing: List[str] = []
+    if not data.get("cmux_surface_id"):
+        missing.append("CMUX_SURFACE_ID")
+    if not data.get("herdr_socket_path"):
+        missing.append("HERDR_SOCKET_PATH")
+    return missing
+
+
+def require_host_fingerprint() -> Dict[str, Any]:
+    """Return a complete host fingerprint or raise a clear BridgeError.
+
+    Auto-resolve must never fall back to the currently focused cmux workspace when
+    fingerprint pieces are missing — that silently writes pills to a random host.
+    Callers with an explicit ``--workspace`` override bypass this gate.
+    """
+    fp = collect_host_fingerprint()
+    missing = fingerprint_missing_fields(fp)
+    if missing:
+        raise BridgeError(
+            "incomplete host fingerprint (missing "
+            + ", ".join(missing)
+            + "); refusing to auto-select a parent binding "
+            "(would risk writing herdr:* status pills to the wrong outer workspace). "
+            "Run sync/watch from a cmux-hosted Herdr pane so CMUX_SURFACE_ID and "
+            "HERDR_SOCKET_PATH are set, or pass --workspace explicitly."
+        )
+    return fp
+
+
+def _parent_key(fp: Optional[Dict[str, Any]] = None) -> str:
+    """Stable filename key for one concurrent parent binding / association file.
+
+    Multiple hosts keep distinct ``parent-<key>.json`` / ``associations-<key>.json``
+    files under the state directory. Key material is hashed so long socket paths
+    cannot truncate away the surface id.
+    """
+    data = fp if fp is not None else collect_host_fingerprint()
+    surface = data.get("cmux_surface_id") or "_nosurface_"
+    socket_path = data.get("herdr_socket_path") or "default"
+    herdr_ws = data.get("herdr_workspace_id") or "default"
+    pid = data.get("herdr_server_pid")
+    pid_part = str(pid) if isinstance(pid, int) else "nopid"
+    material = f"{surface}|{socket_path}|{herdr_ws}|{pid_part}"
+    digest = hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
+    surface_slug = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(surface))[:48] or "host"
+    return f"{surface_slug}-{digest}"
+
+
+def _binding_path(fp: Optional[Dict[str, Any]] = None) -> str:
+    return os.path.join(_state_dir(), f"parent-{_parent_key(fp)}.json")
+
+
+def _binding_matches_fingerprint(data: Dict[str, Any], fp: Dict[str, Any]) -> bool:
+    """True when a persisted binding belongs to the invoking fingerprint."""
+    if data.get("cmux_surface_id") != fp.get("cmux_surface_id"):
+        return False
+    if data.get("herdr_socket_path") != fp.get("herdr_socket_path"):
+        return False
+    stored_ws = data.get("herdr_workspace_id")
+    current_ws = fp.get("herdr_workspace_id")
+    if stored_ws and current_ws and stored_ws != current_ws:
+        return False
+    stored_pid = data.get("herdr_server_pid")
+    current_pid = fp.get("herdr_server_pid")
+    # When both sides know a pid and they disagree, the Herdr server restarted
+    # under the same socket path — drop the stale lock and re-resolve.
+    if isinstance(stored_pid, int) and isinstance(current_pid, int) and stored_pid != current_pid:
+        return False
+    return True
+
+
+def _load_parent_binding(fp: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    data_fp = fp if fp is not None else collect_host_fingerprint()
     try:
-        with open(_binding_path(), "r", encoding="utf-8") as handle:
+        with open(_binding_path(data_fp), "r", encoding="utf-8") as handle:
             data = json.load(handle)
+        if not isinstance(data, dict):
+            return None
+        if not _binding_matches_fingerprint(data, data_fp):
+            return None
         workspace = data.get("workspace_ref")
         return workspace if isinstance(workspace, str) and workspace else None
     except (OSError, ValueError, TypeError):
@@ -375,15 +485,20 @@ def _load_parent_binding() -> Optional[str]:
 _binding_lock = threading.Lock()
 
 
-def _save_parent_binding(workspace: str) -> None:
+def _save_parent_binding(workspace: str, fp: Optional[Dict[str, Any]] = None) -> None:
+    data_fp = fp if fp is not None else collect_host_fingerprint()
     directory = _state_dir()
     os.makedirs(directory, mode=0o700, exist_ok=True)
     payload = {
         "workspace_ref": workspace,
-        "herdr_socket_path": os.environ.get("HERDR_SOCKET_PATH"),
-        "herdr_workspace_id": os.environ.get("HERDR_WORKSPACE_ID"),
+        "cmux_surface_id": data_fp.get("cmux_surface_id"),
+        "herdr_socket_path": data_fp.get("herdr_socket_path"),
+        "herdr_workspace_id": data_fp.get("herdr_workspace_id"),
+        "herdr_server_pid": data_fp.get("herdr_server_pid"),
+        "host_fingerprint_key": _parent_key(data_fp),
         "updated_at": time.time(),
     }
+    target = _binding_path(data_fp)
     with _binding_lock:
         fd, temporary = tempfile.mkstemp(prefix=".parent-", suffix=".tmp", dir=directory)
         try:
@@ -391,7 +506,7 @@ def _save_parent_binding(workspace: str) -> None:
                 json.dump(payload, handle)
                 handle.write("\n")
             os.chmod(temporary, 0o600)
-            os.replace(temporary, _binding_path())
+            os.replace(temporary, target)
         finally:
             try:
                 os.unlink(temporary)
@@ -429,15 +544,15 @@ def _workspace_from_identify(surface: Optional[str] = None) -> Optional[str]:
     return None
 
 
+def _association_path(fp: Optional[Dict[str, Any]] = None) -> str:
+    return os.path.join(_state_dir(), f"associations-{_parent_key(fp)}.json")
 
-def _association_path() -> str:
-    return os.path.join(_state_dir(), f"associations-{_parent_key()}.json")
 
-
-def _load_association_map() -> Dict[str, Any]:
+def _load_association_map(fp: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Load the hybrid pane/session association cache (best-effort)."""
+    data_fp = fp if fp is not None else collect_host_fingerprint()
     try:
-        with open(_association_path(), "r", encoding="utf-8") as handle:
+        with open(_association_path(data_fp), "r", encoding="utf-8") as handle:
             data = json.load(handle)
         if isinstance(data, dict) and data.get("version") == 1 and isinstance(data.get("panes"), dict):
             return data
@@ -447,22 +562,28 @@ def _load_association_map() -> Dict[str, Any]:
         "version": 1,
         "panes": {},
         "cmux_workspace": None,
-        "herdr_socket_path": os.environ.get("HERDR_SOCKET_PATH"),
-        "herdr_workspace_id": os.environ.get("HERDR_WORKSPACE_ID"),
-        "cmux_surface_id": os.environ.get("CMUX_SURFACE_ID"),
+        "herdr_socket_path": data_fp.get("herdr_socket_path"),
+        "herdr_workspace_id": data_fp.get("herdr_workspace_id"),
+        "cmux_surface_id": data_fp.get("cmux_surface_id"),
+        "herdr_server_pid": data_fp.get("herdr_server_pid"),
+        "host_fingerprint_key": _parent_key(data_fp),
         "updated_at": None,
     }
 
 
-def _save_association_map(state: Dict[str, Any]) -> None:
+def _save_association_map(state: Dict[str, Any], fp: Optional[Dict[str, Any]] = None) -> None:
+    data_fp = fp if fp is not None else collect_host_fingerprint()
     directory = _state_dir()
     os.makedirs(directory, mode=0o700, exist_ok=True)
     state = dict(state)
     state["version"] = 1
     state["updated_at"] = time.time()
-    state["herdr_socket_path"] = os.environ.get("HERDR_SOCKET_PATH")
-    state["herdr_workspace_id"] = os.environ.get("HERDR_WORKSPACE_ID")
-    state["cmux_surface_id"] = os.environ.get("CMUX_SURFACE_ID")
+    state["herdr_socket_path"] = data_fp.get("herdr_socket_path")
+    state["herdr_workspace_id"] = data_fp.get("herdr_workspace_id")
+    state["cmux_surface_id"] = data_fp.get("cmux_surface_id")
+    state["herdr_server_pid"] = data_fp.get("herdr_server_pid")
+    state["host_fingerprint_key"] = _parent_key(data_fp)
+    target = _association_path(data_fp)
     with _binding_lock:
         fd, temporary = tempfile.mkstemp(prefix=".assoc-", suffix=".tmp", dir=directory)
         try:
@@ -470,7 +591,7 @@ def _save_association_map(state: Dict[str, Any]) -> None:
                 json.dump(state, handle, indent=2, sort_keys=True)
                 handle.write("\n")
             os.chmod(temporary, 0o600)
-            os.replace(temporary, _association_path())
+            os.replace(temporary, target)
         finally:
             try:
                 os.unlink(temporary)
@@ -486,11 +607,12 @@ def update_association_map(
     """Rewrite the hybrid association cache from a live Herdr snapshot.
 
     Production data pattern:
-    - parent binding (outer cmux workspace) is locked separately
+    - parent binding (outer cmux workspace) is locked separately per host fingerprint
     - this map tracks inner pane_id → status_key/session/status for restore + pruning
     - treated as cache only; never authoritative restore state for native cmux
     """
-    state = _load_association_map()
+    fp = collect_host_fingerprint()
+    state = _load_association_map(fp)
     previous = state.get("panes") if isinstance(state.get("panes"), dict) else {}
     live: Dict[str, Any] = {}
     for pane in snapshot.panes:
@@ -518,12 +640,13 @@ def update_association_map(
     state["panes"] = live
     state["cmux_workspace"] = cmux_workspace or state.get("cmux_workspace")
     state["pruned_pane_ids"] = pruned
-    _save_association_map(state)
+    _save_association_map(state, fp)
     return {
-        "path": _association_path(),
+        "path": _association_path(fp),
         "pane_count": len(live),
         "pruned": pruned,
         "cmux_workspace": state.get("cmux_workspace"),
+        "host_fingerprint_key": _parent_key(fp),
     }
 
 
@@ -535,6 +658,8 @@ def format_associations(state: Optional[Dict[str, Any]] = None) -> str:
         f"  cmux_workspace={data.get('cmux_workspace') or '-'}",
         f"  herdr_workspace={data.get('herdr_workspace_id') or '-'}",
         f"  surface={data.get('cmux_surface_id') or '-'}",
+        f"  herdr_pid={data.get('herdr_server_pid') or '-'}",
+        f"  fingerprint={data.get('host_fingerprint_key') or _parent_key()}",
         f"  file={_association_path()}",
     ]
     for pane_id in sorted(panes):
@@ -551,26 +676,29 @@ def format_associations(state: Optional[Dict[str, Any]] = None) -> str:
 
 
 def resolve_cmux_workspace() -> Optional[str]:
-    """Resolve and lock the outer cmux workspace containing this Herdr session."""
+    """Resolve and lock the outer cmux workspace for this host fingerprint.
+
+    Requires CMUX_SURFACE_ID + HERDR_SOCKET_PATH. Never probes the bare focused
+    workspace when fingerprint pieces are missing (that would bind a random host).
+    """
     if not which("cmux"):
         return None
 
-    bound = _load_parent_binding()
+    fp = require_host_fingerprint()
+
+    bound = _load_parent_binding(fp)
     if bound and _workspace_is_valid(bound):
         return bound
 
-    inherited_surface = os.environ.get("CMUX_SURFACE_ID")
-    resolved = _workspace_from_identify(inherited_surface) if inherited_surface else None
+    surface = fp.get("cmux_surface_id")
+    resolved = _workspace_from_identify(surface if isinstance(surface, str) else None)
     if not resolved:
         inherited_workspace = os.environ.get("CMUX_WORKSPACE_ID")
         if inherited_workspace and _workspace_is_valid(inherited_workspace):
             resolved = inherited_workspace
-    if not resolved:
-        # First-run heuristic only. The persisted binding wins afterward.
-        resolved = _workspace_from_identify()
 
     if resolved and _workspace_is_valid(resolved):
-        _save_parent_binding(resolved)
+        _save_parent_binding(resolved, fp)
         return resolved
     return None
 
@@ -617,11 +745,25 @@ def sync_to_cmux(
     Returns a summary dict.
     """
     snap = snapshot or fetch_snapshot()
-    ws = workspace or resolve_cmux_workspace()
+    fingerprint_warning: Optional[str] = None
+    if workspace:
+        missing = fingerprint_missing_fields()
+        if missing:
+            fingerprint_warning = (
+                "incomplete host fingerprint (missing "
+                + ", ".join(missing)
+                + "); using --workspace override without a stable host key "
+                "(association files may collide across outer surfaces)"
+            )
+            if log:
+                print(f"cmux-herdr: {fingerprint_warning}", file=sys.stderr)
+        ws = workspace
+    else:
+        ws = resolve_cmux_workspace()
     if not ws:
         raise BridgeError(
             "could not resolve cmux workspace for status sync "
-            "(set CMUX_WORKSPACE_ID or run inside cmux)"
+            "(need CMUX_SURFACE_ID + HERDR_SOCKET_PATH, or pass --workspace)"
         )
 
     tabs_by_id = {t.tab_id: t for t in snap.tabs}
@@ -696,7 +838,8 @@ def sync_to_cmux(
             pass
 
     association = update_association_map(snap, cmux_workspace=ws)
-    return {
+    fp = collect_host_fingerprint()
+    result: Dict[str, Any] = {
         "workspace": ws,
         "applied": applied,
         "stale_cleared": stale_cleared,
@@ -707,7 +850,12 @@ def sync_to_cmux(
         "pane_count": len(snap.panes),
         "agent_count": len(panes),
         "associations": association,
+        "host_fingerprint": fp,
+        "host_fingerprint_key": _parent_key(fp),
     }
+    if fingerprint_warning:
+        result["fingerprint_warning"] = fingerprint_warning
+    return result
 
 
 def format_tree(snapshot: Optional[Snapshot] = None) -> str:
@@ -788,6 +936,7 @@ def format_tree(snapshot: Optional[Snapshot] = None) -> str:
 
 def dual_status() -> Dict[str, Any]:
     """Collect dual cmux+herdr context for `status` subcommand."""
+    fp = collect_host_fingerprint()
     info: Dict[str, Any] = {
         "herdr": {
             "env": os.environ.get("HERDR_ENV"),
@@ -795,6 +944,7 @@ def dual_status() -> Dict[str, Any]:
             "tab_id": os.environ.get("HERDR_TAB_ID"),
             "workspace_id": os.environ.get("HERDR_WORKSPACE_ID"),
             "socket_path": os.environ.get("HERDR_SOCKET_PATH"),
+            "server_pid": fp.get("herdr_server_pid"),
             "socket_exists": bool(
                 os.environ.get("HERDR_SOCKET_PATH")
                 and os.path.exists(os.environ["HERDR_SOCKET_PATH"])
@@ -815,6 +965,9 @@ def dual_status() -> Dict[str, Any]:
             "available": False,
             "resolved_workspace": None,
         },
+        "host_fingerprint": fp,
+        "host_fingerprint_key": _parent_key(fp),
+        "host_fingerprint_missing": fingerprint_missing_fields(fp),
         "nested": bool(os.environ.get("HERDR_ENV"))
         and bool(os.environ.get("CMUX_SOCKET_PATH") or os.environ.get("CMUX_WORKSPACE_ID")),
     }

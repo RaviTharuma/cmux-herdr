@@ -82,10 +82,11 @@ Outer cmux still shows one (or few) surfaces hosting herdr; inner topology is wh
 
 ## Common pitfalls
 
-1. **Wrong workspace for set-status** — nested shells may have stale `CMUX_WORKSPACE_ID`. Prefer `cmux-herdr sync` (auto-resolves) or pass `--workspace`.
-2. **Using cmux to split agent fleets** — that creates outer surfaces; use herdr splits instead.
-3. **Assuming `herdr pane focus <id>`** — directional only; use `herdr agent focus <pane_id>` or `cmux-herdr focus-pane`.
-4. **Looking for tmux sockets** — use `$HERDR_SOCKET_PATH` / `$CMUX_SOCKET_PATH`.
+1. **Wrong workspace for set-status** — nested shells may have stale `CMUX_WORKSPACE_ID`. Prefer `cmux-herdr sync` (auto-resolves via host fingerprint) or pass `--workspace`.
+2. **Missing host fingerprint** — auto sync/watch need `CMUX_SURFACE_ID` + `HERDR_SOCKET_PATH` (optional `HERDR_SERVER_PID`). Without them the CLI errors instead of writing pills to a random outer host.
+3. **Using cmux to split agent fleets** — that creates outer surfaces; use herdr splits instead.
+4. **Assuming `herdr pane focus <id>`** — directional only; use `herdr agent focus <pane_id>` or `cmux-herdr focus-pane`.
+5. **Looking for tmux sockets** — use `$HERDR_SOCKET_PATH` / `$CMUX_SOCKET_PATH`.
 
 ## Debug
 
@@ -98,4 +99,4 @@ cmux list-status --workspace <resolved>
 
 ## Hybrid association cache
 
-`cmux-herdr sync` rewrites `~/.local/state/cmux-herdr/associations-*.json` with live pane→session/status keys and prunes gone panes. Inspect with `cmux-herdr associations`. Treat it as cache only.
+`cmux-herdr sync` rewrites `~/.local/state/cmux-herdr/associations-<fingerprint>.json` (and matching `parent-<fingerprint>.json`) keyed by outer surface + Herdr socket (+ optional server pid). Inspect with `cmux-herdr associations`. Treat it as cache only.

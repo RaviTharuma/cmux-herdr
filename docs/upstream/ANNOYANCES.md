@@ -98,10 +98,11 @@ If sync writes statuses into the wrong outer workspace:
 
 **Fix shape:**
 
-- resolve workspace carefully (`CMUX_WORKSPACE_ID` → cmux probe → fail loud)
-- persist a **parent binding** under `~/.local/state/cmux-herdr/parent-*.json`
-- key binding by Herdr socket + Herdr workspace so multi-Herdr setups do not collide
-- do not re-bind on every outer focus twitch without an explicit reason
+- require a **host fingerprint** (`CMUX_SURFACE_ID` + `HERDR_SOCKET_PATH` + optional Herdr server pid); fail loud when pieces are missing
+- persist **per-fingerprint** parent bindings under `~/.local/state/cmux-herdr/parent-<fingerprint>.json`
+- key binding by outer surface + Herdr socket (+ pid when known) + Herdr workspace so multi-window hosts do not collide
+- do not re-bind on every outer focus twitch without an explicit reason; never probe the bare focused workspace when the fingerprint is incomplete
+- `--workspace` remains an explicit override
 
 ### 2.2 Shell panes are not agents
 

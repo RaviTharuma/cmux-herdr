@@ -27,8 +27,19 @@ See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [concep
 
 `sync` / `watch` keep a user-owned cache under `$XDG_STATE_HOME/cmux-herdr/` (default `~/.local/state/cmux-herdr/`):
 
-- `parent-*.json` — locked outer cmux workspace binding for this Herdr socket/workspace
-- `associations-*.json` — live inner `pane_id → status_key / agent_session / status` map, pruned each sync
+- `parent-<fingerprint>.json` — locked outer cmux workspace binding for one host fingerprint
+- `associations-<fingerprint>.json` — live inner `pane_id → status_key / agent_session / status` map, pruned each sync
+
+**Host fingerprint** (selects which files `sync` / `watch` read/write):
+
+| Piece | Source | Required for auto-resolve |
+|---|---|---|
+| Outer surface | `CMUX_SURFACE_ID` | yes |
+| Herdr socket | `HERDR_SOCKET_PATH` | yes |
+| Herdr server pid | `HERDR_SERVER_PID` or `<socket>.pid` / `herdr.pid` beside the socket | optional |
+| Inner workspace | `HERDR_WORKSPACE_ID` | scopes associations (defaults to `default`) |
+
+Multiple outer cmux windows/surfaces can keep concurrent binding files without overwriting each other. Pass `--workspace` to override the outer workspace explicitly. If fingerprint pieces are missing, auto-resolve fails with a clear error (it will not silently write pills to the focused / random host); `--workspace` still works but may warn that association keys are weak.
 
 This is the production stopgap data pattern while native nested topology lands. It is cache-only and not authoritative restore state for cmux.
 
@@ -155,7 +166,7 @@ shims/README.md             optional shim guidance
 - The plugin cannot turn inner Herdr panes into native Bonsplit panes; that needs the upstream nested-topology work ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)).
 - Polling is the portable fallback. Native integration should subscribe to Herdr events and resynchronize from snapshots.
 - Nested shells may carry stale outer cmux IDs. The bridge resolves the live containing workspace before writing status.
-- Status pills depend on Herdr `agent_status`; multi-parent binding collisions remain an open enhancement ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)).
+- Status pills depend on Herdr `agent_status`. Multi-parent hosts need a complete fingerprint (`CMUX_SURFACE_ID` + `HERDR_SOCKET_PATH`); see hybrid association state above ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)).
 - The bridge does not inject a fake `tmux` binary by default; see [shims/README.md](shims/README.md).
 - Continuous `watch` can run in a pane, or via the shipped LaunchAgent (`./scripts/install-watch-service.sh`). Titles/renames are owned by Herdr title tracks, not this plugin.
 - PR [#8736](https://github.com/manaflow-ai/cmux/pull/8736) is a hidden compat dispatcher only — not full native parity. Its tip already covers the missing-`herdr`-on-PATH hermetic test (plugin issue [#5](https://github.com/RaviTharuma/cmux-herdr/issues/5) is not an open residual).
