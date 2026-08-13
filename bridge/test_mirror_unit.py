@@ -26,6 +26,7 @@ from bridge.cmux_herdr_mirror import (
     parse_cmux_json,
     plan_mirror,
     send_pane_text,
+    wait_herdr_event,
 )
 
 
@@ -54,6 +55,159 @@ class DesiredMirrorTests(unittest.TestCase):
         self.assertEqual(desired[0].title, "Agents")
         self.assertEqual(desired[1].role, "split")
         self.assertEqual(desired[1].split_direction, "right")
+
+    def test_layout_tree_drives_split_direction_and_order(self):
+        snap = Snapshot(
+            panes=[
+                _pane(
+                    "w2:p-right",
+                    "w2:t1",
+                    label="Right",
+                    raw={
+                        "pane_id": "w2:p-right",
+                        "x": 41,
+                        "y": 0,
+                        "width": 40,
+                        "height": 24,
+                    },
+                ),
+                _pane(
+                    "w2:p-left",
+                    "w2:t1",
+                    label="Left",
+                    focused=True,
+                    raw={
+                        "pane_id": "w2:p-left",
+                        "x": 0,
+                        "y": 0,
+                        "width": 40,
+                        "height": 24,
+                    },
+                ),
+            ],
+            tabs=[Tab(tab_id="w2:t1", workspace_id="w2", label="Agents", number=1)],
+            workspaces=[],
+            layouts={
+                "w2:t1": {
+                    "width": 81,
+                    "height": 24,
+                    "x": 0,
+                    "y": 0,
+                    "horizontal": [
+                        {
+                            "width": 40,
+                            "height": 24,
+                            "x": 0,
+                            "y": 0,
+                            "pane": "w2:p-left",
+                        },
+                        {
+                            "width": 40,
+                            "height": 24,
+                            "x": 41,
+                            "y": 0,
+                            "pane": "w2:p-right",
+                        },
+                    ],
+                }
+            },
+        )
+        desired = desired_mirrors(snap, scope="current-tab", current_tab_id="w2:t1")
+        self.assertEqual([d.pane_id for d in desired], ["w2:p-left", "w2:p-right"])
+        self.assertEqual(desired[0].role, "tab-root")
+        self.assertEqual(desired[1].role, "split")
+        self.assertEqual(desired[1].split_direction, "right")
+        self.assertEqual(desired[1].split_from_pane_id, "w2:p-left")
+        self.assertIsNotNone(desired[1].split_ratio)
+
+    def test_tmux_parity_plan_emits_focus_order_ratio_and_prune(self):
+        desired = [
+            DesiredMirror(
+                pane_id="w2:p1",
+                tab_id="w2:t1",
+                workspace_id="w2",
+                title="First",
+                role="tab-root",
+                split_direction="right",
+                tab_index=0,
+                focused=True,
+            ),
+            DesiredMirror(
+                pane_id="w2:p2",
+                tab_id="w2:t1",
+                workspace_id="w2",
+                title="Reviewer",
+                role="split",
+                split_direction="right",
+                split_ratio=0.4,
+                split_from_pane_id="w2:p1",
+                tab_index=0,
+            ),
+        ]
+        existing = {
+            "w2:p1": {
+                "cmux_surface_id": "s1",
+                "title": "First",
+                "role": "tab-root",
+                "tab_id": "w2:t1",
+                "tab_index": 3,
+            },
+            "w2:p2": {
+                "cmux_surface_id": "s2",
+                "title": "Reviewer",
+                "role": "split",
+                "tab_id": "w2:t1",
+            },
+            "w2:p-gone": {
+                "cmux_surface_id": "s-old",
+                "title": "Gone",
+                "role": "split",
+            },
+        }
+        plan = plan_mirror(
+            desired,
+            existing,
+            live_surface_ids={"s1", "s2", "s-old"},
+            prune=True,
+            sync_focus=True,
+            sync_order=True,
+            sync_ratios=True,
+        )
+        ops = [a.op for a in plan.actions]
+        self.assertIn("keep", ops)
+        self.assertIn("prune", ops)
+        self.assertIn("set_ratio", ops)
+        self.assertIn("move_tab", ops)
+        self.assertIn("focus", ops)
+        self.assertEqual(plan.prunes[0].pane_id, "w2:p-gone")
+        self.assertEqual(plan.ratio_updates[0].ratio, 0.4)
+        self.assertEqual(plan.moves[0].tab_index, 0)
+        self.assertEqual(plan.focuses[0].pane_id, "w2:p1")
+
+        again = plan_mirror(
+            desired,
+            {
+                "w2:p1": {
+                    "cmux_surface_id": "s1",
+                    "title": "First",
+                    "role": "tab-root",
+                    "tab_index": 0,
+                    "focused": True,
+                },
+                "w2:p2": {
+                    "cmux_surface_id": "s2",
+                    "title": "Reviewer",
+                    "role": "split",
+                    "split_ratio": 0.4,
+                },
+            },
+            live_surface_ids={"s1", "s2"},
+            prune=True,
+            sync_focus=True,
+            sync_order=True,
+            sync_ratios=True,
+        )
+        self.assertEqual(set(a.op for a in again.actions), {"keep"})
 
     def test_all_includes_every_pane_grouped_by_tab_number(self):
         snap = _snap(
@@ -260,7 +414,11 @@ class ParseAndAttachTests(unittest.TestCase):
         self.assertIn("create_tab", text)
         self.assertIn("w2:p1", text)
 
-    def test_send_pane_text_tries_flag_then_stdin(self):
+    def test_wait_herdr_event_times_out_without_socket(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            started = True
+            self.assertFalse(wait_herdr_event(timeout=0.05))
+            self.assertTrue(started)
         from bridge import cmux_herdr_mirror as mirror
 
         fail = mock.Mock(returncode=1, stderr="nope", stdout="")

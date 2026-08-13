@@ -50,9 +50,9 @@ cmux-herdr status
 - See both contexts: `cmux-herdr status`
 - Pretty inner topology: `cmux-herdr tree`
 - Mirror agents into outer sidebar: `cmux-herdr sync` or `cmux-herdr watch`
-- Project Herdr tabs/panes into real cmux tabs/splits: `cmux-herdr mirror` (current tab) or `cmux-herdr mirror --all`
+- Project Herdr tabs/panes into real cmux tabs/splits: `cmux-herdr mirror` (current tab) or `cmux-herdr mirror --tmux-parity` (ssh-tmux contract)
 - Follow one pane in this terminal: `cmux-herdr attach-pane <pane_id>`
-- Keep deep mirror live: `cmux-herdr watch --mirror`
+- Keep deep mirror live: `cmux-herdr watch --tmux-parity`
 - Compact agent list: `cmux-herdr agents`
 - Focus helpers: `focus-workspace`, `focus-tab`, `focus-pane`, `focus-agent`
 - Read helpers: `read-pane <pane_id>`, `read-agent <target>`

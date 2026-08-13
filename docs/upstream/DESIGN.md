@@ -19,26 +19,30 @@ Source review baseline:
 
 ## Goals
 
-1. Represent a nested provider’s workspace/tab/pane/agent topology beneath the cmux terminal that hosts it.
-2. Update from provider events, with snapshot-based recovery.
-3. Preserve ownership boundaries: cmux owns outer windows/workspaces/Bonsplit/panels/surfaces; Herdr owns inner topology and PTYs.
+1. Represent a nested provider’s workspace/tab/pane/agent topology beneath the cmux terminal that hosts it (sidebar navigator — #10045).
+2. Mirror Herdr tabs/panes into real cmux tabs/Bonsplit/Ghostty surfaces the same way ssh-tmux does (`RemoteHerdrWindowMirror` — PR7).
+3. Update from provider events, with snapshot-based recovery.
 4. Route only negotiated, explicitly authorized actions to the correct live provider.
 5. Restore attachment intent without persisting or replaying stale provider state.
 6. Generalize the model enough for another nested mux without turning cmux into an arbitrary plugin host.
 
 ## Non-goals
 
-- Mirroring inner panes into `Workspace.panels` or Bonsplit.
 - Parsing terminal screen contents to reconstruct topology.
 - Executing provider CLIs or arbitrary provider-supplied code.
 - Managing Herdr process lifetime.
 - Remote provider transport in v1.
+- Replacing ssh-tmux’s feed-forward sizing with a feedback controller.
 
 ## Existing architecture and constraints
 
 cmux’s public tree is assembled from app/window `TabManager` state, `Workspace`, Bonsplit pane summaries, and panel/surface summaries in `TerminalController+ControlSystemContext.swift`. `Workspace.sessionSnapshot` persists `SessionWorkspaceSnapshot`, panel snapshots, layout, status, logs, and related state through `SessionPersistence.swift`. Control-socket methods are centrally advertised and assigned execution/authorization policy.
 
-That architecture argues against pretending a Herdr pane is a native pane. A Herdr pane has no cmux `Panel`, Ghostty `Surface`, or Bonsplit `PaneID`; assigning those identities would create false lifecycle, input, layout, and persistence expectations.
+That architecture is why **sidebar v1** must not pretend a Herdr pane *is* a cmux pane: a virtual descendant has no `Panel` / Ghostty `Surface` / Bonsplit `PaneID`.
+
+**PR7 (`RemoteHerdrWindowMirror`) is the exception that ssh-tmux already made for tmux:** the inner mux remains the grid authority, but cmux *does* create real `TerminalPanel`s whose I/O is bound to inner pane ids, and imposes the inner layout tree on Bonsplit. Herdr still owns the PTY processes; cmux owns the viewer surfaces. Same split as remote tmux.
+
+Do not invent a third model. Copy `RemoteTmuxWindowMirror`. Canonical mapping: [TMUX_PARITY.md](./TMUX_PARITY.md).
 
 Herdr’s separate local API is newline-delimited JSON. `session.snapshot` already provides a coherent topology and focused IDs. `events.subscribe` provides typed events. The API socket is restricted to mode `0600`, but has no documented application-level bearer authentication. `ping` reports version, protocol, and limited capabilities.
 
@@ -431,7 +435,7 @@ Test supported Herdr release(s), unknown/newer protocol, server restart, high ev
 
 **Keep only status pills.** Useful fallback, but cannot provide hierarchy, identity, event ordering, or scoped actions.
 
-**Model inner panes as cmux panels.** Incorrect ownership; breaks Bonsplit/layout/input/persistence assumptions and risks duplicate PTYs.
+**Model inner panes as cmux panels without a window mirror.** Incorrect if done as a sidebar-only identity rewrite. Correct when done as `RemoteHerdrWindowMirror` (PR7), copying ssh-tmux: Herdr owns PTYs; cmux owns viewer surfaces and Bonsplit extents.
 
 **Run `herdr` CLI for every operation.** Adds process/shell complexity, weakens cancellation and typing, and cannot provide a robust event stream.
 

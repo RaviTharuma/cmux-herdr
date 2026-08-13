@@ -53,7 +53,7 @@ Custom sidebars run in a **restricted Swift interpreter** and primarily see the 
 - `mirror` creates real cmux tabs/splits running `attach-pane` followers so the outer workspace *looks* like ssh-tmux (idempotent `herdr-mirror:<pane_id>` keys).
 - The sidebar lists outer workspaces / the tabs `mirror` created; it still cannot call Herdr itself.
 
-Until native nested topology lands, `cmux-herdr watch --mirror` is the supported live deep mirror.
+Until native nested topology lands, `cmux-herdr watch --tmux-parity` is the supported live deep mirror.
 
 ## Workspace resolution caveat
 
@@ -81,16 +81,16 @@ Progress bar: `working / (working+idle+done+blocked)`.
 ## Non-goals (plugin path)
 
 - Patching cmux.app or shipping a signed sidebar bundle
-- Stealing Herdr PTYs into Ghostty (native `ssh-tmux` / #8737)
+- Stealing Herdr PTYs into Ghostty (native `ssh-tmux` / PR7 `RemoteHerdrWindowMirror`)
 - Network calls
 - Requiring root or Homebrew formula (plain user install is enough)
 
 ## Upstream path (future)
 
-Native parity would ideally:
+Native tmux parity (PR7) would:
 
-- Surface nested herdr topology in cmux tree/API
-- Auto-forward agent status without a user watch loop
-- Keep this plugin as a thin client or retire `watch` into a cmux-managed helper
+- Copy `RemoteTmuxWindowMirror` for Herdr (real tabs/panes, layout, I/O)
+- Keep #10045 sidebar as the session navigator
+- Keep this plugin as fallback (`watch --tmux-parity`) when native attachment is not live
 
-Until then, `cmux-herdr watch --mirror` is the supported live deep mirror (tabs/splits + status pills).
+Until then, `cmux-herdr watch --tmux-parity` is the supported live deep mirror.

@@ -19,8 +19,8 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 
 ## What this plugin solves today
 
-- Mirror Herdr **tabs/panes into real cmux tabs/splits** (`cmux-herdr mirror`)
-  with `attach-pane` followers — userspace analogue of cmux `ssh-tmux`.
+- Mirror Herdr **tabs/panes into real cmux tabs/splits** (`cmux-herdr mirror`,
+  `--tmux-parity` for the ssh-tmux contract) with `attach-pane` followers.
 - Mirror Herdr agent state into cmux workspace **status pills** (`herdr:<pane_id>`) and progress.
 - CLI for topology and control: `status`, `doctor`, `tree`, `agents`, `sync`, `watch`,
   `mirror`, `attach-pane`, `clear`, focus helpers, `read-pane` / `read-agent`, `split`,
@@ -40,15 +40,16 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 ## Explicit limitations (not bugs)
 
 1. **No Ghostty PTY theft.**
-   `mirror` creates extra cmux tabs/splits that *follow* Herdr panes via
-   `attach-pane` (poll `herdr pane read`, forward `pane send`). It does not
-   insert Herdr PTYs into Bonsplit the way native `ssh-tmux` does. Full native
-   nested topology remains issue [#8737](https://github.com/manaflow-ai/cmux/issues/8737)
-   / PR [#10045](https://github.com/manaflow-ai/cmux/pull/10045).
+   `mirror --tmux-parity` creates extra cmux tabs/splits that *follow* Herdr
+   panes via `attach-pane` (poll `herdr pane read`, forward `pane send`,
+   SIGWINCH resize). It does not insert Herdr PTYs into Bonsplit the way native
+   `ssh-tmux` / PR7 `RemoteHerdrWindowMirror` does. See
+   [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
 
-2. **Polling, not events.**
-   `watch` loops on an interval (default 3s). Native path should subscribe to Herdr events
-   and resync from snapshots.
+2. **Polling, with optional events.**
+   `watch --tmux-parity` waits on the Herdr Unix socket when present, then
+   resyncs; otherwise it polls. Native PR7 should subscribe to Herdr events
+   and feed `%output`-style bytes into Ghostty.
 
 3. **No reattach model after cmux restart.**
    Parent binding is best-effort local state under `~/.local/state/cmux-herdr/`. There is no
@@ -97,6 +98,10 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] Userspace deep mirror: `mirror` / `attach-pane` / `watch --mirror` project
       Herdr tabs/panes into real cmux tabs/splits (idempotent `herdr-mirror:<pane_id>`
       keys). Not Ghostty PTY theft — extra viewers, like a second tmux client.
+- [x] **tmux-parity plugin:** `mirror --tmux-parity` / `watch --tmux-parity` —
+      layout tree, ratios, tab order, focus, prune, attach cbreak/SIGWINCH/ANSI,
+      optional event wait. Remaining plugin gap is PTY theft / divider-drag
+      (native PR7).
 
 ### B. Native MVP PR (#8736) — open + mergeable
 
@@ -119,17 +124,14 @@ Remaining for that PR is maintainer review / merge — not more missing-PATH wor
 
 ### C. Full native parity (#8737) — long pole
 
-Not started (by design). Blocks:
+Two native layers (do not collapse them):
 
-- Capability negotiation + provider socket attach from host surface
-- Read-only nested snapshot import + event subscription
-- Virtual descendants under host surface (not real cmux PTYs)
-- Forwarded focus/split/mutate actions
-- Reattach / restore model
-- UI: tree, attention, unread scoped to inner agents
+1. **Sidebar nested topology** — [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (open, dirty). Virtual rows + `nested.node.focus`. **Not** ssh-tmux.
+2. **Window mirror (PR7)** — paste-ready [docs/upstream/PR7_HERDR_WINDOW_MIRROR.md](./docs/upstream/PR7_HERDR_WINDOW_MIRROR.md). Copy `RemoteTmuxWindowMirror`: real cmux tabs, Bonsplit panes, Ghostty I/O, layout, resize, zoom, prune.
 
-Start only after MVP lands or maintainers signal interest on #8737.
-**Do not expand this plugin into #8737 native implementation.**
+Matrix: [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
+
+**Do not expand this plugin into #8737 Swift.** Keep `--tmux-parity` as the userspace stand-in.
 
 ## Coordination
 

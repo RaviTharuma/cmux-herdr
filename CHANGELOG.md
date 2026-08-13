@@ -9,6 +9,20 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **tmux-parity mirror** (`cmux-herdr mirror --tmux-parity` / `watch --tmux-parity`):
+  same reconcile contract as cmux `ssh-tmux` / `RemoteTmuxWindowMirror` in
+  userspace — full session, prune gone panes, Herdr layout tree drives split
+  direction and ratios, tab order via `move-tab`, focus projection (and reverse
+  click), optional Unix-socket event wait. Layout planner is
+  `bridge/cmux_herdr_layout.py` (same `pane` / `horizontal` / `vertical` JSON
+  as `RemoteTmuxLayoutNode`). `attach-pane` now uses cbreak input, SIGWINCH →
+  `herdr pane resize`, and ANSI/raw reads.
+- Native track retarget: [docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md)
+  and paste-ready [PR7 `RemoteHerdrWindowMirror`](docs/upstream/PR7_HERDR_WINDOW_MIRROR.md)
+  so the in-app path copies ssh-tmux instead of stopping at sidebar virtual rows.
+
+### Added (earlier on this unreleased branch)
+
 - **Deep mirror** (`cmux-herdr mirror` / `attach-pane` / `watch --mirror`):
   project Herdr tabs into real cmux tabs and extra panes into cmux splits,
   each running an `attach-pane` follower (`herdr pane read` + `pane send`).

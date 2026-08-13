@@ -11,11 +11,10 @@
 ## Principles
 
 - **Native wins as the primary path**; the external bridge remains fallback, dogfood surface, and a fixture source.
-- Keep the **plugin route flexible** while pushing native parity with cmux’s nested-tmux-style awareness where practical.
+- Keep the **plugin route at maximum ssh-tmux parity** (`--tmux-parity`) while native lands `RemoteHerdrWindowMirror`.
 - Keep provider protocol code out of `Workspace` and SwiftUI views.
-- Land read-only topology before mutations.
-- Add behavior through capability-gated, additive APIs.
-- Do not combine this work with cmux pane/layout refactors.
+- Land sidebar topology (#10045) then **PR7 window mirror** (Bonsplit/PTY/input/layout). Do not treat sidebar rows as tmux parity.
+- Share **two-pass association + native-title lock** semantics between plugin and native so upgrades do not thrash titles/parentage.
 - Share **two-pass association + native-title lock** semantics between plugin and native so upgrades do not thrash titles/parentage.
 - Prefer robust, reviewable implementation edits: shell for directory/scaffold, focused Python/codegen only where it reduces mechanical error; no drive-by refactors.
 - In Rust provider/integration code paths, handle poisoned mutexes gracefully with `unwrap_or_default()` (or equivalent recovery) rather than panicking the host.
@@ -279,6 +278,25 @@ Also run:
 - remote/network provider transport;
 - mobile-issued nested mutations;
 - automatic server startup/shutdown;
-- migration of Herdr panes into native cmux PTYs;
+- duplicating Herdr PTY *processes* inside Ghostty (PR7 binds I/O like ssh-tmux; Herdr keeps the processes);
 - unified persistence of provider processes;
 - using screen scraping as the primary native topology source.
+
+## PR 7 — RemoteHerdrWindowMirror (tmux parity)
+
+**Goal:** copy `RemoteTmuxWindowMirror` for Herdr so native has the same *surface* contract as ssh-tmux. Full write-up: [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md) and [TMUX_PARITY.md](./TMUX_PARITY.md).
+
+This is **not** optional polish on #10045. Sidebar virtual rows are the session navigator; PR7 is the window mirror.
+
+Add:
+
+- `RemoteHerdrSessionMirror` / `RemoteHerdrWindowMirror` next to the tmux types
+- layout node compatible with `RemoteTmuxLayoutNode` JSON (`pane` / `horizontal` / `vertical`)
+- panel lifecycle from the **base** tree; render from the **visible** tree (zoom)
+- `routeOutput` / `sendKeys` / split / resize / focus / prune
+- feed-forward sizing (port `docs/remote-tmux-sizing-design.md`)
+- plugin single-writer: suppress `cmux-herdr watch --tmux-parity` while the mirror is live
+
+**Tests:** layout fixtures from this plugin repo, reconcile create/close, zoom keeps panels, focus projection without loops, tab order, sizing claim independence, security checks reused from #10045.
+
+Explicitly **in scope** for PR7 (previously deferred): graphical layout, PTY/surface ownership, send input, split, resize, close.

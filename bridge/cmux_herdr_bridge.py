@@ -106,6 +106,7 @@ class Snapshot:
     panes: List[Pane]
     tabs: List[Tab]
     workspaces: List[Workspace]
+    layouts: Any = None
     fetched_at: float = field(default_factory=time.time)
 
     def agent_panes(self) -> List[Pane]:
@@ -334,6 +335,27 @@ def fetch_agents() -> List[Pane]:
     return [p for p in fetch_panes() if p.agent]
 
 
+def fetch_layouts_raw() -> Any:
+    """Best-effort Herdr layout payload (tab trees or session.snapshot).
+
+    Returns the raw JSON object so the mirror can parse multiple shapes.
+    Missing CLI verbs are not an error — older Herdr builds simply have no
+    layout command.
+    """
+    for args in (
+        ["layout", "list"],
+        ["tab", "layout"],
+        ["session", "snapshot"],
+    ):
+        try:
+            data = herdr_json(args)
+        except BridgeError:
+            continue
+        if data:
+            return data
+    return {}
+
+
 def fetch_snapshot() -> Snapshot:
     panes = fetch_panes()
     try:
@@ -344,7 +366,11 @@ def fetch_snapshot() -> Snapshot:
         workspaces = fetch_workspaces()
     except BridgeError:
         workspaces = []
-    return Snapshot(panes=panes, tabs=tabs, workspaces=workspaces)
+    try:
+        layouts = fetch_layouts_raw()
+    except BridgeError:
+        layouts = {}
+    return Snapshot(panes=panes, tabs=tabs, workspaces=workspaces, layouts=layouts)
 
 
 def _state_dir() -> str:

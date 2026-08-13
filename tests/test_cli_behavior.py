@@ -374,6 +374,30 @@ raise SystemExit(9)
         self.assertEqual(payload["scope"], "current-tab")
         self.assertGreaterEqual(payload["desired_count"], 1)
 
+    def test_mirror_tmux_parity_dry_run_is_full_session(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            result = self.run_cli(
+                "mirror",
+                "--tmux-parity",
+                "--dry-run",
+                "--no-status",
+                "--no-log",
+                "--json",
+                path=f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("tmux-parity", result.stdout)
+        idx = result.stdout.find("{")
+        payload = json.loads(result.stdout[idx:])
+        self.assertEqual(payload["scope"], "all")
+        self.assertTrue(payload["tmux_parity"])
+        self.assertTrue(payload["sync_focus"])
+        self.assertTrue(payload["sync_order"])
+        self.assertTrue(payload["sync_ratios"])
+
 
 if __name__ == "__main__":
     unittest.main()

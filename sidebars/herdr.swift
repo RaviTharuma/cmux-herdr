@@ -116,7 +116,7 @@ ScrollView {
         .font(.caption)
         .foregroundColor(.secondary)
         .lineLimit(4)
-      Text("cmux-herdr mirror projects Herdr tabs into real cmux tabs/splits (attach-pane followers).")
+      Text("cmux-herdr mirror --tmux-parity projects Herdr tabs/panes like ssh-tmux (layout, focus, order, prune).")
         .font(.caption)
         .foregroundColor(.secondary)
         .lineLimit(4)
