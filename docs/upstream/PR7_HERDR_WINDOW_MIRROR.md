@@ -4,6 +4,19 @@ Paste-ready follow-up to [manaflow-ai/cmux#10045](https://github.com/manaflow-ai
 
 Base: nested-topology tip (`cursor/nested-topology-herdr-v1-becf` / #10045). Do **not** mix with `#8736` (`__herdr-compat`).
 
+## Implementation status
+
+The **pure reconcile engine** lives in `Packages/macOS/CmuxNestedTopology`:
+
+- `RemoteHerdrLayoutNode` / `RemoteHerdrWindow` / `RemoteHerdrWindowMirror` / `RemoteHerdrSessionMirror`
+- `RemoteHerdrSizing` (feed-forward client grid)
+- `RemoteHerdrPaneIO` on `HerdrNestedTopologyClient` (`pane.send` / `split` / `resize` / `close` / `read`)
+- `RemoteHerdrOutput` (incremental `pane.read` delta)
+- `session.snapshot` now decodes `layouts` (map or `[{tab_id, layout}]`)
+- Tests: `RemoteHerdrWindowMirrorTests.swift`
+
+Still host-side (cmux app, not this package): Bonsplit impose, Ghostty `TerminalPanel`, divider-drag session, plugin single-writer suppression UI. The package is the ssh-tmux contract; AppKit wiring is the remaining native slice.
+
 ## Summary
 
 Copy **`RemoteTmuxWindowMirror`** for Herdr.

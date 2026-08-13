@@ -8,7 +8,7 @@ cd "${ROOT}"
 export PYTHONPATH="${ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 
 echo "== py_compile =="
-python3 -m py_compile bin/cmux-herdr bridge/cmux_herdr_bridge.py bridge/cmux_herdr_mirror.py bridge/cmux_herdr_layout.py
+python3 -m py_compile bin/cmux-herdr bridge/cmux_herdr_bridge.py bridge/cmux_herdr_mirror.py bridge/cmux_herdr_layout.py bridge/cmux_herdr_socket.py bridge/cmux_herdr_engine.py
 
 echo "== unittest bridge =="
 python3 -m unittest discover -s bridge -p 'test_*.py' -v

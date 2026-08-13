@@ -87,10 +87,9 @@ Progress bar: `working / (working+idle+done+blocked)`.
 
 ## Upstream path (future)
 
-Native tmux parity (PR7) would:
-
-- Copy `RemoteTmuxWindowMirror` for Herdr (real tabs/panes, layout, I/O)
-- Keep #10045 sidebar as the session navigator
-- Keep this plugin as fallback (`watch --tmux-parity`) when native attachment is not live
+Native tmux parity (PR7) copies `RemoteTmuxWindowMirror` in `CmuxNestedTopology`
+(`RemoteHerdrWindowMirror` engine + pane I/O). AppKit/Bonsplit/Ghostty host
+wiring is still required in the cmux app. This plugin stays the fallback
+(`watch --tmux-parity`) when native attachment is not live.
 
 Until then, `cmux-herdr watch --tmux-parity` is the supported live deep mirror.

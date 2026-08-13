@@ -48,6 +48,7 @@ from bridge.cmux_herdr_mirror import (  # noqa: E402
     mirror_to_cmux,
     wait_herdr_event,
 )
+from bridge.cmux_herdr_socket import HerdrEventSession  # noqa: E402
 
 __version__ = "0.1.0"
 
@@ -218,34 +219,53 @@ def cmd_watch(args: argparse.Namespace) -> int:
         f"(workspace={args.workspace or 'auto'}); Ctrl-C to stop",
         file=sys.stderr,
     )
-    while not stop["flag"]:
-        try:
-            if getattr(args, "mirror", False) or getattr(args, "tmux_parity", False):
-                result = mirror_to_cmux(
-                    **_mirror_kwargs(args),
-                    dry_run=False,
-                    log=False,
-                )
-                print(format_mirror_plan(result).splitlines()[0])
-            else:
-                summary = sync_to_cmux(
-                    workspace=args.workspace,
-                    clear_stale=not args.no_clear_stale,
-                    set_progress=not args.no_progress,
-                    log=False,  # avoid log spam
-                )
-                print(summary["summary"])
-        except BridgeError as exc:
-            print(f"cmux-herdr: {exc}", file=sys.stderr)
-        except Exception as exc:  # noqa: BLE001
-            print(f"cmux-herdr: unexpected: {exc}", file=sys.stderr)
-        if getattr(args, "tmux_parity", False) or getattr(args, "events", False):
-            wait_herdr_event(timeout=interval)
-            continue
-        # Sleep in small slices so SIGINT is responsive
-        end = time.time() + interval
-        while not stop["flag"] and time.time() < end:
-            time.sleep(min(0.25, end - time.time()))
+    event_session = None
+    if getattr(args, "tmux_parity", False) or getattr(args, "events", False):
+        event_session = HerdrEventSession.try_open(timeout=interval)
+        if event_session is not None:
+            print(
+                "cmux-herdr watch: holding Herdr events.subscribe session",
+                file=sys.stderr,
+            )
+    try:
+        while not stop["flag"]:
+            try:
+                if getattr(args, "mirror", False) or getattr(args, "tmux_parity", False):
+                    result = mirror_to_cmux(
+                        **_mirror_kwargs(args),
+                        dry_run=False,
+                        log=False,
+                    )
+                    print(format_mirror_plan(result).splitlines()[0])
+                else:
+                    summary = sync_to_cmux(
+                        workspace=args.workspace,
+                        clear_stale=not args.no_clear_stale,
+                        set_progress=not args.no_progress,
+                        log=False,  # avoid log spam
+                    )
+                    print(summary["summary"])
+            except BridgeError as exc:
+                print(f"cmux-herdr: {exc}", file=sys.stderr)
+            except Exception as exc:  # noqa: BLE001
+                print(f"cmux-herdr: unexpected: {exc}", file=sys.stderr)
+            if getattr(args, "tmux_parity", False) or getattr(args, "events", False):
+                if event_session is not None:
+                    got = event_session.wait(timeout=interval)
+                    if not got:
+                        # Socket dropped — reopen once rather than spinning reconnects.
+                        event_session.close()
+                        event_session = HerdrEventSession.try_open(timeout=interval)
+                else:
+                    wait_herdr_event(timeout=interval)
+                continue
+            # Sleep in small slices so SIGINT is responsive
+            end = time.time() + interval
+            while not stop["flag"] and time.time() < end:
+                time.sleep(min(0.25, end - time.time()))
+    finally:
+        if event_session is not None:
+            event_session.close()
     return 0
 
 

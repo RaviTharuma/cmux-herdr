@@ -48,6 +48,7 @@ try:
         sync_to_cmux,
         which,
     )
+    from .cmux_herdr_engine import output_delta
     from .cmux_herdr_layout import (
         layouts_by_tab_id,
         pane_is_zoomed,
@@ -56,6 +57,7 @@ try:
         split_specs,
         tree_from_rects,
     )
+    from .cmux_herdr_socket import HerdrEventSession
 except ImportError:  # running as a loose file with PYTHONPATH=bridge
     from cmux_herdr_bridge import (
         BridgeError,
@@ -74,6 +76,7 @@ except ImportError:  # running as a loose file with PYTHONPATH=bridge
         sync_to_cmux,
         which,
     )
+    from cmux_herdr_engine import output_delta
     from cmux_herdr_layout import (
         layouts_by_tab_id,
         pane_is_zoomed,
@@ -82,6 +85,7 @@ except ImportError:  # running as a loose file with PYTHONPATH=bridge
         split_specs,
         tree_from_rects,
     )
+    from cmux_herdr_socket import HerdrEventSession
 
 ATTACH_ENV = "CMUX_HERDR_ATTACH_PANE"
 MIRROR_KEY_PREFIX = "herdr-mirror:"
@@ -1359,14 +1363,18 @@ def attach_pane_loop(
                 out.write(f"\ncmux-herdr: pane {pane_id} gone ({exc})\n")
                 out.flush()
                 return 1
-            if text != last:
+            chunk, full_redraw = output_delta(last, text)
+            if last is None or full_redraw:
                 out.write("\033[H\033[2J")
                 out.write(header)
                 out.write(text)
                 if not text.endswith("\n"):
                     out.write("\n")
                 out.flush()
-                last = text
+            elif chunk:
+                out.write(chunk)
+                out.flush()
+            last = text
             if send_input:
                 _drain_stdin_to_pane(pane_id)
             if max_iterations is not None and iteration >= max_iterations:
@@ -1424,48 +1432,16 @@ def _install_resize_handler(pane_id: str) -> None:
 def wait_herdr_event(*, timeout: float = 3.0) -> bool:
     """Block until a Herdr socket event arrives, or ``timeout`` elapses.
 
-    ssh-tmux is event-driven (``%layout-change``, ``%window-pane-changed``).
-    Plugin watch uses this when ``HERDR_SOCKET_PATH`` is a live Unix socket
-    and falls back to polling when subscribe is unavailable.
+    One-shot helper for tests and callers that do not hold a session.
+    ``watch --tmux-parity`` uses ``HerdrEventSession`` so subscribe stays open.
 
     Returns True when at least one event line was read.
     """
-    path = os.environ.get("HERDR_SOCKET_PATH")
-    if not path or not os.path.exists(path):
+    session = HerdrEventSession.try_open(timeout=max(0.1, timeout))
+    if session is None:
         time.sleep(max(0.05, timeout))
         return False
-    sock = None
     try:
-        import socket as socket_mod
-
-        sock = socket_mod.socket(socket_mod.AF_UNIX, socket_mod.SOCK_STREAM)
-        sock.settimeout(max(0.1, timeout))
-        sock.connect(path)
-        # NDJSON request; tolerate both jsonrpc and bare method shapes.
-        for payload in (
-            {"id": 1, "method": "events.subscribe", "params": {}},
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "events.subscribe",
-                "params": {},
-            },
-        ):
-            try:
-                sock.sendall((json.dumps(payload) + "\n").encode("utf-8"))
-                break
-            except OSError:
-                continue
-        ready, _, _ = select.select([sock], [], [], max(0.05, timeout))
-        if not ready:
-            return False
-        data = sock.recv(65536)
-        return bool(data)
-    except (OSError, ValueError):
-        return False
+        return session.wait(timeout=timeout)
     finally:
-        if sock is not None:
-            try:
-                sock.close()
-            except OSError:
-                pass
+        session.close()

@@ -30,7 +30,7 @@ Legend: **Yes** = required for tmux parity. Plugin column is what this repo impl
 | Tab **order** follows inner numbers | `--order` / `--tmux-parity` | Virtual row order | Yes — `TabManager` order = Herdr tab numbers |
 | **Prune** gone panes (close surfaces) | `--prune` (default on `--tmux-parity`) | Event close | Yes — teardown panel like tmux reconcile |
 | **Zoom** does not destroy hidden pane panels | Mapped viewers kept | n/a | Yes — base vs visible layout (copy tmux) |
-| Event-driven reconcile + snapshot resync | `watch --tmux-parity` / `--events` | `events.subscribe` | Yes — events + snapshot after gaps |
+| Event-driven reconcile + snapshot resync | Persistent `events.subscribe` via `watch --tmux-parity` | `events.subscribe` | Yes — events + snapshot after gaps |
 | Idempotent reconcile (re-run is a no-op) | `herdr-mirror:<pane_id>` keys | Compound nested IDs | Yes — paneId → panel map |
 | Titles from inner window/tab, not pane-border noise | Tab label on tab-root | Provider labels | Yes — copy tmux `windowTitle` rule |
 | Single writer vs plugin | Plugin yields if native attachment live | Plugin suppression | Same |
@@ -40,7 +40,7 @@ Legend: **Yes** = required for tmux parity. Plugin column is what this repo impl
 ### Plugin (cannot close without native cmux)
 
 - No Ghostty PTY theft; `attach-pane` is a second client, like `tmux attach` from another terminal.
-- No true `%output` byte stream; poll + redraw.
+- No true `%output` byte stream; poll `pane.read` + incremental delta when the snapshot extends.
 - No Bonsplit divider-drag → `resize-pane` (CLI has no drag session).
 - `cmux split` / `set-ratio` / `move-tab` / `focus-surface` verbs differ across cmux CLI builds; the bridge tries fallbacks and records errors.
 

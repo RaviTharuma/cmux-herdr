@@ -46,10 +46,11 @@ Cross-links: PR and issue reference each other; both point back here as the fall
    `ssh-tmux` / PR7 `RemoteHerdrWindowMirror` does. See
    [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
 
-2. **Polling, with optional events.**
-   `watch --tmux-parity` waits on the Herdr Unix socket when present, then
-   resyncs; otherwise it polls. Native PR7 should subscribe to Herdr events
-   and feed `%output`-style bytes into Ghostty.
+2. **Event-driven watch, poll fallback.**
+   `watch --tmux-parity` holds one Herdr Unix-socket `events.subscribe` session
+   when `HERDR_SOCKET_PATH` is live, then resyncs; otherwise it polls. Native
+   PR7 feeds `%output`-style bytes into Ghostty; the plugin still polls
+   `pane.read` and applies an incremental delta.
 
 3. **No reattach model after cmux restart.**
    Parent binding is best-effort local state under `~/.local/state/cmux-herdr/`. There is no
@@ -98,10 +99,12 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] Userspace deep mirror: `mirror` / `attach-pane` / `watch --mirror` project
       Herdr tabs/panes into real cmux tabs/splits (idempotent `herdr-mirror:<pane_id>`
       keys). Not Ghostty PTY theft — extra viewers, like a second tmux client.
+- [x] **Persistent NDJSON session + engine:** `HerdrEventSession` for
+      `watch --tmux-parity`; `cmux_herdr_engine.py` is the Python twin of
+      `RemoteHerdrWindowMirror` (zoom/close/structure version/sizing/output
+      delta). Remaining plugin gap is PTY theft / divider-drag (native PR7).
 - [x] **tmux-parity plugin:** `mirror --tmux-parity` / `watch --tmux-parity` —
-      layout tree, ratios, tab order, focus, prune, attach cbreak/SIGWINCH/ANSI,
-      optional event wait. Remaining plugin gap is PTY theft / divider-drag
-      (native PR7).
+      layout tree, ratios, tab order, focus, prune, attach cbreak/SIGWINCH/ANSI.
 
 ### B. Native MVP PR (#8736) — open + mergeable
 
