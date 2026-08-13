@@ -555,12 +555,15 @@ def _load_association_map(fp: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
         with open(_association_path(data_fp), "r", encoding="utf-8") as handle:
             data = json.load(handle)
         if isinstance(data, dict) and data.get("version") == 1 and isinstance(data.get("panes"), dict):
+            if not isinstance(data.get("mirrors"), dict):
+                data["mirrors"] = {}
             return data
     except (OSError, ValueError, TypeError):
         pass
     return {
         "version": 1,
         "panes": {},
+        "mirrors": {},
         "cmux_workspace": None,
         "herdr_socket_path": data_fp.get("herdr_socket_path"),
         "herdr_workspace_id": data_fp.get("herdr_workspace_id"),
@@ -638,6 +641,8 @@ def update_association_map(
         }
     pruned = sorted(set(previous) - set(live))
     state["panes"] = live
+    if not isinstance(state.get("mirrors"), dict):
+        state["mirrors"] = {}
     state["cmux_workspace"] = cmux_workspace or state.get("cmux_workspace")
     state["pruned_pane_ids"] = pruned
     _save_association_map(state, fp)
@@ -653,8 +658,9 @@ def update_association_map(
 def format_associations(state: Optional[Dict[str, Any]] = None) -> str:
     data = state or _load_association_map()
     panes = data.get("panes") if isinstance(data.get("panes"), dict) else {}
+    mirrors = data.get("mirrors") if isinstance(data.get("mirrors"), dict) else {}
     lines = [
-        f"associations: {len(panes)} panes",
+        f"associations: {len(panes)} panes, {len(mirrors)} mirrored surfaces",
         f"  cmux_workspace={data.get('cmux_workspace') or '-'}",
         f"  herdr_workspace={data.get('herdr_workspace_id') or '-'}",
         f"  surface={data.get('cmux_surface_id') or '-'}",
@@ -672,6 +678,14 @@ def format_associations(state: Optional[Dict[str, Any]] = None) -> str:
             f"{(entry.get('agent') or '-'):8}  {entry.get('status_key') or '-'}  "
             f"session={session}"
         )
+    if mirrors:
+        lines.append("mirrors:")
+        for pane_id in sorted(mirrors):
+            entry = mirrors[pane_id] if isinstance(mirrors[pane_id], dict) else {}
+            lines.append(
+                f"  {pane_id:10}  {(entry.get('role') or '?'):8}  "
+                f"{entry.get('cmux_surface_id') or '-'}  {entry.get('title') or '-'}"
+            )
     return "\n".join(lines)
 
 

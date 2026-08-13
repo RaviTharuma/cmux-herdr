@@ -196,7 +196,7 @@ class AssociationMapTests(unittest.TestCase):
             self.assertEqual(second["pane_count"], 1)
             self.assertEqual(second["pruned"], ["w2:p2"])
             rendered = format_associations()
-            self.assertIn("associations: 1 panes", rendered)
+            self.assertIn("associations: 1 panes, 0 mirrored surfaces", rendered)
             self.assertIn("w2:p1", rendered)
             self.assertNotIn("w2:p2  ", rendered)
 

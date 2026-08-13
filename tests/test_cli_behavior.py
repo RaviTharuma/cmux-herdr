@@ -102,6 +102,8 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("read-agent", result.stdout)
         self.assertIn("focus-workspace", result.stdout)
         self.assertIn("focus-agent", result.stdout)
+        self.assertIn("mirror", result.stdout)
+        self.assertIn("attach-pane", result.stdout)
 
     def test_unknown_command_is_argparse_error(self):
         result = self.run_cli("does-not-exist")
@@ -347,6 +349,30 @@ raise SystemExit(9)
         self.assertEqual(result.returncode, 1)
         self.assertIn("focus refused", result.stderr)
         self.assertNotIn("focused pane", result.stdout)
+
+    def test_mirror_dry_run_with_mocked_herdr(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            result = self.run_cli(
+                "mirror",
+                "--dry-run",
+                "--tab",
+                "t1",
+                "--no-status",
+                "--no-log",
+                "--json",
+                path=f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("DRY-RUN", result.stdout)
+        self.assertIn("create_tab", result.stdout)
+        idx = result.stdout.find("{")
+        self.assertGreaterEqual(idx, 0)
+        payload = json.loads(result.stdout[idx:])
+        self.assertEqual(payload["scope"], "current-tab")
+        self.assertGreaterEqual(payload["desired_count"], 1)
 
 
 if __name__ == "__main__":

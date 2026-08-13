@@ -8,9 +8,10 @@ It works **today without any cmux upstream PR**. Current stopgap release target:
 
 When Herdr runs nested inside a cmux terminal, cmux sees one terminal surface while the real agent tabs and panes live inside Herdr. This plugin:
 
-1. Mirrors Herdr agent state into cmux sidebar **status pills** and progress.
-2. Provides a **`cmux-herdr` CLI** for topology and control.
-3. Ships an optional **custom sidebar** and **agent skill** documenting the dual hierarchy.
+1. Mirrors Herdr **tabs and panes into real cmux tabs/splits** (`cmux-herdr mirror`) — userspace analogue of cmux `ssh-tmux`.
+2. Mirrors Herdr agent state into cmux sidebar **status pills** and progress (`sync` / `watch`).
+3. Provides a **`cmux-herdr` CLI** for topology, `attach-pane` followers, and control.
+4. Ships an optional **custom sidebar** and **agent skill** documenting the dual hierarchy.
 
 ## Two-path strategy
 
@@ -28,7 +29,7 @@ See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [concep
 `sync` / `watch` keep a user-owned cache under `$XDG_STATE_HOME/cmux-herdr/` (default `~/.local/state/cmux-herdr/`):
 
 - `parent-<fingerprint>.json` — locked outer cmux workspace binding for one host fingerprint
-- `associations-<fingerprint>.json` — live inner `pane_id → status_key / agent_session / status` map, pruned each sync
+- `associations-<fingerprint>.json` — live inner `pane_id → status_key / agent_session / status` map plus `mirrors` (Herdr pane → cmux surface) for deep-mirror reconcile, pruned each sync
 
 **Host fingerprint** (selects which files `sync` / `watch` read/write):
 
@@ -101,6 +102,10 @@ cmux-herdr tree           # Herdr workspaces → tabs → panes → agents
 cmux-herdr agents         # compact agent list
 cmux-herdr sync           # one-shot mirror → cmux set-status
 cmux-herdr watch          # loop every 3s (Ctrl-C to stop)
+cmux-herdr mirror         # project current Herdr tab → cmux tabs/splits
+cmux-herdr mirror --all   # project every Herdr tab/pane (ssh-tmux-style)
+cmux-herdr mirror --dry-run
+cmux-herdr attach-pane w2:p34   # follow one pane in this terminal
 cmux-herdr associations   # hybrid pane/session association cache
 cmux-herdr clear          # remove herdr:* status pills
 ```
@@ -127,7 +132,29 @@ cmux sidebar validate herdr --json
 cmux sidebar open herdr
 ```
 
-The sidebar is a valid cmux interpreted-Swift sidebar and navigates outer cmux workspaces. Live inner-pane state appears through status pills written by `sync` or `watch`; the sidebar interpreter cannot shell out to Herdr.
+The sidebar is a valid cmux interpreted-Swift sidebar and navigates outer cmux workspaces. After `cmux-herdr mirror`, Herdr tabs appear as **real cmux tabs** in that workspace (plus status pills from `sync` / `watch`). The sidebar interpreter still cannot shell out to Herdr.
+
+## Deep mirror (tabs and panes)
+
+`cmux-herdr mirror` is the plugin analogue of cmux `ssh-tmux` / `RemoteTmuxWindowMirror`:
+
+| Herdr | cmux projection |
+|---|---|
+| Tab | cmux tab (first pane is the tab root) |
+| Extra panes in that tab | cmux splits |
+| Pane contents | `cmux-herdr attach-pane` follower (`herdr pane read` + `pane send`) |
+
+Reconcile is **idempotent**: each pane is keyed `herdr-mirror:<pane_id>`, so a second `mirror` keeps existing surfaces and only creates/renames/prunes diffs.
+
+```bash
+cmux-herdr mirror              # current $HERDR_TAB_ID only (safe default)
+cmux-herdr mirror --all        # full Herdr session
+cmux-herdr mirror --dry-run    # plan only
+cmux-herdr watch --mirror      # keep tabs/splits + status pills in sync
+cmux-herdr mirror --prune      # close cmux surfaces whose Herdr panes are gone
+```
+
+This cannot steal Herdr PTYs into Ghostty (native cmux still owns that). It creates **extra cmux viewers** of the live Herdr session, the same idea as attaching a second tmux client.
 
 ## Status mapping
 
@@ -150,7 +177,9 @@ RELEASE.md                  tag / gh release / install-from-tag steps
 OPEN.md                     stopgap inventory + open checklist
 bin/cmux-herdr              CLI (Python, stdlib only)
 bridge/cmux_herdr_bridge.py fetch/map/sync library
+bridge/cmux_herdr_mirror.py tab/pane deep-mirror planner + attach-pane
 bridge/test_bridge_unit.py  pure unit tests
+bridge/test_mirror_unit.py  deep-mirror planner tests
 tests/                      mocked CLI and behavior tests
 scripts/install.sh          idempotent user install
 scripts/uninstall.sh        scoped uninstall
@@ -168,7 +197,7 @@ shims/README.md             optional shim guidance
 
 ## Limitations
 
-- The plugin cannot turn inner Herdr panes into native Bonsplit panes; that needs the upstream nested-topology work ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)).
+- The plugin cannot steal inner Herdr PTYs into Ghostty/Bonsplit the way native `ssh-tmux` does. `mirror` creates extra cmux tabs/splits running `attach-pane` followers instead. Native nested topology remains [issue #8737](https://github.com/manaflow-ai/cmux/issues/8737) / [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045).
 - Polling is the portable fallback. Native integration should subscribe to Herdr events and resynchronize from snapshots.
 - Nested shells may carry stale outer cmux IDs. The bridge resolves the live containing workspace before writing status.
 - Status pills depend on Herdr `agent_status`. Multi-parent hosts need a complete fingerprint (`CMUX_SURFACE_ID` + `HERDR_SOCKET_PATH`); see hybrid association state above ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)).

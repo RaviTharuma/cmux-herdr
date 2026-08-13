@@ -7,6 +7,17 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- **Deep mirror** (`cmux-herdr mirror` / `attach-pane` / `watch --mirror`):
+  project Herdr tabs into real cmux tabs and extra panes into cmux splits,
+  each running an `attach-pane` follower (`herdr pane read` + `pane send`).
+  Idempotent via `herdr-mirror:<pane_id>` keys stored in the association
+  cache `mirrors` map. Default scope is the current Herdr tab; `--all`
+  mirrors the full session; `--dry-run` prints the plan; `--prune` closes
+  leftover cmux surfaces. This is the plugin analogue of cmux `ssh-tmux`
+  (extra viewers, not Ghostty PTY theft).
+
 ## [0.2.0] — 2026-08-12
 
 ### Added

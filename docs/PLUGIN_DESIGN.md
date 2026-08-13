@@ -18,17 +18,18 @@ This repo implements the plugin path only. It must not depend on unmerged cmux p
 ```
 ┌─────────────────────────────────────────────┐
 │ cmux (outer)                                │
-│  window → workspace → pane → surface        │
+│  window → workspace → tab/pane → surface    │
 │       ▲ status pills / progress             │
-│       │ cmux set-status / set-progress      │
+│       ▲ mirrored tabs/splits (optional)     │
+│       │ cmux set-status / create-terminal   │
 └───────┼─────────────────────────────────────┘
         │
-   cmux-herdr sync|watch
+   cmux-herdr sync|watch|mirror
         │
 ┌───────┼─────────────────────────────────────┐
 │ herdr (inner)                               │
 │  workspace → tab → pane → agent             │
-│  herdr pane list / agent list (JSON)        │
+│  herdr pane list / pane read / pane send    │
 └─────────────────────────────────────────────┘
 ```
 
@@ -44,13 +45,15 @@ This repo implements the plugin path only. It must not depend on unmerged cmux p
 4. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy
 5. **`scripts/install.sh` / `uninstall.sh`** — symlink CLI, install sidebar + skill
 
-## Why status pills (not a full nested tree in cmux)
+## Why status pills plus optional tab/pane mirror
 
 Custom sidebars run in a **restricted Swift interpreter** and primarily see the **cmux workspace model**. They may not shell out to `herdr`. Therefore:
 
-- The bridge pushes live agent state into `cmux set-status` keys (`herdr:<pane_id>`).
-- The sidebar explains dual hierarchy and lists outer workspaces / progress labels.
-- Full inner topology remains available via `cmux-herdr tree` and `herdr …` for agents/humans in-terminal.
+- `sync` / `watch` push live agent state into `cmux set-status` keys (`herdr:<pane_id>`).
+- `mirror` creates real cmux tabs/splits running `attach-pane` followers so the outer workspace *looks* like ssh-tmux (idempotent `herdr-mirror:<pane_id>` keys).
+- The sidebar lists outer workspaces / the tabs `mirror` created; it still cannot call Herdr itself.
+
+Until native nested topology lands, `cmux-herdr watch --mirror` is the supported live deep mirror.
 
 ## Workspace resolution caveat
 
@@ -78,7 +81,7 @@ Progress bar: `working / (working+idle+done+blocked)`.
 ## Non-goals (plugin path)
 
 - Patching cmux.app or shipping a signed sidebar bundle
-- Re-implementing herdr layout inside cmux
+- Stealing Herdr PTYs into Ghostty (native `ssh-tmux` / #8737)
 - Network calls
 - Requiring root or Homebrew formula (plain user install is enough)
 
@@ -90,4 +93,4 @@ Native parity would ideally:
 - Auto-forward agent status without a user watch loop
 - Keep this plugin as a thin client or retire `watch` into a cmux-managed helper
 
-Until then, `cmux-herdr watch` is the supported live mirror.
+Until then, `cmux-herdr watch --mirror` is the supported live deep mirror (tabs/splits + status pills).
