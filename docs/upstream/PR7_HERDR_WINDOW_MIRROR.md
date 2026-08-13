@@ -6,7 +6,7 @@ Base: nested-topology tip (`cursor/nested-topology-herdr-v1-becf` / #10045). Do 
 
 ## Implementation status
 
-The **pure reconcile engine** lives in `Packages/macOS/CmuxNestedTopology`:
+The **pure reconcile engine** lives in `Packages/macOS/CmuxNestedTopology` on fork PR [RaviTharuma/cmux#8](https://github.com/RaviTharuma/cmux/pull/8):
 
 - `RemoteHerdrLayoutNode` / `RemoteHerdrWindow` / `RemoteHerdrWindowMirror` / `RemoteHerdrSessionMirror`
 - `RemoteHerdrSizing` (feed-forward client grid)

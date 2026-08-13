@@ -20,7 +20,7 @@ When Herdr runs nested inside a cmux terminal, cmux sees one terminal surface wh
 | **Plugin (this repo)** | Implemented — CLI, bridge, sidebar, skill, installer, LaunchAgent, tests; `mirror --tmux-parity`; persistent `events.subscribe`; window-mirror engine |
 | **Upstream native MVP** | [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) — open + mergeable; hidden `cmux __herdr-compat` dispatcher (`exec` into Herdr) |
 | **Upstream native sidebar** | [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) — nested topology tree + focus (not ssh-tmux) |
-| **Upstream native tmux parity** | Engine in `CmuxNestedTopology` (`RemoteHerdrWindowMirror`); AppKit/Bonsplit/Ghostty host wiring still required. See [PR7](docs/upstream/PR7_HERDR_WINDOW_MIRROR.md). |
+| **Upstream native tmux parity** | Engine PR: [RaviTharuma/cmux#8](https://github.com/RaviTharuma/cmux/pull/8) (`RemoteHerdrWindowMirror` in `CmuxNestedTopology`). AppKit/Bonsplit/Ghostty host wiring still required. See [PR7](docs/upstream/PR7_HERDR_WINDOW_MIRROR.md). |
 
 See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [tmux parity](docs/upstream/TMUX_PARITY.md), [concept map](mapping/concept-map.md), and the paste-ready [upstream issue/design package](docs/upstream/).
 
