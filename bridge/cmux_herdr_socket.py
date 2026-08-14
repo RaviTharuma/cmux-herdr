@@ -38,6 +38,9 @@ DEFAULT_SUBSCRIPTIONS: List[Dict[str, str]] = [
     {"type": "pane.moved"},
     {"type": "pane.exited"},
     {"type": "pane.agent_detected"},
+    {"type": "pane.resized"},
+    {"type": "layout.updated"},
+    {"type": "layout.changed"},
 ]
 
 MAX_LINE_BYTES = 512 * 1024
@@ -55,6 +58,33 @@ def socket_path_from_env() -> Optional[str]:
     return path
 
 
+def assert_socket_secure(path: str) -> None:
+    """Reject unsafe Herdr sockets (symlink, wrong owner, loose mode).
+
+    Raises:
+        HerdrSocketError: when the path fails local security checks.
+    """
+    try:
+        st = os.lstat(path)
+    except OSError as exc:
+        raise HerdrSocketError(f"socket stat failed: {exc}") from exc
+    import stat as stat_mod
+
+    if stat_mod.S_ISLNK(st.st_mode):
+        raise HerdrSocketError("refusing symlink Herdr socket path")
+    if not stat_mod.S_ISSOCK(st.st_mode):
+        raise HerdrSocketError("Herdr path is not a Unix socket")
+    mode = st.st_mode & 0o777
+    if mode & 0o077:
+        raise HerdrSocketError(
+            f"Herdr socket mode {oct(mode)} is too open (want 0600 or tighter)"
+        )
+    if hasattr(os, "getuid") and st.st_uid != os.getuid():
+        raise HerdrSocketError(
+            f"Herdr socket uid {st.st_uid} != current uid {os.getuid()}"
+        )
+
+
 class HerdrSocketClient:
     """One connected NDJSON session (request/response + optional subscribe)."""
 
@@ -70,6 +100,7 @@ class HerdrSocketClient:
     def connect(self) -> None:
         """Open the Unix stream. Raises ``HerdrSocketError`` on failure."""
         self.close()
+        assert_socket_secure(self.path)
         sock = None
         try:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -235,13 +266,13 @@ class HerdrEventSession:
             client.close()
             return None
 
-    def wait(self, *, timeout: float = 3.0) -> bool:
-        """Block until one event arrives. Returns False on timeout or drop."""
+    def wait(self, *, timeout: float = 3.0) -> Optional[Dict[str, Any]]:
+        """Block until one event arrives. Returns the event dict, or None."""
         try:
             event = self.client.read_event(timeout=timeout)
         except HerdrSocketError:
-            return False
-        return event is not None
+            return None
+        return event
 
     def close(self) -> None:
         """Tear down the subscribe socket."""

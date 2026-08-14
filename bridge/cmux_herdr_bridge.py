@@ -371,6 +371,15 @@ def fetch_layouts_raw() -> Any:
 
 
 def fetch_snapshot() -> Snapshot:
+    """Fetch Herdr topology, preferring a live Unix-socket snapshot.
+
+    Socket-first avoids CLI fan-out every watch tick (tmux-parity). Falls
+    back to ``herdr pane|tab|workspace|layout`` CLI verbs when the socket
+    is missing or returns an unusable payload.
+    """
+    sock_snap = fetch_snapshot_via_socket()
+    if sock_snap is not None:
+        return sock_snap
     panes = fetch_panes()
     try:
         tabs = fetch_tabs()
@@ -385,6 +394,94 @@ def fetch_snapshot() -> Snapshot:
     except BridgeError:
         layouts = {}
     return Snapshot(panes=panes, tabs=tabs, workspaces=workspaces, layouts=layouts)
+
+
+def fetch_snapshot_via_socket() -> Optional[Snapshot]:
+    """Return a Snapshot from ``session.snapshot`` over the Herdr socket.
+
+    Returns None when the socket is unavailable or the payload cannot be
+    parsed into panes. Never raises for transport failures.
+    """
+    path = os.environ.get("HERDR_SOCKET_PATH")
+    if not path or not os.path.exists(path):
+        return None
+    try:
+        from .cmux_herdr_socket import (
+            HerdrSocketClient,
+            HerdrSocketError,
+            assert_socket_secure,
+        )
+    except ImportError:
+        try:
+            from cmux_herdr_socket import (  # type: ignore
+                HerdrSocketClient,
+                HerdrSocketError,
+                assert_socket_secure,
+            )
+        except ImportError:
+            return None
+    try:
+        assert_socket_secure(path)
+        with HerdrSocketClient(path, timeout=5.0) as client:
+            client.ping()
+            result = client.snapshot()
+    except (OSError, HerdrSocketError, ValueError, TypeError):
+        return None
+    if not isinstance(result, dict):
+        return None
+    if isinstance(result.get("snapshot"), dict):
+        result = result["snapshot"]
+    panes_raw = result.get("panes") or []
+    tabs_raw = result.get("tabs") or []
+    workspaces_raw = result.get("workspaces") or result.get("workspace_list") or []
+    if not isinstance(panes_raw, list):
+        return None
+    panes = [
+        _pane_from_raw(p)
+        for p in panes_raw
+        if isinstance(p, dict) and p.get("pane_id")
+    ]
+    tabs: List[Tab] = []
+    if isinstance(tabs_raw, list):
+        for t in tabs_raw:
+            if not isinstance(t, dict):
+                continue
+            tabs.append(
+                Tab(
+                    tab_id=str(t.get("tab_id") or ""),
+                    workspace_id=str(t.get("workspace_id") or ""),
+                    label=t.get("label"),
+                    number=t.get("number"),
+                    agent_status=str(t.get("agent_status") or "unknown"),
+                    focused=bool(t.get("focused")),
+                    pane_count=int(t.get("pane_count") or 0),
+                    raw=t,
+                )
+            )
+    workspaces: List[Workspace] = []
+    if isinstance(workspaces_raw, list):
+        for w in workspaces_raw:
+            if not isinstance(w, dict):
+                continue
+            workspaces.append(
+                Workspace(
+                    workspace_id=str(w.get("workspace_id") or ""),
+                    label=w.get("label"),
+                    number=w.get("number"),
+                    agent_status=str(w.get("agent_status") or "unknown"),
+                    focused=bool(w.get("focused")),
+                    pane_count=int(w.get("pane_count") or 0),
+                    tab_count=int(w.get("tab_count") or 0),
+                    raw=w,
+                )
+            )
+    layouts = result.get("layouts") or result
+    return Snapshot(
+        panes=panes,
+        tabs=tabs,
+        workspaces=workspaces,
+        layouts=layouts,
+    )
 
 
 def _state_dir() -> str:

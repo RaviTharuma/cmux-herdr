@@ -47,6 +47,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   snapshot parentage does not re-run env/sole-tab inference. A new
   `agent_session_id` drops locks so they are not reused across instance
   identities.
+- **Advanced tmux-parity hardening:** engine-owned reconcile drives
+  `mirror_to_cmux` (zoom keeps base panes; geometry-only does not recreate);
+  fail-closed splits (no orphan-tab fallback); single size-claim writer
+  (`size-authority-<fingerprint>` / `CMUX_HERDR_SIZE_AUTHORITY`); socket-first
+  `session.snapshot` + secure socket checks (UID/mode/no symlink); layout
+  event subscriptions on the persistent watch session.
 
 ## [0.2.0] — 2026-08-12
 

@@ -39,6 +39,7 @@ class FakeHerdrUnixServer:
         os.unlink(self.path)
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._sock.bind(self.path)
+        os.chmod(self.path, 0o600)
         self._sock.listen(8)
         self._sock.settimeout(0.2)
         self._running = True
@@ -171,8 +172,9 @@ class HerdrSocketClientTests(unittest.TestCase):
         self.assertIsNotNone(session)
         assert session is not None
         try:
-            self.assertTrue(session.wait(timeout=1.0))
-            self.assertFalse(session.wait(timeout=0.15))
+            event = session.wait(timeout=1.0)
+            self.assertIsInstance(event, dict)
+            self.assertIsNone(session.wait(timeout=0.15))
         finally:
             session.close()
         self.assertEqual(server.accepts, 1)
