@@ -1,6 +1,8 @@
 > **Canonical source of truth is GitHub**, not this draft.
 >
+> - Community poll: https://github.com/manaflow-ai/cmux/discussions/10106
 > - Full nested topology: https://github.com/manaflow-ai/cmux/issues/8737
+> - Nested topology v1: https://github.com/manaflow-ai/cmux/pull/10045
 > - Hidden compat MVP: https://github.com/manaflow-ai/cmux/pull/8736
 > - Update GitHub first when trackers move; then sync this file if still useful.
 >

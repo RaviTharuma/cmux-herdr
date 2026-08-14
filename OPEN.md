@@ -10,9 +10,11 @@ As of **2026-08-12** (prep for tagged **v0.1.0**).
 
 | Artifact | URL | Status |
 |---|---|---|
+| Community poll (native Herdr as tmux counterpart) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open |
 | Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open + mergeable |
+| Nested topology v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open |
 | Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open (no implementation in this repo) |
-| This plugin | https://github.com/RaviTharuma/cmux-herdr | Implemented; tagging v0.1.0 |
+| This plugin | https://github.com/RaviTharuma/cmux-herdr | Implemented; v0.2.0 tagged |
 | Thrash / annoyance report | [docs/upstream/ANNOYANCES.md](./docs/upstream/ANNOYANCES.md) | Living doc |
 
 Cross-links: PR and issue reference each other; both point back here as the fallback.

@@ -17,7 +17,9 @@ When Herdr runs nested inside a cmux terminal, cmux sees one terminal surface wh
 | Path | Status |
 |---|---|
 | **Plugin (this repo)** | Implemented — CLI, bridge, sidebar, skill, installer, LaunchAgent, tests |
+| **Upstream community poll** | [Discussion #10106](https://github.com/manaflow-ai/cmux/discussions/10106) — native Herdr as tmux counterpart |
 | **Upstream native MVP** | [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) — open + mergeable; hidden `cmux __herdr-compat` dispatcher (`exec` into Herdr) |
+| **Upstream native v1** | [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) — nested topology providers |
 | **Upstream native parity** | [Issue #8737](https://github.com/manaflow-ai/cmux/issues/8737) — first-class nested topology; plugin remains fallback |
 
 See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [concept map](mapping/concept-map.md), and the paste-ready [upstream issue/design package](docs/upstream/).
@@ -202,7 +204,7 @@ cmux sidebar validate herdr --json
 
 ## Native integration proposal
 
-Live trackers: [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) (MVP dispatcher, open + mergeable) and [issue #8737](https://github.com/manaflow-ai/cmux/issues/8737) (full nested topology). Design drafts also live in [docs/upstream/](docs/upstream/).
+Live trackers: [discussion #10106](https://github.com/manaflow-ai/cmux/discussions/10106) (community poll), [PR #8736](https://github.com/manaflow-ai/cmux/pull/8736) (MVP dispatcher), [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (nested topology v1), and [issue #8737](https://github.com/manaflow-ai/cmux/issues/8737) (full nested topology). Design drafts also live in [docs/upstream/](docs/upstream/).
 
 The standalone bridge intentionally does not pretend that inner Herdr panes are native cmux panes. The upstream package proposes a capability-negotiated nested-topology provider:
 
@@ -216,5 +218,7 @@ No issue or PR is opened automatically. This plugin does **not** implement #8737
 
 ## Upstream tracking
 
+- Community poll: [manaflow-ai/cmux#10106](https://github.com/manaflow-ai/cmux/discussions/10106)
 - Native design issue: [manaflow-ai/cmux#8737](https://github.com/manaflow-ai/cmux/issues/8737)
+- Nested topology v1: [manaflow-ai/cmux#10045](https://github.com/manaflow-ai/cmux/pull/10045)
 - First native compatibility PR: [manaflow-ai/cmux#8736](https://github.com/manaflow-ai/cmux/pull/8736)
