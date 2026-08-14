@@ -105,6 +105,18 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       delta). Remaining plugin gap is PTY theft / divider-drag (native PR7).
 - [x] **tmux-parity plugin:** `mirror --tmux-parity` / `watch --tmux-parity` —
       layout tree, ratios, tab order, focus, prune, attach cbreak/SIGWINCH/ANSI.
+- [x] Single-writer guard when native attachment is live (`CMUX_HERDR_NATIVE_LIVE` /
+      `native-live-<fingerprint>` marker; `CMUX_HERDR_FORCE_PLUGIN` escape hatch).
+- [x] Native-title lock + diff-before-write (`lock-title` / `unlock-title`,
+      `CMUX_HERDR_LOCK_TITLES`).
+- [x] Heuristic-once parent map (`parent_tab_id` + `heuristic_satisfied`; session
+      identity change resets locks).
+- [ ] Mirror / `--tmux-parity` yields when native attachment is live (same single-writer
+      rule as status pills).
+- [ ] Engine-owned reconcile drives `mirror_to_cmux` (no dual DesiredMirror/engine drift).
+- [ ] Single size-claim writer (no per-viewer SIGWINCH resize war).
+- [ ] Fail-closed layout application (no orphan-tab fallback on split failure).
+- [ ] Socket-first snapshot for `watch --tmux-parity` (CLI fan-out only on socket drop).
 
 ### B. Native MVP PR (#8736) — open + mergeable
 

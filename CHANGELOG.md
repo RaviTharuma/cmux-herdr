@@ -21,8 +21,6 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   and paste-ready [PR7 `RemoteHerdrWindowMirror`](docs/upstream/PR7_HERDR_WINDOW_MIRROR.md)
   so the in-app path copies ssh-tmux instead of stopping at sidebar virtual rows.
 
-### Added (earlier on this unreleased branch)
-
 - **Deep mirror** (`cmux-herdr mirror` / `attach-pane` / `watch --mirror`):
   project Herdr tabs into real cmux tabs and extra panes into cmux splits,
   each running an `attach-pane` follower (`herdr pane read` + `pane send`).
@@ -31,6 +29,24 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   mirrors the full session; `--dry-run` prints the plan; `--prune` closes
   leftover cmux surfaces. This is the plugin analogue of cmux `ssh-tmux`
   (extra viewers, not Ghostty PTY theft).
+
+- **Single-writer guard**: `sync` / `watch` / `mirror` no-op competing writes when
+  native nested attachment is live (`CMUX_HERDR_NATIVE_LIVE=1`, or a
+  `native-live-<fingerprint>` / `native-live` marker under
+  `$XDG_STATE_HOME/cmux-herdr/`). Logs the handoff once per process.
+  Escape hatch: `CMUX_HERDR_FORCE_PLUGIN=1`. `doctor` and `status` report the
+  active writer.
+- **Native-title lock + diff-before-write**: association records persist
+  `title_lock` / `locked_title` / last written pill value. Identical pills are
+  not rewritten every poll. `cmux-herdr lock-title` / `unlock-title` set the
+  lock; `CMUX_HERDR_LOCK_TITLES=1` locks each display name after the first
+  successful write.
+- **Heuristic-once parent map**: association records keep `parent_tab_id` /
+  `parent_workspace_id` / `heuristic_satisfied` / `association_key`
+  (`pane_id:session_id`). After the first successful association, empty
+  snapshot parentage does not re-run env/sole-tab inference. A new
+  `agent_session_id` drops locks so they are not reused across instance
+  identities.
 
 ## [0.2.0] — 2026-08-12
 
