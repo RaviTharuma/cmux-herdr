@@ -38,9 +38,18 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
     read_agent,
     read_pane,
     resolve_cmux_workspace,
+    set_title_lock,
     split_pane,
     sync_to_cmux,
 )
+from bridge.cmux_herdr_mirror import (  # noqa: E402
+    attach_pane_loop,
+    format_mirror_plan,
+    is_attach_process,
+    mirror_to_cmux,
+    wait_herdr_event,
+)
+from bridge.cmux_herdr_socket import HerdrEventSession  # noqa: E402
 
 __version__ = "0.1.0"
 
@@ -111,6 +120,12 @@ def cmd_status(_args: argparse.Namespace) -> int:
     print(f"  key          : {info.get('host_fingerprint_key') or '-'}")
     missing = info.get("host_fingerprint_missing") or []
     print(f"  missing      : {', '.join(missing) if missing else '(none)'}")
+    writer = info.get("writer") or {}
+    print("writer:")
+    print(f"  path         : {writer.get('writer') or 'plugin'}")
+    print(f"  native live  : {writer.get('native_live')}")
+    if writer.get("force_plugin"):
+        print("  force plugin : yes")
     if _args.json:
         print(json.dumps(info, indent=2, default=str))
     return 0
@@ -177,6 +192,10 @@ def cmd_sync(args: argparse.Namespace) -> int:
     except BridgeError as exc:
         _die(str(exc))
     print(summary["summary"])
+    if summary.get("native_live"):
+        print("writer: native (plugin projection skipped)")
+    if summary.get("skipped_unchanged"):
+        print(f"unchanged: {len(summary['skipped_unchanged'])} pills")
     if summary.get("stale_cleared"):
         print(f"cleared stale: {', '.join(summary['stale_cleared'])}")
     if summary.get("errors"):
@@ -190,6 +209,8 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
 def cmd_watch(args: argparse.Namespace) -> int:
     if args.once:
+        if getattr(args, "mirror", False) or getattr(args, "tmux_parity", False):
+            return cmd_mirror(args)
         return cmd_sync(args)
     _ensure_herdr()
     interval = max(0.5, float(args.interval))
@@ -201,29 +222,129 @@ def cmd_watch(args: argparse.Namespace) -> int:
 
     signal.signal(signal.SIGINT, _handle)
     signal.signal(signal.SIGTERM, _handle)
+    mode = "mirror+status" if getattr(args, "mirror", False) else "status"
+    if getattr(args, "tmux_parity", False):
+        mode = "tmux-parity"
     print(
-        f"cmux-herdr watch: every {interval}s "
+        f"cmux-herdr watch: {mode} every {interval}s "
         f"(workspace={args.workspace or 'auto'}); Ctrl-C to stop",
         file=sys.stderr,
     )
-    while not stop["flag"]:
-        try:
-            summary = sync_to_cmux(
-                workspace=args.workspace,
-                clear_stale=not args.no_clear_stale,
-                set_progress=not args.no_progress,
-                log=False,  # avoid log spam
+    event_session = None
+    if getattr(args, "tmux_parity", False) or getattr(args, "events", False):
+        event_session = HerdrEventSession.try_open(timeout=interval)
+        if event_session is not None:
+            print(
+                "cmux-herdr watch: holding Herdr events.subscribe session",
+                file=sys.stderr,
             )
-            print(summary["summary"])
-        except BridgeError as exc:
-            print(f"cmux-herdr: {exc}", file=sys.stderr)
-        except Exception as exc:  # noqa: BLE001
-            print(f"cmux-herdr: unexpected: {exc}", file=sys.stderr)
-        # Sleep in small slices so SIGINT is responsive
-        end = time.time() + interval
-        while not stop["flag"] and time.time() < end:
-            time.sleep(min(0.25, end - time.time()))
+    try:
+        while not stop["flag"]:
+            try:
+                if getattr(args, "mirror", False) or getattr(args, "tmux_parity", False):
+                    result = mirror_to_cmux(
+                        **_mirror_kwargs(args),
+                        dry_run=False,
+                        log=False,
+                    )
+                    print(format_mirror_plan(result).splitlines()[0])
+                else:
+                    summary = sync_to_cmux(
+                        workspace=args.workspace,
+                        clear_stale=not args.no_clear_stale,
+                        set_progress=not args.no_progress,
+                        log=False,  # avoid log spam
+                    )
+                    print(summary["summary"])
+            except BridgeError as exc:
+                print(f"cmux-herdr: {exc}", file=sys.stderr)
+            except Exception as exc:  # noqa: BLE001
+                print(f"cmux-herdr: unexpected: {exc}", file=sys.stderr)
+            if getattr(args, "tmux_parity", False) or getattr(args, "events", False):
+                if event_session is not None:
+                    got = event_session.wait(timeout=interval)
+                    if not got:
+                        # Socket dropped — reopen once rather than spinning reconnects.
+                        event_session.close()
+                        event_session = HerdrEventSession.try_open(timeout=interval)
+                else:
+                    wait_herdr_event(timeout=interval)
+                continue
+            # Sleep in small slices so SIGINT is responsive
+            end = time.time() + interval
+            while not stop["flag"] and time.time() < end:
+                time.sleep(min(0.25, end - time.time()))
+    finally:
+        if event_session is not None:
+            event_session.close()
     return 0
+
+
+def _mirror_scope(args: argparse.Namespace) -> str:
+    if getattr(args, "tmux_parity", False) or getattr(args, "all", False):
+        return "all"
+    if getattr(args, "herdr_workspace", None):
+        return "workspace"
+    return "current-tab"
+
+
+def _mirror_kwargs(args: argparse.Namespace) -> dict:
+    tmux_parity = bool(getattr(args, "tmux_parity", False))
+    return {
+        "scope": _mirror_scope(args),
+        "workspace": args.workspace,
+        "herdr_workspace": getattr(args, "herdr_workspace", None),
+        "tab": getattr(args, "tab", None),
+        "prune": True if tmux_parity else getattr(args, "prune", False),
+        "sync_status": not getattr(args, "no_status", False)
+        and not getattr(args, "no_progress", False),
+        "use_layout": not getattr(args, "no_layout", False),
+        "sync_focus": tmux_parity or getattr(args, "focus", False),
+        "sync_order": tmux_parity or getattr(args, "order", False),
+        "sync_ratios": tmux_parity or getattr(args, "ratios", False),
+        "tmux_parity": tmux_parity,
+    }
+
+
+def cmd_mirror(args: argparse.Namespace) -> int:
+    if is_attach_process():
+        _die("refusing to nest mirror inside attach-pane")
+    _ensure_herdr()
+    try:
+        result = mirror_to_cmux(
+            **_mirror_kwargs(args),
+            dry_run=getattr(args, "dry_run", False),
+            log=not getattr(args, "no_log", False),
+        )
+    except BridgeError as exc:
+        _die(str(exc))
+    print(format_mirror_plan(result))
+    plan = result.get("plan") if isinstance(result.get("plan"), dict) else {}
+    if args.json:
+        print(json.dumps(result, indent=2, default=str))
+    if plan.get("errors"):
+        return 2
+    return 0
+
+
+def cmd_attach_pane(args: argparse.Namespace) -> int:
+    _ensure_herdr()
+    try:
+        return attach_pane_loop(
+            args.pane_id,
+            interval=max(0.05, float(args.interval)),
+            lines=args.lines,
+            send_input=not args.read_only,
+            raw_tty=not getattr(args, "no_raw_tty", False),
+            follow_resize=not getattr(args, "no_resize", False),
+            ansi=not getattr(args, "no_ansi", False),
+        )
+    except KeyboardInterrupt:
+        print("\ncmux-herdr: detached viewer", file=sys.stderr)
+        return 0
+    except BridgeError as exc:
+        _die(str(exc))
+    return 1
 
 
 def cmd_focus_tab(args: argparse.Namespace) -> int:
@@ -357,6 +478,29 @@ def cmd_associations(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_lock_title(args: argparse.Namespace) -> int:
+    """Lock a pane display name so later syncs do not overwrite it."""
+    try:
+        entry = set_title_lock(args.pane_id, locked=True, title=args.title)
+    except BridgeError as exc:
+        _die(str(exc))
+    print(
+        f"locked title for {entry.get('pane_id')}: "
+        f"{entry.get('locked_title') or '-'}"
+    )
+    return 0
+
+
+def cmd_unlock_title(args: argparse.Namespace) -> int:
+    """Clear the native-title lock so sync may update the display name."""
+    try:
+        entry = set_title_lock(args.pane_id, locked=False)
+    except BridgeError as exc:
+        _die(str(exc))
+    print(f"unlocked title for {entry.get('pane_id')}")
+    return 0
+
+
 def cmd_clear(args: argparse.Namespace) -> int:
     try:
         cleared = clear_cmux_herdr_statuses(args.workspace)
@@ -482,12 +626,71 @@ def build_parser() -> argparse.ArgumentParser:
         )
         sp.add_argument("--json", action="store_true")
 
+    def add_mirror_flags(sp: argparse.ArgumentParser) -> None:
+        sp.add_argument(
+            "--all",
+            action="store_true",
+            help="Mirror every Herdr tab/pane (ssh-tmux-style full session)",
+        )
+        sp.add_argument(
+            "--herdr-workspace",
+            help="Mirror every tab in this Herdr workspace id (e.g. w2)",
+        )
+        sp.add_argument(
+            "--tab",
+            help="Herdr tab id to mirror (default: $HERDR_TAB_ID)",
+        )
+        sp.add_argument(
+            "--prune",
+            action="store_true",
+            help="Close cmux surfaces whose Herdr panes are gone",
+        )
+        sp.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Print the reconcile plan without creating/closing surfaces",
+        )
+        sp.add_argument(
+            "--no-status",
+            action="store_true",
+            help="Do not also write herdr:* status pills",
+        )
+        sp.add_argument(
+            "--tmux-parity",
+            action="store_true",
+            help=(
+                "Maximum ssh-tmux contract: --all --prune plus layout ratios, "
+                "tab order, and focus sync"
+            ),
+        )
+        sp.add_argument(
+            "--focus",
+            action="store_true",
+            help="Project Herdr focused pane onto the matching cmux surface",
+        )
+        sp.add_argument(
+            "--order",
+            action="store_true",
+            help="Reorder cmux tabs to match Herdr tab numbers",
+        )
+        sp.add_argument(
+            "--ratios",
+            action="store_true",
+            help="Impose layout-tree split ratios on existing cmux splits",
+        )
+        sp.add_argument(
+            "--no-layout",
+            action="store_true",
+            help="Do not use Herdr layout trees (alternate right/down splits)",
+        )
+
     s = sub.add_parser("sync", help="One-shot mirror herdr agents → cmux set-status")
     add_sync_flags(s)
     s.set_defaults(func=cmd_sync)
 
     s = sub.add_parser("watch", help="Loop sync every N seconds (default 3)")
     add_sync_flags(s)
+    add_mirror_flags(s)
     s.add_argument(
         "-n",
         "--interval",
@@ -500,7 +703,65 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Alias for sync (single iteration)",
     )
+    s.add_argument(
+        "--mirror",
+        action="store_true",
+        help="Also reconcile Herdr tabs/panes into cmux tabs/splits",
+    )
+    s.add_argument(
+        "--events",
+        action="store_true",
+        help="Prefer Herdr Unix-socket events between polls (tmux-parity default)",
+    )
     s.set_defaults(func=cmd_watch)
+
+    s = sub.add_parser(
+        "mirror",
+        help="Project Herdr tabs/panes into real cmux tabs/splits (userspace ssh-tmux analogue)",
+    )
+    add_sync_flags(s)
+    add_mirror_flags(s)
+    s.set_defaults(func=cmd_mirror)
+
+    s = sub.add_parser(
+        "attach-pane",
+        help="Follow one Herdr pane in this terminal (used by mirror surfaces)",
+    )
+    s.add_argument("pane_id")
+    s.add_argument(
+        "-n",
+        "--interval",
+        type=float,
+        default=0.25,
+        help="Refresh interval seconds (default 0.25)",
+    )
+    s.add_argument(
+        "--lines",
+        type=int,
+        default=200,
+        help="Lines to read from herdr pane read (default 200)",
+    )
+    s.add_argument(
+        "--read-only",
+        action="store_true",
+        help="Do not forward typed input to the Herdr pane",
+    )
+    s.add_argument(
+        "--no-raw-tty",
+        action="store_true",
+        help="Do not put stdin in cbreak (line-buffered input)",
+    )
+    s.add_argument(
+        "--no-resize",
+        action="store_true",
+        help="Do not forward SIGWINCH to herdr pane resize",
+    )
+    s.add_argument(
+        "--no-ansi",
+        action="store_true",
+        help="Do not request ANSI/raw pane read",
+    )
+    s.set_defaults(func=cmd_attach_pane)
 
     s = sub.add_parser("focus-tab", help="Focus herdr tab by id or label")
     s.add_argument("target", help="tab_id or label")
@@ -555,6 +816,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--json", action="store_true", help="machine-readable output")
     s.set_defaults(func=cmd_associations)
+
+    s = sub.add_parser(
+        "lock-title",
+        help="Lock a pane display name (native-title lock; sync will not overwrite it)",
+    )
+    s.add_argument("pane_id")
+    s.add_argument("--title", help="display name to lock (default: cached label or pane id)")
+    s.set_defaults(func=cmd_lock_title)
+
+    s = sub.add_parser(
+        "unlock-title",
+        help="Clear the native-title lock so sync may update the display name",
+    )
+    s.add_argument("pane_id")
+    s.set_defaults(func=cmd_unlock_title)
 
     s = sub.add_parser("clear", help="Clear all cmux statuses with herdr: prefix")
     s.add_argument("--workspace", help="cmux workspace id/ref")

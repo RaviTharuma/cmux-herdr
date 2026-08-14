@@ -42,6 +42,8 @@ CMUX_BUNDLE_ID=com.cmuxterm.app
 | Inner tree | `cmux-herdr tree` / `herdr pane list` |
 | Diagnose install | `cmux-herdr doctor` |
 | Mirror agents to sidebar | `cmux-herdr sync` / `watch` |
+| Mirror tabs/panes into cmux | `cmux-herdr mirror --tmux-parity` / `watch --tmux-parity` |
+| Follow one inner pane | `cmux-herdr attach-pane <pane_id>` |
 | Split agent | `herdr pane split --current` / `cmux-herdr split` |
 | Focus inner workspace | `herdr workspace focus` / `cmux-herdr focus-workspace` |
 | Focus inner tab | `herdr tab focus` / `cmux-herdr focus-tab` |

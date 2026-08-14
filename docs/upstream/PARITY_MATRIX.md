@@ -8,39 +8,45 @@
 
 # cmux ↔ Herdr native parity matrix
 
-This matrix distinguishes the current nested stopgap from the proposed native adapter. “Native” means provider-owned virtual descendants under a cmux host terminal, not conversion into Bonsplit panes.
+This matrix distinguishes three things: the plugin stopgap, native **sidebar** nested topology (#10045), and native **window mirror** (PR7 / ssh-tmux parity). Canonical tmux mapping: [TMUX_PARITY.md](./TMUX_PARITY.md).
 
 ## Topology and presentation
 
-| Capability | Herdr source/API | cmux today | Plugin stopgap | Native target | First release |
+| Capability | Herdr source/API | cmux ssh-tmux | Plugin (`--tmux-parity`) | Native sidebar (#10045) | Native mirror (PR7) |
 |---|---|---|---|---|---|
-| Provider health/version | `ping` → version, protocol, capabilities | No Herdr awareness | CLI health check | Direct handshake with compatibility result | Yes |
-| Complete initial topology | `session.snapshot` | Outer surface only | Merge CLI list output | Atomic snapshot: workspace → tab → pane → agent | Yes |
-| Incremental topology | `events.subscribe` | None | Poll every N seconds | Long-lived event stream plus resync | Yes |
-| Workspace rows | snapshot/workspace events | cmux workspace only | Not representable | Virtual nested workspace rows | Yes |
-| Tab rows/order | snapshot/tab events | Surface tabs are cmux-owned | Text-only tree | Virtual provider tab rows preserving order | Yes |
-| Pane rows/layout | panes + `layouts` | Bonsplit cmux panes | Text-only tree | Virtual pane rows; optional layout hints | Rows yes; graphical layout later |
-| Agent rows | `agents`, pane agent fields | Agent detection tied to cmux surface | Status pills | Agent child/decoration on provider pane | Yes |
-| Focus | focused IDs/events | Outer focus only | Separate CLI helper | Inner focus reflected and forwarded | Yes |
-| Titles/labels | workspace/tab/pane/agent fields | Native titles only | Flattened pill text | Provider labels with clear provenance | Yes |
-| Working/idle/blocked/done | `AgentStatus`, status events | cmux agent/status facilities | Color-coded pills | Native status decoration retaining raw value | Yes |
-| Metadata/state labels | pane/agent metadata | Not nested | Mostly dropped | Bounded typed metadata for UI | Selected fields only |
-| Read output | `pane.read`, `agent.read` | Native surfaces only | CLI command | Provider action/read API | Later |
-| Unread/attention synthesis | events/status | Outer workspace semantics | Approximate | Explicit policy; never silently clear outer state | Later |
+| Provider health/version | `ping` | handshake | CLI health | Direct handshake | Same connection |
+| Complete initial topology | `session.snapshot` | tmux layout fetch | `pane/tab list` + layouts | Atomic snapshot | Snapshot → window mirrors |
+| Incremental topology | `events.subscribe` | `%layout-change` / `%output` | poll + optional socket wait | Event stream + resync | Events + resync |
+| Workspace rows | snapshot | session list | not a cmux workspace | Virtual nested rows | Host surface only |
+| Tab rows/order | tab numbers | one cmux tab per tmux window | `move-tab` | Virtual rows | Real cmux tabs, Herdr order |
+| Pane rows/layout | layouts + rects | Bonsplit from layout tree | layout-driven splits + `set-ratio` | Virtual rows; graphical later | Bonsplit from Herdr tree |
+| Agent rows | `agents` | n/a | status pills | Agent child/decoration | Decoration on pane chrome |
+| Focus | focused IDs | `%window-pane-changed` | `--focus` + reverse click | `nested.node.focus` | tmux-style project + send |
+| Titles/labels | tab/pane fields | window title | tab-root title | Provider labels | Window title rule |
+| Read output | `pane.read` | `%output` → surface | `attach-pane` poll | Later | Push into `TerminalPanel` |
+| Send input | `pane.send_*` | `send-keys` | cbreak → `pane send` | Later/guarded | Ghostty → `pane.send_*` |
+| Split pane | `pane.split` | `split-window` | `cmux split` from layout | Later | User split → provider |
+| Resize/layout | `pane.resize` | `resize-pane` + claim | SIGWINCH + `set-ratio` | Later | Divider drag + claim |
+| Close inner node | `*.close` | kill-pane | `--prune` | Later | Reconcile teardown |
+| Zoom | pane zoom flag | base vs visible layout | keep mapped viewers | n/a | Same as tmux |
 
 ## Actions
 
-| Action | Herdr method | Native policy | First release |
+| Action | Herdr method | Native sidebar (#10045) | Native mirror (PR7) |
 |---|---|---|---|
-| Focus workspace/tab/pane/agent | `*.focus` / `agent.focus` | Allowed after current-binding check | Yes |
-| Rename workspace/tab/pane/agent | `*.rename` | User-initiated only; capability-gated | Yes |
-| Send text/keys/input | `pane.send_*`, agent methods | Never derived from display text; explicit target | Later/guarded |
-| Prompt/wait agent | `agent.prompt`, `agent.wait` | Explicit UI/API with timeout limits | Later |
-| Split pane | `pane.split` | Provider-owned split; result refreshes snapshot | Later |
-| Move/swap/resize/layout | pane/layout methods | Provider-owned; not Bonsplit mutation | Later |
-| Close inner node | `*.close` | Confirmation; cannot close host implicitly | Later |
-| Stop server | `server.stop` | Excluded from nested adapter | No |
-| Reload server/config/integrations/plugins | server/integration/plugin methods | Excluded; outside topology scope | No |
+| Focus workspace/tab/pane/agent | `*.focus` / `agent.focus` | Yes | Yes (plus Bonsplit selection) |
+| Rename | `*.rename` | User-initiated | Tab title from provider |
+| Send text/keys | `pane.send_*` | Later/guarded | **Yes** |
+| Split pane | `pane.split` | Later | **Yes** |
+| Move/swap/resize/layout | pane/layout methods | Later | **Yes** |
+| Close inner node | `*.close` | Later | **Yes** (confirm if busy) |
+| Stop server | `server.stop` | Excluded | Excluded |
+
+## Definition of native tmux-parity (PR7)
+
+Native Herdr has **tmux parity** when each Herdr tab is a real cmux tab, each pane is a real Bonsplit + Ghostty surface, output/input/split/resize/focus/zoom/prune match `RemoteTmuxWindowMirror`, and the #10045 sidebar remains the session navigator.
+
+Sidebar-only v1 (#10045) is **not** tmux parity. It is a prerequisite (socket, IDs, attach, restore).
 
 ## Lifecycle, identity, and API parity
 
@@ -80,6 +86,8 @@ This matrix distinguishes the current nested stopgap from the proposed native ad
 6. **Event gap/reconnect:** discard incremental assumptions and fetch `session.snapshot`.
 7. **Restore without provider identity proof:** leave disconnected and require manual reattach.
 
-## Definition of native parity for v1
+## Definition of native parity
 
-Native v1 is complete when health, initial tree, event-driven updates, focus, labels, agent status, collision-free IDs, safe disconnect/reconnect, additive control-socket reads, and restore revalidation work. Full parity does **not** require every Herdr mutation, graphical reproduction of its split layout, or ownership of its PTYs.
+- **Sidebar v1 (#10045):** health, tree, events, focus, labels, agent status, compound IDs, restore revalidation. Complete as a navigator; **not** ssh-tmux.
+- **Mirror PR7:** Bonsplit + Ghostty ownership of Herdr panes, layout imposition, input/output, split/resize/zoom/prune — copy `RemoteTmuxWindowMirror`. This is tmux parity.
+- Plugin `--tmux-parity` is the userspace stand-in until PR7 lands.

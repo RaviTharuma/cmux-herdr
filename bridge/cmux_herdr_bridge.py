@@ -22,6 +22,11 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 STATUS_PREFIX = "herdr:"
 
+# Single-writer / title-lock contract (plugin track in docs/upstream/PR_PLAN.md)
+NATIVE_LIVE_ENV = "CMUX_HERDR_NATIVE_LIVE"
+FORCE_PLUGIN_ENV = "CMUX_HERDR_FORCE_PLUGIN"
+LOCK_TITLES_ENV = "CMUX_HERDR_LOCK_TITLES"
+
 # agent_status -> (icon, color, priority)
 STATUS_STYLE: Dict[str, Tuple[str, str, int]] = {
     "working": ("hammer", "#ff9500", 80),
@@ -106,6 +111,7 @@ class Snapshot:
     panes: List[Pane]
     tabs: List[Tab]
     workspaces: List[Workspace]
+    layouts: Any = None
     fetched_at: float = field(default_factory=time.time)
 
     def agent_panes(self) -> List[Pane]:
@@ -212,15 +218,24 @@ def map_status_to_style(status: Optional[str]) -> Tuple[str, str, int]:
 def status_value_for_pane(
     pane: Pane,
     tabs_by_id: Optional[Dict[str, "Tab"]] = None,
+    *,
+    locked_title: Optional[str] = None,
+    parent_tab_id: Optional[str] = None,
 ) -> str:
-    """Build a compact, human-readable cmux status-pill value."""
+    """Build a compact, human-readable cmux status-pill value.
+
+    When *locked_title* is set (native-title lock), that display name is used
+    instead of ``pane.display_name``. *parent_tab_id* prefers the persisted
+    parent map over a flickering snapshot ``tab_id``.
+    """
     agent = pane.agent or "agent"
     status = (pane.agent_status or "unknown").lower()
     parts = [f"{agent}/{status}"]
-    tab = (tabs_by_id or {}).get(pane.tab_id)
+    tab_id = parent_tab_id or pane.tab_id
+    tab = (tabs_by_id or {}).get(tab_id)
     if tab and tab.label:
         parts.append(str(tab.label))
-    name = pane.display_name
+    name = locked_title if locked_title else pane.display_name
     if name and name not in parts:
         parts.append(name)
     return " · ".join(parts)
@@ -334,7 +349,37 @@ def fetch_agents() -> List[Pane]:
     return [p for p in fetch_panes() if p.agent]
 
 
+def fetch_layouts_raw() -> Any:
+    """Best-effort Herdr layout payload (tab trees or session.snapshot).
+
+    Returns the raw JSON object so the mirror can parse multiple shapes.
+    Missing CLI verbs are not an error — older Herdr builds simply have no
+    layout command.
+    """
+    for args in (
+        ["layout", "list"],
+        ["tab", "layout"],
+        ["session", "snapshot"],
+    ):
+        try:
+            data = herdr_json(args)
+        except BridgeError:
+            continue
+        if data:
+            return data
+    return {}
+
+
 def fetch_snapshot() -> Snapshot:
+    """Fetch Herdr topology, preferring a live Unix-socket snapshot.
+
+    Socket-first avoids CLI fan-out every watch tick (tmux-parity). Falls
+    back to ``herdr pane|tab|workspace|layout`` CLI verbs when the socket
+    is missing or returns an unusable payload.
+    """
+    sock_snap = fetch_snapshot_via_socket()
+    if sock_snap is not None:
+        return sock_snap
     panes = fetch_panes()
     try:
         tabs = fetch_tabs()
@@ -344,13 +389,213 @@ def fetch_snapshot() -> Snapshot:
         workspaces = fetch_workspaces()
     except BridgeError:
         workspaces = []
-    return Snapshot(panes=panes, tabs=tabs, workspaces=workspaces)
+    try:
+        layouts = fetch_layouts_raw()
+    except BridgeError:
+        layouts = {}
+    return Snapshot(panes=panes, tabs=tabs, workspaces=workspaces, layouts=layouts)
+
+
+def fetch_snapshot_via_socket() -> Optional[Snapshot]:
+    """Return a Snapshot from ``session.snapshot`` over the Herdr socket.
+
+    Returns None when the socket is unavailable or the payload cannot be
+    parsed into panes. Never raises for transport failures.
+    """
+    path = os.environ.get("HERDR_SOCKET_PATH")
+    if not path or not os.path.exists(path):
+        return None
+    try:
+        from .cmux_herdr_socket import (
+            HerdrSocketClient,
+            HerdrSocketError,
+            assert_socket_secure,
+        )
+    except ImportError:
+        try:
+            from cmux_herdr_socket import (  # type: ignore
+                HerdrSocketClient,
+                HerdrSocketError,
+                assert_socket_secure,
+            )
+        except ImportError:
+            return None
+    try:
+        assert_socket_secure(path)
+        with HerdrSocketClient(path, timeout=5.0) as client:
+            client.ping()
+            result = client.snapshot()
+    except (OSError, HerdrSocketError, ValueError, TypeError):
+        return None
+    if not isinstance(result, dict):
+        return None
+    if isinstance(result.get("snapshot"), dict):
+        result = result["snapshot"]
+    panes_raw = result.get("panes") or []
+    tabs_raw = result.get("tabs") or []
+    workspaces_raw = result.get("workspaces") or result.get("workspace_list") or []
+    if not isinstance(panes_raw, list):
+        return None
+    panes = [
+        _pane_from_raw(p)
+        for p in panes_raw
+        if isinstance(p, dict) and p.get("pane_id")
+    ]
+    tabs: List[Tab] = []
+    if isinstance(tabs_raw, list):
+        for t in tabs_raw:
+            if not isinstance(t, dict):
+                continue
+            tabs.append(
+                Tab(
+                    tab_id=str(t.get("tab_id") or ""),
+                    workspace_id=str(t.get("workspace_id") or ""),
+                    label=t.get("label"),
+                    number=t.get("number"),
+                    agent_status=str(t.get("agent_status") or "unknown"),
+                    focused=bool(t.get("focused")),
+                    pane_count=int(t.get("pane_count") or 0),
+                    raw=t,
+                )
+            )
+    workspaces: List[Workspace] = []
+    if isinstance(workspaces_raw, list):
+        for w in workspaces_raw:
+            if not isinstance(w, dict):
+                continue
+            workspaces.append(
+                Workspace(
+                    workspace_id=str(w.get("workspace_id") or ""),
+                    label=w.get("label"),
+                    number=w.get("number"),
+                    agent_status=str(w.get("agent_status") or "unknown"),
+                    focused=bool(w.get("focused")),
+                    pane_count=int(w.get("pane_count") or 0),
+                    tab_count=int(w.get("tab_count") or 0),
+                    raw=w,
+                )
+            )
+    layouts = result.get("layouts") or result
+    return Snapshot(
+        panes=panes,
+        tabs=tabs,
+        workspaces=workspaces,
+        layouts=layouts,
+    )
 
 
 def _state_dir() -> str:
     """Return the user-scoped state directory, honoring XDG_STATE_HOME."""
     root = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
     return os.path.join(root, "cmux-herdr")
+
+
+def _env_truthy(name: str) -> bool:
+    """Return True when *name* is a conventional truthy env flag."""
+    raw = (os.environ.get(name) or "").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def association_key_for_pane(pane: Pane) -> str:
+    """Return the contract association key ``pane_id:session_id`` (or pane_id)."""
+    sid = (pane.agent_session_id or "").strip()
+    if sid:
+        return f"{pane.pane_id}:{sid}"
+    return pane.pane_id
+
+
+def native_live_marker_path(fp: Optional[Dict[str, Any]] = None) -> str:
+    """Per-fingerprint marker native cmux writes while attachment is live."""
+    return os.path.join(_state_dir(), f"native-live-{_parent_key(fp)}")
+
+
+def plugin_force_writer() -> bool:
+    """Escape hatch: plugin may write even when native attachment is detected."""
+    return _env_truthy(FORCE_PLUGIN_ENV)
+
+
+def auto_lock_titles() -> bool:
+    """When set, lock each pane display name after the first successful write."""
+    return _env_truthy(LOCK_TITLES_ENV)
+
+
+def native_attachment_is_live(fp: Optional[Dict[str, Any]] = None) -> bool:
+    """True when native nested attachment owns status/title writes for this host.
+
+    Detection (any of):
+    - ``CMUX_HERDR_NATIVE_LIVE`` is truthy
+    - per-fingerprint marker ``native-live-<key>``
+    - global marker ``native-live`` (surface-agnostic / legacy)
+
+    ``CMUX_HERDR_FORCE_PLUGIN=1`` always returns False so dogfood can opt out.
+    """
+    if plugin_force_writer():
+        return False
+    if _env_truthy(NATIVE_LIVE_ENV):
+        return True
+    try:
+        if os.path.isfile(native_live_marker_path(fp)):
+            return True
+        if os.path.isfile(os.path.join(_state_dir(), "native-live")):
+            return True
+    except OSError:
+        return False
+    return False
+
+
+def writer_status(fp: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Describe which path is allowed to project ``herdr:*`` pills."""
+    force = plugin_force_writer()
+    env_live = _env_truthy(NATIVE_LIVE_ENV)
+    marker = native_live_marker_path(fp)
+    try:
+        marker_exists = os.path.isfile(marker)
+        global_exists = os.path.isfile(os.path.join(_state_dir(), "native-live"))
+    except OSError:
+        marker_exists = False
+        global_exists = False
+    detected = env_live or marker_exists or global_exists
+    live = detected and not force
+    if force and detected:
+        writer = "plugin-forced"
+    elif live:
+        writer = "native"
+    else:
+        writer = "plugin"
+    return {
+        "writer": writer,
+        "native_live": live,
+        "native_detected": detected,
+        "force_plugin": force,
+        "env_native_live": env_live,
+        "marker_path": marker,
+        "marker_exists": marker_exists,
+        "global_marker_exists": global_exists,
+    }
+
+
+_native_skip_logged = False
+
+
+def reset_native_skip_log() -> None:
+    """Reset the once-only native-skip log (tests / process reuse)."""
+    global _native_skip_logged
+    _native_skip_logged = False
+
+
+def _log_native_skip_once(log: bool, fp: Optional[Dict[str, Any]] = None) -> None:
+    """Log the single-writer handoff once per process."""
+    global _native_skip_logged
+    if _native_skip_logged:
+        return
+    _native_skip_logged = True
+    msg = (
+        "cmux-herdr: native attachment is live; skipping herdr:* status writes "
+        f"(fingerprint={_parent_key(fp)}). Set {FORCE_PLUGIN_ENV}=1 to force "
+        "plugin writes."
+    )
+    if log:
+        print(msg, file=sys.stderr)
 
 
 def _herdr_server_pid() -> Optional[int]:
@@ -555,12 +800,15 @@ def _load_association_map(fp: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
         with open(_association_path(data_fp), "r", encoding="utf-8") as handle:
             data = json.load(handle)
         if isinstance(data, dict) and data.get("version") == 1 and isinstance(data.get("panes"), dict):
+            if not isinstance(data.get("mirrors"), dict):
+                data["mirrors"] = {}
             return data
     except (OSError, ValueError, TypeError):
         pass
     return {
         "version": 1,
         "panes": {},
+        "mirrors": {},
         "cmux_workspace": None,
         "herdr_socket_path": data_fp.get("herdr_socket_path"),
         "herdr_workspace_id": data_fp.get("herdr_workspace_id"),
@@ -599,45 +847,246 @@ def _save_association_map(state: Dict[str, Any], fp: Optional[Dict[str, Any]] = 
                 pass
 
 
+def _nonempty_id(value: Any) -> Optional[str]:
+    """Return a stripped non-empty string id, or None."""
+    if isinstance(value, str):
+        text = value.strip()
+        if text:
+            return text
+    return None
+
+
+def _prior_for_pane(pane: Pane, previous: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the prior association record, or {} when the session instance changed.
+
+    Locks and heuristic-satisfied flags must not reuse across ``session_id``
+    identities for the same ``pane_id``.
+    """
+    prior = previous.get(pane.pane_id)
+    if not isinstance(prior, dict):
+        return {}
+    prior_sid = prior.get("agent_session_id")
+    new_sid = pane.agent_session_id
+    if prior_sid and new_sid and prior_sid != new_sid:
+        return {}
+    return prior
+
+
+def _infer_parent_once(
+    pane: Pane,
+    snapshot: Optional[Snapshot] = None,
+) -> Tuple[Optional[str], Optional[str]]:
+    """Prompt-time parent heuristic. Must not run after heuristic_satisfied.
+
+    1. If this pane is the invoking Herdr pane, seed from ``HERDR_TAB_ID`` /
+       ``HERDR_WORKSPACE_ID``.
+    2. Else if the snapshot has exactly one tab in the pane's workspace, use it.
+    Never invent a parent from titles or cwd matching.
+    """
+    env_pane = os.environ.get("HERDR_PANE_ID")
+    if env_pane and env_pane == pane.pane_id:
+        tab = _nonempty_id(os.environ.get("HERDR_TAB_ID"))
+        ws = _nonempty_id(os.environ.get("HERDR_WORKSPACE_ID")) or _nonempty_id(
+            pane.workspace_id
+        )
+        if tab or ws:
+            return tab, ws
+    if snapshot is not None:
+        ws = _nonempty_id(pane.workspace_id)
+        tabs = [
+            t
+            for t in snapshot.tabs
+            if t.tab_id and (not ws or t.workspace_id == ws)
+        ]
+        if len(tabs) == 1:
+            return tabs[0].tab_id, tabs[0].workspace_id or ws
+    return None, None
+
+
+def resolve_association_parents(
+    pane: Pane,
+    prior: Optional[Dict[str, Any]] = None,
+    *,
+    snapshot: Optional[Snapshot] = None,
+) -> Dict[str, Any]:
+    """Two-pass parent resolution for one pane.
+
+    Pass A uses authoritative snapshot ``tab_id`` / ``workspace_id``.
+    Pass B (heuristic, once) uses env / sole-tab inference only when the
+    provider has not yet emitted parentage and the record is not already
+    satisfied. After the first successful association, later empty snapshots
+    keep the recorded parent map instead of re-inferring.
+    """
+    prior = prior if isinstance(prior, dict) else {}
+    satisfied = bool(prior.get("heuristic_satisfied"))
+    prior_tab = _nonempty_id(prior.get("parent_tab_id") or prior.get("tab_id"))
+    prior_ws = _nonempty_id(prior.get("parent_workspace_id") or prior.get("workspace_id"))
+
+    snap_tab = _nonempty_id(pane.tab_id)
+    snap_ws = _nonempty_id(pane.workspace_id)
+    tab_id = snap_tab
+    workspace_id = snap_ws
+    used_heuristic = False
+
+    if not tab_id or not workspace_id:
+        if satisfied and (prior_tab or prior_ws):
+            tab_id = tab_id or prior_tab
+            workspace_id = workspace_id or prior_ws
+        else:
+            inferred_tab, inferred_ws = _infer_parent_once(pane, snapshot)
+            if inferred_tab or inferred_ws:
+                used_heuristic = True
+                tab_id = tab_id or inferred_tab
+                workspace_id = workspace_id or inferred_ws
+
+    now_satisfied = bool(satisfied or (tab_id and workspace_id) or used_heuristic)
+    return {
+        "parent_tab_id": tab_id,
+        "parent_workspace_id": workspace_id,
+        "heuristic_satisfied": now_satisfied,
+        "used_heuristic": used_heuristic,
+    }
+
+
+def locked_display_name(pane: Pane, prior: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """Return the locked title when the association record has a title lock."""
+    prior = prior if isinstance(prior, dict) else {}
+    if not prior.get("title_lock"):
+        return None
+    locked = prior.get("locked_title")
+    if isinstance(locked, str) and locked.strip():
+        return locked.strip()
+    return None
+
+
+def status_write_payload(
+    pane: Pane,
+    tabs_by_id: Optional[Dict[str, Tab]] = None,
+    prior: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Build the set-status payload, honoring title lock and parent map."""
+    prior = prior if isinstance(prior, dict) else {}
+    locked = locked_display_name(pane, prior)
+    parent_tab = prior.get("parent_tab_id") if prior.get("heuristic_satisfied") else None
+    if not isinstance(parent_tab, str) or not parent_tab.strip():
+        parent_tab = None
+    icon, color, priority = map_status_to_style(pane.agent_status)
+    value = status_value_for_pane(
+        pane,
+        tabs_by_id,
+        locked_title=locked,
+        parent_tab_id=parent_tab,
+    )
+    return {
+        "value": value,
+        "icon": icon,
+        "color": color,
+        "priority": priority,
+        "title_lock": bool(prior.get("title_lock")),
+        "locked_title": locked,
+    }
+
+
+def should_write_status_pill(
+    payload: Dict[str, Any],
+    prior: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """Return False when the last written pill is identical (diff-before-write)."""
+    if not isinstance(prior, dict):
+        return True
+    return not (
+        prior.get("last_status_value") == payload.get("value")
+        and prior.get("last_icon") == payload.get("icon")
+        and prior.get("last_color") == payload.get("color")
+        and prior.get("last_priority") == payload.get("priority")
+    )
+
+
+def _association_record(
+    pane: Pane,
+    prior: Dict[str, Any],
+    parents: Dict[str, Any],
+    write_meta: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Build one association cache record, preserving locks and last write."""
+    meta = write_meta if isinstance(write_meta, dict) else {}
+    title_lock = bool(meta.get("title_lock") if "title_lock" in meta else prior.get("title_lock"))
+    locked_title = meta.get("locked_title")
+    if title_lock and not locked_title:
+        locked_title = prior.get("locked_title") or pane.display_name
+    if not title_lock:
+        locked_title = None
+    return {
+        "pane_id": pane.pane_id,
+        "association_key": association_key_for_pane(pane),
+        "tab_id": pane.tab_id,
+        "workspace_id": pane.workspace_id,
+        "parent_tab_id": parents.get("parent_tab_id") or pane.tab_id,
+        "parent_workspace_id": parents.get("parent_workspace_id") or pane.workspace_id,
+        "heuristic_satisfied": bool(parents.get("heuristic_satisfied")),
+        "title_lock": title_lock,
+        "locked_title": locked_title,
+        "last_status_value": meta.get("last_status_value", prior.get("last_status_value")),
+        "last_icon": meta.get("last_icon", prior.get("last_icon")),
+        "last_color": meta.get("last_color", prior.get("last_color")),
+        "last_priority": meta.get("last_priority", prior.get("last_priority")),
+        "agent": pane.agent,
+        "agent_status": pane.agent_status,
+        "status_key": pane.status_key,
+        "label": pane.label,
+        "cwd": pane.cwd,
+        "focused": pane.focused,
+        "agent_session_path": pane.agent_session_path,
+        "agent_session_id": pane.agent_session_id,
+        "agent_session_kind": pane.agent_session_kind,
+        "revision": pane.revision,
+        "first_seen_at": prior.get("first_seen_at") or time.time(),
+        "last_seen_at": time.time(),
+    }
+
+
 def update_association_map(
     snapshot: Snapshot,
     *,
     cmux_workspace: Optional[str] = None,
+    write_meta: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Rewrite the hybrid association cache from a live Herdr snapshot.
 
     Production data pattern:
     - parent binding (outer cmux workspace) is locked separately per host fingerprint
     - this map tracks inner pane_id → status_key/session/status for restore + pruning
+    - parent map + title-lock + heuristic-satisfied are explicit fields
     - treated as cache only; never authoritative restore state for native cmux
     """
     fp = collect_host_fingerprint()
     state = _load_association_map(fp)
     previous = state.get("panes") if isinstance(state.get("panes"), dict) else {}
+    meta_by_pane = write_meta if isinstance(write_meta, dict) else {}
     live: Dict[str, Any] = {}
     for pane in snapshot.panes:
         if not pane.pane_id:
             continue
-        prior = previous.get(pane.pane_id) if isinstance(previous.get(pane.pane_id), dict) else {}
-        live[pane.pane_id] = {
-            "pane_id": pane.pane_id,
-            "tab_id": pane.tab_id,
-            "workspace_id": pane.workspace_id,
-            "agent": pane.agent,
-            "agent_status": pane.agent_status,
-            "status_key": pane.status_key,
-            "label": pane.label,
-            "cwd": pane.cwd,
-            "focused": pane.focused,
-            "agent_session_path": pane.agent_session_path,
-            "agent_session_id": pane.agent_session_id,
-            "agent_session_kind": pane.agent_session_kind,
-            "revision": pane.revision,
-            "first_seen_at": prior.get("first_seen_at") or time.time(),
-            "last_seen_at": time.time(),
-        }
+        prior = _prior_for_pane(pane, previous)
+        meta = meta_by_pane.get(pane.pane_id)
+        if not isinstance(meta, dict):
+            meta = {}
+        parents = resolve_association_parents(pane, prior, snapshot=snapshot)
+        if meta.get("parent_tab_id") or meta.get("heuristic_satisfied") is not None:
+            parents = {
+                "parent_tab_id": meta.get("parent_tab_id", parents["parent_tab_id"]),
+                "parent_workspace_id": meta.get(
+                    "parent_workspace_id", parents["parent_workspace_id"]
+                ),
+                "heuristic_satisfied": bool(
+                    meta.get("heuristic_satisfied", parents["heuristic_satisfied"])
+                ),
+            }
+        live[pane.pane_id] = _association_record(pane, prior, parents, meta)
     pruned = sorted(set(previous) - set(live))
     state["panes"] = live
+    if not isinstance(state.get("mirrors"), dict):
+        state["mirrors"] = {}
     state["cmux_workspace"] = cmux_workspace or state.get("cmux_workspace")
     state["pruned_pane_ids"] = pruned
     _save_association_map(state, fp)
@@ -650,11 +1099,50 @@ def update_association_map(
     }
 
 
+def set_title_lock(
+    pane_id: str,
+    *,
+    locked: bool,
+    title: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Set or clear the native-title lock on one association record.
+
+    Creates a stub record when the pane is not yet in the cache. Idempotent.
+    """
+    if not pane_id or not str(pane_id).strip():
+        raise BridgeError("pane_id is required to lock or unlock a title")
+    pane_id = str(pane_id).strip()
+    fp = collect_host_fingerprint()
+    state = _load_association_map(fp)
+    panes = state.get("panes") if isinstance(state.get("panes"), dict) else {}
+    entry = panes.get(pane_id) if isinstance(panes.get(pane_id), dict) else {}
+    if not entry:
+        entry = {
+            "pane_id": pane_id,
+            "status_key": f"{STATUS_PREFIX}{pane_id}",
+            "association_key": pane_id,
+        }
+    if locked:
+        entry["title_lock"] = True
+        if title and str(title).strip():
+            entry["locked_title"] = str(title).strip()
+        elif not entry.get("locked_title"):
+            entry["locked_title"] = entry.get("label") or pane_id
+    else:
+        entry["title_lock"] = False
+        entry.pop("locked_title", None)
+    panes[pane_id] = entry
+    state["panes"] = panes
+    _save_association_map(state, fp)
+    return entry
+
+
 def format_associations(state: Optional[Dict[str, Any]] = None) -> str:
     data = state or _load_association_map()
     panes = data.get("panes") if isinstance(data.get("panes"), dict) else {}
+    mirrors = data.get("mirrors") if isinstance(data.get("mirrors"), dict) else {}
     lines = [
-        f"associations: {len(panes)} panes",
+        f"associations: {len(panes)} panes, {len(mirrors)} mirrored surfaces",
         f"  cmux_workspace={data.get('cmux_workspace') or '-'}",
         f"  herdr_workspace={data.get('herdr_workspace_id') or '-'}",
         f"  surface={data.get('cmux_surface_id') or '-'}",
@@ -667,11 +1155,22 @@ def format_associations(state: Optional[Dict[str, Any]] = None) -> str:
         session = entry.get("agent_session_path") or entry.get("agent_session_id") or "-"
         if isinstance(session, str) and len(session) > 60:
             session = "…" + session[-57:]
+        lock = "Y" if entry.get("title_lock") else "n"
+        heur = "Y" if entry.get("heuristic_satisfied") else "n"
+        parent = entry.get("parent_tab_id") or entry.get("tab_id") or "-"
         lines.append(
             f"  {pane_id:10}  {(entry.get('agent_status') or '?'):8}  "
             f"{(entry.get('agent') or '-'):8}  {entry.get('status_key') or '-'}  "
-            f"session={session}"
+            f"parent={parent}  lock={lock}  heur={heur}  session={session}"
         )
+    if mirrors:
+        lines.append("mirrors:")
+        for pane_id in sorted(mirrors):
+            entry = mirrors[pane_id] if isinstance(mirrors[pane_id], dict) else {}
+            lines.append(
+                f"  {pane_id:10}  {(entry.get('role') or '?'):8}  "
+                f"{entry.get('cmux_surface_id') or '-'}  {entry.get('title') or '-'}"
+            )
     return "\n".join(lines)
 
 
@@ -766,16 +1265,64 @@ def sync_to_cmux(
             "(need CMUX_SURFACE_ID + HERDR_SOCKET_PATH, or pass --workspace)"
         )
 
+    writer = writer_status()
+    fp = collect_host_fingerprint()
+    if writer["native_live"]:
+        association = update_association_map(snap, cmux_workspace=ws)
+        _log_native_skip_once(log, fp)
+        summary_line = (
+            f"herdr sync: skipped (native attachment live) ws={ws} "
+            f"fingerprint={_parent_key(fp)}"
+        )
+        if log:
+            try:
+                cmux_cmd(["log", summary_line], workspace=ws)
+            except Exception:
+                pass
+        result = {
+            "workspace": ws,
+            "applied": [],
+            "skipped_unchanged": [],
+            "stale_cleared": [],
+            "counts": {
+                "working": 0,
+                "idle": 0,
+                "done": 0,
+                "blocked": 0,
+                "unknown": 0,
+                "other": 0,
+            },
+            "progress": None,
+            "errors": [],
+            "summary": summary_line,
+            "pane_count": len(snap.panes),
+            "agent_count": 0,
+            "associations": association,
+            "host_fingerprint": fp,
+            "host_fingerprint_key": _parent_key(fp),
+            "writer": writer["writer"],
+            "native_live": True,
+            "skipped_reason": "native_live",
+        }
+        if fingerprint_warning:
+            result["fingerprint_warning"] = fingerprint_warning
+        return result
+
     tabs_by_id = {t.tab_id: t for t in snap.tabs}
     # Prefer panes that look like agents; fall back to all non-unknown
     panes = [p for p in snap.panes if p.agent]
     if not panes:
         panes = [p for p in snap.panes if p.agent_status in ("working", "idle", "done", "blocked")]
 
+    prior_state = _load_association_map(fp)
+    previous = prior_state.get("panes") if isinstance(prior_state.get("panes"), dict) else {}
     desired_keys = set()
     counts = {"working": 0, "idle": 0, "done": 0, "blocked": 0, "unknown": 0, "other": 0}
     applied: List[str] = []
+    skipped_unchanged: List[str] = []
     errors: List[str] = []
+    write_meta: Dict[str, Dict[str, Any]] = {}
+    lock_after_write = auto_lock_titles()
 
     for pane in panes:
         st = (pane.agent_status or "unknown").lower()
@@ -783,26 +1330,54 @@ def sync_to_cmux(
             counts[st] += 1
         else:
             counts["other"] += 1
-        icon, color, priority = map_status_to_style(st)
         key = pane.status_key
         desired_keys.add(key)
-        value = status_value_for_pane(pane, tabs_by_id)
+        prior = _prior_for_pane(pane, previous)
+        parents = resolve_association_parents(pane, prior, snapshot=snap)
+        prior_view = dict(prior)
+        prior_view.update(parents)
+        payload = status_write_payload(pane, tabs_by_id, prior_view)
+        if not should_write_status_pill(payload, prior):
+            skipped_unchanged.append(key)
+            write_meta[pane.pane_id] = {
+                "last_status_value": prior.get("last_status_value"),
+                "last_icon": prior.get("last_icon"),
+                "last_color": prior.get("last_color"),
+                "last_priority": prior.get("last_priority"),
+                "title_lock": bool(prior.get("title_lock")),
+                "locked_title": prior.get("locked_title"),
+                **parents,
+            }
+            continue
         proc = cmux_cmd(
             [
                 "set-status",
                 key,
-                value,
+                payload["value"],
                 "--icon",
-                icon,
+                payload["icon"],
                 "--color",
-                color,
+                payload["color"],
                 "--priority",
-                str(priority),
+                str(payload["priority"]),
             ],
             workspace=ws,
         )
         if proc.returncode == 0:
             applied.append(key)
+            lock = bool(prior.get("title_lock") or lock_after_write)
+            locked_title = payload.get("locked_title")
+            if lock and not locked_title:
+                locked_title = pane.display_name
+            write_meta[pane.pane_id] = {
+                "last_status_value": payload["value"],
+                "last_icon": payload["icon"],
+                "last_color": payload["color"],
+                "last_priority": payload["priority"],
+                "title_lock": lock,
+                "locked_title": locked_title if lock else None,
+                **parents,
+            }
         else:
             errors.append((proc.stderr or proc.stdout or key).strip())
 
@@ -829,7 +1404,9 @@ def sync_to_cmux(
     summary_line = (
         f"herdr sync: {len(applied)} panes → cmux ws={ws} "
         f"(working={counts['working']} idle={counts['idle']} "
-        f"done={counts['done']} blocked={counts['blocked']} unknown={counts['unknown']})"
+        f"done={counts['done']} blocked={counts['blocked']} unknown={counts['unknown']}"
+        + (f" unchanged={len(skipped_unchanged)}" if skipped_unchanged else "")
+        + ")"
     )
     if log:
         try:
@@ -837,11 +1414,11 @@ def sync_to_cmux(
         except Exception:
             pass
 
-    association = update_association_map(snap, cmux_workspace=ws)
-    fp = collect_host_fingerprint()
+    association = update_association_map(snap, cmux_workspace=ws, write_meta=write_meta)
     result: Dict[str, Any] = {
         "workspace": ws,
         "applied": applied,
+        "skipped_unchanged": skipped_unchanged,
         "stale_cleared": stale_cleared,
         "counts": counts,
         "progress": progress,
@@ -852,6 +1429,8 @@ def sync_to_cmux(
         "associations": association,
         "host_fingerprint": fp,
         "host_fingerprint_key": _parent_key(fp),
+        "writer": writer["writer"],
+        "native_live": False,
     }
     if fingerprint_warning:
         result["fingerprint_warning"] = fingerprint_warning
@@ -970,6 +1549,7 @@ def dual_status() -> Dict[str, Any]:
         "host_fingerprint_missing": fingerprint_missing_fields(fp),
         "nested": bool(os.environ.get("HERDR_ENV"))
         and bool(os.environ.get("CMUX_SOCKET_PATH") or os.environ.get("CMUX_WORKSPACE_ID")),
+        "writer": writer_status(fp),
     }
     info["herdr"]["available"] = herdr_available()
     info["cmux"]["available"] = cmux_available()
@@ -1466,6 +2046,28 @@ def diagnose_install() -> Dict[str, Any]:
                 binding_exists,
                 bound_workspace,
             ),
+        }
+    )
+
+    writer = writer_status(fp)
+    if writer["native_live"]:
+        writer_detail = (
+            f"writer=native (plugin projection skipped); "
+            f"marker={writer['marker_path']}"
+        )
+    elif writer["force_plugin"] and writer["native_detected"]:
+        writer_detail = (
+            f"writer=plugin-forced ({FORCE_PLUGIN_ENV}=1 overrides native live)"
+        )
+    else:
+        writer_detail = "writer=plugin (no native attachment detected)"
+    checks.append(
+        {
+            "name": "writer",
+            "ok": True,
+            "hard": False,
+            "writer": writer,
+            "detail": writer_detail,
         }
     )
 

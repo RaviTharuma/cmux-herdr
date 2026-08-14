@@ -21,7 +21,12 @@ cmux window → workspace → pane → terminal surface
 
 This makes inner agents invisible to cmux navigation, status, unread/attention UI, automation, and restore. A user-space bridge can copy agent state into workspace status pills, but cannot provide first-class hierarchy or correctly scoped actions.
 
-**Native wins as the primary path.** cmux should gain capability-negotiated nested topology: discover an opted-in provider from the host terminal, connect directly to its local socket, import a read-only snapshot, subscribe to events, and render provider-owned virtual descendants beneath the host surface. Mutating actions are forwarded to the provider; cmux does not duplicate PTYs or treat provider panes as cmux-native panes.
+**Native wins as the primary path.** cmux should gain two complementary Herdr integrations, matching how ssh-tmux already works:
+
+1. **Sidebar nested topology** (#10045) — provider-owned virtual descendants, socket snapshot + events, capability-gated focus.
+2. **Window mirror (PR7)** — `RemoteHerdrWindowMirror`: each Herdr tab is a real cmux tab; each pane is a real Bonsplit + Ghostty surface; layout/input/output/split/resize/zoom/prune copy `RemoteTmuxWindowMirror`.
+
+The plugin (`cmux-herdr mirror --tmux-parity`) is the userspace stand-in until PR7 lands. Canonical mapping: [TMUX_PARITY.md](./TMUX_PARITY.md).
 
 The existing user-controlled plugin bridge remains a **flexible compatibility route** for older cmux/Herdr builds and for dogfooding production association patterns (parent maps, title locks, heuristic once-only behavior) while native parity lands.
 
@@ -86,8 +91,8 @@ This is a bridge/native-shared behavioral contract, not a substitute for compoun
 
 ### Presentation
 
-- Provider workspaces, tabs, panes, and agents appear as virtual descendants of the host terminal surface.
-- Each row is visibly provider-owned. Inner panes are not inserted into Bonsplit and do not claim native cmux pane/surface UUIDs.
+- Provider workspaces, tabs, panes, and agents appear as virtual descendants of the host terminal surface (**sidebar**).
+- **Window mirror (PR7):** Herdr tabs appear as real cmux tabs; Herdr panes appear as real Bonsplit panes + Ghostty surfaces, with layout imposed from the provider tree (ssh-tmux).
 - Focus, prompt, send-input, rename, split, and close are shown only when the negotiated provider capabilities support them.
 - Agent states map to cmux semantics without discarding the provider’s original value.
 - `system.tree` can optionally include the nested subtree with typed, namespaced IDs and a parent host-surface reference.
@@ -132,7 +137,7 @@ At the source revisions reviewed below, Herdr’s newline-delimited local API pr
 
 Herdr protocol 17 exposes feature booleans in `ServerCapabilities`, not a complete method list. The first adapter should therefore use a cmux-owned compatibility table keyed by tested protocol range and degrade to snapshot-only when mutation support is uncertain. A future Herdr capability list can remove that coupling.
 
-Where practical, native Herdr support should aim for **parity with cmux’s existing tmux nested integration** (discover → observe topology → surface tree/status → capability-gated actions), without forcing Herdr panes into Bonsplit/PTY ownership.
+Where practical, native Herdr support should aim for **parity with cmux’s existing tmux nested integration**. Sidebar topology is the session navigator; **PR7 must copy `RemoteTmuxWindowMirror`** (real tabs/panes, layout, I/O). See [TMUX_PARITY.md](./TMUX_PARITY.md).
 
 ## Security requirements
 
@@ -160,8 +165,9 @@ The plugin’s `pane_id:session_id` state key is an **association cache key only
 
 - [ ] A supported Herdr session can be attached to exactly one cmux host surface without polling a CLI.
 - [ ] Initial snapshot and subscribed events produce an ordered nested workspace/tab/pane/agent tree.
+- [ ] **PR7:** each Herdr tab is a real cmux tab and each pane a real Bonsplit + Ghostty surface (ssh-tmux parity).
 - [ ] Focus and status changes are reflected without recreating the host terminal.
-- [ ] Supported actions route to the correct provider instance and node; unsupported actions are absent or disabled.
+- [ ] Supported actions (including send/split/resize on the mirror) route to the correct provider instance and node; unsupported actions are absent or disabled.
 - [ ] Two Herdr providers with identical raw pane IDs do not collide.
 - [ ] Disconnect/reconnect and socket-path reuse cannot apply an action to a different provider instance.
 - [ ] Restore revalidates and refreshes live state instead of restoring stale inner topology.
@@ -172,13 +178,15 @@ The plugin’s `pane_id:session_id` state key is an **association cache key only
 - [ ] Plugin fallback remains usable on older cmux builds and can be disabled when native attachment is live for the same host surface (no double writers).
 - [ ] Unit, protocol fixture, integration, restore, security, and UI tests cover the cases above.
 
-## Non-goals (v1)
+## Non-goals (sidebar v1 / #10045)
 
-- Treating Herdr panes as native Bonsplit panes / Ghostty surfaces.
+- Treating Herdr panes as native Bonsplit panes **without** a `RemoteHerdrWindowMirror` (that is PR7, not a sidebar identity rewrite).
 - Remote provider transport.
 - Generic third-party executable plugins inside cmux.
 - Automatic Herdr process lifecycle management.
 - Unbounded screen-scraping as the primary topology source.
+
+PR7 **does** create viewer `TerminalPanel`s bound to Herdr pane ids, copying ssh-tmux. Herdr keeps the PTY processes.
 
 ## Source basis
 
@@ -191,6 +199,8 @@ Relevant cmux implementation points include `Workspace`, `TerminalController+Con
 
 Companion materials in this package:
 
+- [TMUX_PARITY.md](./TMUX_PARITY.md) — ssh-tmux capability matrix (plugin + native)
+- [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md) — paste-ready native window-mirror PR
 - [DESIGN.md](./DESIGN.md) — architecture and ownership boundaries
 - [PARITY_MATRIX.md](./PARITY_MATRIX.md) — stopgap vs native capability matrix
 - [PR_PLAN.md](./PR_PLAN.md) — incremental upstream PR sequence

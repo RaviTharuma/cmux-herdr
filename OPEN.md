@@ -19,10 +19,12 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 
 ## What this plugin solves today
 
+- Mirror Herdr **tabs/panes into real cmux tabs/splits** (`cmux-herdr mirror`,
+  `--tmux-parity` for the ssh-tmux contract) with `attach-pane` followers.
 - Mirror Herdr agent state into cmux workspace **status pills** (`herdr:<pane_id>`) and progress.
 - CLI for topology and control: `status`, `doctor`, `tree`, `agents`, `sync`, `watch`,
-  `clear`, focus helpers (`focus-workspace` / `focus-tab` / `focus-pane` / `focus-agent`),
-  `read-pane` / `read-agent`, `split`, `json-dump`.
+  `mirror`, `attach-pane`, `clear`, focus helpers, `read-pane` / `read-agent`, `split`,
+  `json-dump`.
 - Persist per-host-fingerprint Herdr-parent → cmux-workspace bindings so outer focus
   changes do not thrash status writes and multi-window hosts do not collide.
 - Skip ordinary shell panes (no agent) so they are not mirrored as agents.
@@ -37,13 +39,18 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 
 ## Explicit limitations (not bugs)
 
-1. **No first-class nested hierarchy in cmux.**
-   Inner Herdr workspaces/tabs/panes never become Bonsplit objects. Status pills are a flat
-   projection onto one outer workspace. Full hierarchy is issue [#8737](https://github.com/manaflow-ai/cmux/issues/8737).
+1. **No Ghostty PTY theft.**
+   `mirror --tmux-parity` creates extra cmux tabs/splits that *follow* Herdr
+   panes via `attach-pane` (poll `herdr pane read`, forward `pane send`,
+   SIGWINCH resize). It does not insert Herdr PTYs into Bonsplit the way native
+   `ssh-tmux` / PR7 `RemoteHerdrWindowMirror` does. See
+   [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
 
-2. **Polling, not events.**
-   `watch` loops on an interval (default 3s). Native path should subscribe to Herdr events
-   and resync from snapshots.
+2. **Event-driven watch, poll fallback.**
+   `watch --tmux-parity` holds one Herdr Unix-socket `events.subscribe` session
+   when `HERDR_SOCKET_PATH` is live, then resyncs; otherwise it polls. Native
+   PR7 feeds `%output`-style bytes into Ghostty; the plugin still polls
+   `pane.read` and applies an incremental delta.
 
 3. **No reattach model after cmux restart.**
    Parent binding is best-effort local state under `~/.local/state/cmux-herdr/`. There is no
@@ -89,6 +96,27 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] `./scripts/test.sh` — stdlib unittest only (no pytest).
 - [x] Herdr 0.8 `agent_session.agent` parsing.
 - [x] Release artifacts for v0.1.0 (`VERSION`, `CHANGELOG.md`, `RELEASE.md`) — tag after merge per [RELEASE.md](./RELEASE.md).
+- [x] Userspace deep mirror: `mirror` / `attach-pane` / `watch --mirror` project
+      Herdr tabs/panes into real cmux tabs/splits (idempotent `herdr-mirror:<pane_id>`
+      keys). Not Ghostty PTY theft — extra viewers, like a second tmux client.
+- [x] **Persistent NDJSON session + engine:** `HerdrEventSession` for
+      `watch --tmux-parity`; `cmux_herdr_engine.py` is the Python twin of
+      `RemoteHerdrWindowMirror` (zoom/close/structure version/sizing/output
+      delta). Remaining plugin gap is PTY theft / divider-drag (native PR7).
+- [x] **tmux-parity plugin:** `mirror --tmux-parity` / `watch --tmux-parity` —
+      layout tree, ratios, tab order, focus, prune, attach cbreak/SIGWINCH/ANSI.
+- [x] Single-writer guard when native attachment is live (`CMUX_HERDR_NATIVE_LIVE` /
+      `native-live-<fingerprint>` marker; `CMUX_HERDR_FORCE_PLUGIN` escape hatch).
+- [x] Native-title lock + diff-before-write (`lock-title` / `unlock-title`,
+      `CMUX_HERDR_LOCK_TITLES`).
+- [x] Heuristic-once parent map (`parent_tab_id` + `heuristic_satisfied`; session
+      identity change resets locks).
+- [x] Mirror / `--tmux-parity` yields when native attachment is live (same single-writer
+      rule as status pills).
+- [x] Engine-owned reconcile drives `mirror_to_cmux` (no dual DesiredMirror/engine drift).
+- [x] Single size-claim writer (no per-viewer SIGWINCH resize war).
+- [x] Fail-closed layout application (no orphan-tab fallback on split failure).
+- [x] Socket-first snapshot for `watch --tmux-parity` (CLI fan-out only on socket drop).
 
 ### B. Native MVP PR (#8736) — open + mergeable
 
@@ -111,17 +139,14 @@ Remaining for that PR is maintainer review / merge — not more missing-PATH wor
 
 ### C. Full native parity (#8737) — long pole
 
-Not started (by design). Blocks:
+Two native layers (do not collapse them):
 
-- Capability negotiation + provider socket attach from host surface
-- Read-only nested snapshot import + event subscription
-- Virtual descendants under host surface (not real cmux PTYs)
-- Forwarded focus/split/mutate actions
-- Reattach / restore model
-- UI: tree, attention, unread scoped to inner agents
+1. **Sidebar nested topology** — [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (open, dirty). Virtual rows + `nested.node.focus`. **Not** ssh-tmux.
+2. **Window mirror (PR7)** — paste-ready [docs/upstream/PR7_HERDR_WINDOW_MIRROR.md](./docs/upstream/PR7_HERDR_WINDOW_MIRROR.md). Copy `RemoteTmuxWindowMirror`: real cmux tabs, Bonsplit panes, Ghostty I/O, layout, resize, zoom, prune.
 
-Start only after MVP lands or maintainers signal interest on #8737.
-**Do not expand this plugin into #8737 native implementation.**
+Matrix: [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
+
+**Do not expand this plugin into #8737 Swift.** Keep `--tmux-parity` as the userspace stand-in.
 
 ## Coordination
 

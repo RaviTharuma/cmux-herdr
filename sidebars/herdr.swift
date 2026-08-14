@@ -116,6 +116,10 @@ ScrollView {
         .font(.caption)
         .foregroundColor(.secondary)
         .lineLimit(4)
+      Text("cmux-herdr mirror --tmux-parity projects Herdr tabs/panes like ssh-tmux (layout, focus, order, prune).")
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .lineLimit(4)
     }
 
     Divider()
@@ -144,6 +148,8 @@ ScrollView {
       Text("cmux-herdr sync")
         .font(.system(size: 11, design: .monospaced))
       Text("cmux-herdr watch")
+        .font(.system(size: 11, design: .monospaced))
+      Text("cmux-herdr mirror")
         .font(.system(size: 11, design: .monospaced))
       Text("cmux-herdr agents")
         .font(.system(size: 11, design: .monospaced))

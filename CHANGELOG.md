@@ -7,6 +7,53 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- **Persistent Herdr socket + window-mirror engine:** `bridge/cmux_herdr_socket.py`
+  holds one protocol-17 NDJSON `events.subscribe` session for
+  `watch --tmux-parity` (no reconnect-every-tick). `bridge/cmux_herdr_engine.py`
+  is the Python twin of native `RemoteHerdrWindowMirror` (zoom keeps hidden
+  panes, geometry-only does not bump structure version, feed-forward client
+  grid, incremental `pane.read` delta). `attach-pane` appends when output
+  extends the last snapshot.
+
+- Native track retarget: [docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md)
+  and paste-ready [PR7 `RemoteHerdrWindowMirror`](docs/upstream/PR7_HERDR_WINDOW_MIRROR.md)
+  so the in-app path copies ssh-tmux instead of stopping at sidebar virtual rows.
+
+- **Deep mirror** (`cmux-herdr mirror` / `attach-pane` / `watch --mirror`):
+  project Herdr tabs into real cmux tabs and extra panes into cmux splits,
+  each running an `attach-pane` follower (`herdr pane read` + `pane send`).
+  Idempotent via `herdr-mirror:<pane_id>` keys stored in the association
+  cache `mirrors` map. Default scope is the current Herdr tab; `--all`
+  mirrors the full session; `--dry-run` prints the plan; `--prune` closes
+  leftover cmux surfaces. This is the plugin analogue of cmux `ssh-tmux`
+  (extra viewers, not Ghostty PTY theft).
+
+- **Single-writer guard**: `sync` / `watch` / `mirror` no-op competing writes when
+  native nested attachment is live (`CMUX_HERDR_NATIVE_LIVE=1`, or a
+  `native-live-<fingerprint>` / `native-live` marker under
+  `$XDG_STATE_HOME/cmux-herdr/`). Logs the handoff once per process.
+  Escape hatch: `CMUX_HERDR_FORCE_PLUGIN=1`. `doctor` and `status` report the
+  active writer.
+- **Native-title lock + diff-before-write**: association records persist
+  `title_lock` / `locked_title` / last written pill value. Identical pills are
+  not rewritten every poll. `cmux-herdr lock-title` / `unlock-title` set the
+  lock; `CMUX_HERDR_LOCK_TITLES=1` locks each display name after the first
+  successful write.
+- **Heuristic-once parent map**: association records keep `parent_tab_id` /
+  `parent_workspace_id` / `heuristic_satisfied` / `association_key`
+  (`pane_id:session_id`). After the first successful association, empty
+  snapshot parentage does not re-run env/sole-tab inference. A new
+  `agent_session_id` drops locks so they are not reused across instance
+  identities.
+- **Advanced tmux-parity hardening:** engine-owned reconcile drives
+  `mirror_to_cmux` (zoom keeps base panes; geometry-only does not recreate);
+  fail-closed splits (no orphan-tab fallback); single size-claim writer
+  (`size-authority-<fingerprint>` / `CMUX_HERDR_SIZE_AUTHORITY`); socket-first
+  `session.snapshot` + secure socket checks (UID/mode/no symlink); layout
+  event subscriptions on the persistent watch session.
+
 ## [0.2.0] — 2026-08-12
 
 ### Added
