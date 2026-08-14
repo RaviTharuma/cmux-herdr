@@ -102,6 +102,8 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("read-agent", result.stdout)
         self.assertIn("focus-workspace", result.stdout)
         self.assertIn("focus-agent", result.stdout)
+        self.assertIn("lock-title", result.stdout)
+        self.assertIn("unlock-title", result.stdout)
 
     def test_unknown_command_is_argparse_error(self):
         result = self.run_cli("does-not-exist")

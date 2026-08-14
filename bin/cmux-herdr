@@ -38,6 +38,7 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
     read_agent,
     read_pane,
     resolve_cmux_workspace,
+    set_title_lock,
     split_pane,
     sync_to_cmux,
 )
@@ -111,6 +112,12 @@ def cmd_status(_args: argparse.Namespace) -> int:
     print(f"  key          : {info.get('host_fingerprint_key') or '-'}")
     missing = info.get("host_fingerprint_missing") or []
     print(f"  missing      : {', '.join(missing) if missing else '(none)'}")
+    writer = info.get("writer") or {}
+    print("writer:")
+    print(f"  path         : {writer.get('writer') or 'plugin'}")
+    print(f"  native live  : {writer.get('native_live')}")
+    if writer.get("force_plugin"):
+        print("  force plugin : yes")
     if _args.json:
         print(json.dumps(info, indent=2, default=str))
     return 0
@@ -177,6 +184,10 @@ def cmd_sync(args: argparse.Namespace) -> int:
     except BridgeError as exc:
         _die(str(exc))
     print(summary["summary"])
+    if summary.get("native_live"):
+        print("writer: native (plugin projection skipped)")
+    if summary.get("skipped_unchanged"):
+        print(f"unchanged: {len(summary['skipped_unchanged'])} pills")
     if summary.get("stale_cleared"):
         print(f"cleared stale: {', '.join(summary['stale_cleared'])}")
     if summary.get("errors"):
@@ -354,6 +365,29 @@ def cmd_associations(args: argparse.Namespace) -> int:
         print(json.dumps(state, indent=2, default=str))
     else:
         print(format_associations(state))
+    return 0
+
+
+def cmd_lock_title(args: argparse.Namespace) -> int:
+    """Lock a pane display name so later syncs do not overwrite it."""
+    try:
+        entry = set_title_lock(args.pane_id, locked=True, title=args.title)
+    except BridgeError as exc:
+        _die(str(exc))
+    print(
+        f"locked title for {entry.get('pane_id')}: "
+        f"{entry.get('locked_title') or '-'}"
+    )
+    return 0
+
+
+def cmd_unlock_title(args: argparse.Namespace) -> int:
+    """Clear the native-title lock so sync may update the display name."""
+    try:
+        entry = set_title_lock(args.pane_id, locked=False)
+    except BridgeError as exc:
+        _die(str(exc))
+    print(f"unlocked title for {entry.get('pane_id')}")
     return 0
 
 
@@ -555,6 +589,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--json", action="store_true", help="machine-readable output")
     s.set_defaults(func=cmd_associations)
+
+    s = sub.add_parser(
+        "lock-title",
+        help="Lock a pane display name (native-title lock; sync will not overwrite it)",
+    )
+    s.add_argument("pane_id")
+    s.add_argument("--title", help="display name to lock (default: cached label or pane id)")
+    s.set_defaults(func=cmd_lock_title)
+
+    s = sub.add_parser(
+        "unlock-title",
+        help="Clear the native-title lock so sync may update the display name",
+    )
+    s.add_argument("pane_id")
+    s.set_defaults(func=cmd_unlock_title)
 
     s = sub.add_parser("clear", help="Clear all cmux statuses with herdr: prefix")
     s.add_argument("--workspace", help="cmux workspace id/ref")

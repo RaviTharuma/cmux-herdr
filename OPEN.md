@@ -89,6 +89,12 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] `./scripts/test.sh` — stdlib unittest only (no pytest).
 - [x] Herdr 0.8 `agent_session.agent` parsing.
 - [x] Release artifacts for v0.1.0 (`VERSION`, `CHANGELOG.md`, `RELEASE.md`) — tag after merge per [RELEASE.md](./RELEASE.md).
+- [x] Single-writer guard when native attachment is live (`CMUX_HERDR_NATIVE_LIVE` /
+      `native-live-<fingerprint>` marker; `CMUX_HERDR_FORCE_PLUGIN` escape hatch).
+- [x] Native-title lock + diff-before-write (`lock-title` / `unlock-title`,
+      `CMUX_HERDR_LOCK_TITLES`).
+- [x] Heuristic-once parent map (`parent_tab_id` + `heuristic_satisfied`; session
+      identity change resets locks).
 
 ### B. Native MVP PR (#8736) — open + mergeable
 

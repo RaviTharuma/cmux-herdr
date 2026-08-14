@@ -7,6 +7,26 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- **Single-writer guard**: `sync` / `watch` no-op `herdr:*` pill writes when
+  native nested attachment is live (`CMUX_HERDR_NATIVE_LIVE=1`, or a
+  `native-live-<fingerprint>` / `native-live` marker under
+  `$XDG_STATE_HOME/cmux-herdr/`). Logs the handoff once per process.
+  Escape hatch: `CMUX_HERDR_FORCE_PLUGIN=1`. `doctor` and `status` report the
+  active writer.
+- **Native-title lock + diff-before-write**: association records persist
+  `title_lock` / `locked_title` / last written pill value. Identical pills are
+  not rewritten every poll. `cmux-herdr lock-title` / `unlock-title` set the
+  lock; `CMUX_HERDR_LOCK_TITLES=1` locks each display name after the first
+  successful write.
+- **Heuristic-once parent map**: association records keep `parent_tab_id` /
+  `parent_workspace_id` / `heuristic_satisfied` / `association_key`
+  (`pane_id:session_id`). After the first successful association, empty
+  snapshot parentage does not re-run env/sole-tab inference. A new
+  `agent_session_id` drops locks so they are not reused across instance
+  identities.
+
 ## [0.2.0] — 2026-08-12
 
 ### Added

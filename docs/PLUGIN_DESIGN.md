@@ -75,6 +75,16 @@ Callers can override with `cmux-herdr sync --workspace …`. Missing fingerprint
 
 Progress bar: `working / (working+idle+done+blocked)`.
 
+## Writer contract (plugin + native)
+
+Shared rules so upgrades do not thrash titles or parentage:
+
+1. **Association key** — `pane_id:session_id` (falls back to `pane_id`).
+2. **Parent map** — persist `parent_tab_id` / `parent_workspace_id`; render from the map.
+3. **Heuristic once** — env / sole-tab inference runs only before `heuristic_satisfied`.
+4. **Native-title lock** — locked display names are not overwritten; always diff before `set-status`.
+5. **Single writer** — if native attachment is live (`CMUX_HERDR_NATIVE_LIVE` or `native-live-<fingerprint>`), plugin projection no-ops. Escape hatch: `CMUX_HERDR_FORCE_PLUGIN=1`.
+
 ## Non-goals (plugin path)
 
 - Patching cmux.app or shipping a signed sidebar bundle
