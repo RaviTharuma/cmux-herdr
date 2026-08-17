@@ -86,7 +86,7 @@ Shared rules so upgrades do not thrash titles or parentage:
 2. **Parent map** — persist `parent_tab_id` / `parent_workspace_id`; render from the map.
 3. **Heuristic once** — env / sole-tab inference runs only before `heuristic_satisfied`.
 4. **Native-title lock** — locked display names are not overwritten; always diff before `set-status`.
-5. **Single writer** — if native attachment is live (`CMUX_HERDR_NATIVE_LIVE` or `native-live-<fingerprint>`), plugin projection no-ops. Escape hatch: `CMUX_HERDR_FORCE_PLUGIN=1`.
+5. **Single writer** — plugin and native share one lease (`writer-<fingerprint>.json` plus `native-live-*` / `plugin-live-*`). A dead pid or expired heartbeat does not hold the lock. Escape hatch: `CMUX_HERDR_FORCE_PLUGIN=1`.
 
 ## Non-goals (plugin path)
 

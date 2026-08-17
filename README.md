@@ -32,7 +32,8 @@ See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [tmux p
 
 - `parent-<fingerprint>.json` — locked outer cmux workspace binding for one host fingerprint
 - `associations-<fingerprint>.json` — live inner `pane_id → status_key / agent_session / status` map plus `mirrors` (Herdr pane → cmux surface), `parent_tab_id`, `heuristic_satisfied`, `title_lock`, last written pill; pruned each sync
-- `native-live-<fingerprint>` (or `native-live`) — optional marker: native attachment owns writes; plugin `sync`/`watch`/`mirror` skip competing projection
+- `writer-<fingerprint>.json` / `native-live-<fingerprint>` / `plugin-live-<fingerprint>` — shared lease: one writer. JSON has `owner`, `pid`, `heartbeat_ms`. A dead pid or expired heartbeat is stale and the other path may resume. Legacy `native-live` (`1` / `live`) still counts while its mtime is fresh. Native also reads `~/Library/Application Support/cmux-herdr/` when that directory exists.
+- `restore-<endpointHash>.json` — last attach (`mode: reattach` only). Shared so restart works regardless of who attached.
 
 **Host fingerprint** (selects which files `sync` / `watch` read/write):
 
@@ -54,7 +55,7 @@ cmux-herdr lock-title w2:p34 --title Orchestrator
 cmux-herdr unlock-title w2:p34
 ```
 
-**Single writer.** If native nested attachment is live for this host, the plugin must not also project competing `herdr:*` pills. Native (or a dogfood helper) can set `CMUX_HERDR_NATIVE_LIVE=1` or write the marker file above. `CMUX_HERDR_FORCE_PLUGIN=1` forces plugin writes anyway. `CMUX_HERDR_LOCK_TITLES=1` locks each display name after the first successful write.
+**Single writer (both paths).** Plugin and native share one lease. If native is live, plugin `sync` / `watch` / `mirror` / `attach` / `observe` / `restore` yield and do not start a competing apply host. If the plugin watch holds the lease, native should yield (same files). If native dies, the lease goes stale and `watch --tmux-parity` may resume. `CMUX_HERDR_NATIVE_LIVE=1` is an explicit native claim. `CMUX_HERDR_FORCE_PLUGIN=1` forces the plugin. `CMUX_HERDR_LOCK_TITLES=1` locks each display name after the first successful write. This is a handoff, not Ghostty PTY theft.
 
 ## Requirements
 

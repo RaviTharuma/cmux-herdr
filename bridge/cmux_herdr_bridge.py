@@ -20,11 +20,34 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+try:
+    from .cmux_herdr_handoff import (
+        FORCE_PLUGIN_ENV,
+        NATIVE_LIVE_ENV,
+        claim_native_writer,
+        claim_plugin_writer,
+        heartbeat_plugin_writer,
+        release_native_writer,
+        release_plugin_writer,
+        resolve_writer,
+    )
+    from .cmux_herdr_handoff import writer_status as handoff_writer_status
+except ImportError:  # pragma: no cover - script-style import
+    from cmux_herdr_handoff import (
+        FORCE_PLUGIN_ENV,
+        NATIVE_LIVE_ENV,
+        claim_native_writer,
+        claim_plugin_writer,
+        heartbeat_plugin_writer,
+        release_native_writer,
+        release_plugin_writer,
+        resolve_writer,
+    )
+    from cmux_herdr_handoff import writer_status as handoff_writer_status
+
 STATUS_PREFIX = "herdr:"
 
-# Single-writer / title-lock contract (plugin track in docs/upstream/PR_PLAN.md)
-NATIVE_LIVE_ENV = "CMUX_HERDR_NATIVE_LIVE"
-FORCE_PLUGIN_ENV = "CMUX_HERDR_FORCE_PLUGIN"
+# Single-writer / title-lock contract (shared with native via handoff).
 LOCK_TITLES_ENV = "CMUX_HERDR_LOCK_TITLES"
 
 # agent_status -> (icon, color, priority)
@@ -520,76 +543,36 @@ def auto_lock_titles() -> bool:
 
 
 def native_attachment_is_live(fp: Optional[Dict[str, Any]] = None) -> bool:
-    """True when native nested attachment owns status/title writes for this host.
+    """True when a *fresh* native lease owns this host.
 
     Detection (any of):
     - ``CMUX_HERDR_NATIVE_LIVE`` is truthy
-    - per-fingerprint marker ``native-live-<key>``
-    - global marker ``native-live`` (surface-agnostic / legacy)
+    - a fresh JSON lease on ``native-live-<key>`` / ``writer-<key>.json``
+    - a fresh legacy ``native-live`` marker (mtime within the lease TTL)
 
-    ``CMUX_HERDR_FORCE_PLUGIN=1`` always returns False so dogfood can opt out.
+    A dead pid or expired heartbeat does **not** count — the plugin may
+    resume. ``CMUX_HERDR_FORCE_PLUGIN=1`` always returns False.
     """
-    if plugin_force_writer():
-        return False
-    if _env_truthy(NATIVE_LIVE_ENV):
-        return True
-    try:
-        if os.path.isfile(native_live_marker_path(fp)):
-            return True
-        if os.path.isfile(os.path.join(_state_dir(), "native-live")):
-            return True
-    except OSError:
-        return False
-    return False
+    return resolve_writer(_parent_key(fp)).native_live
 
 
 def write_native_live_marker(fp: Optional[Dict[str, Any]] = None) -> str:
-    """Native AppKit claims the single-writer lock (tmux mirror live)."""
-    path = native_live_marker_path(fp)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as handle:
-        handle.write("1\n")
-    return path
+    """Native AppKit / dogfood helper claims the single-writer lock."""
+    key = _parent_key(fp)
+    lease = claim_native_writer(key)
+    if lease is None:
+        return native_live_marker_path(fp)
+    return lease.path or native_live_marker_path(fp)
 
 
 def clear_native_live_marker(fp: Optional[Dict[str, Any]] = None) -> None:
-    """Drop the single-writer lock on detach / process exit."""
-    for path in (native_live_marker_path(fp), os.path.join(_state_dir(), "native-live")):
-        try:
-            os.remove(path)
-        except OSError:
-            continue
+    """Drop the native lease on detach / process exit. Plugin files stay."""
+    release_native_writer(_parent_key(fp))
 
 
 def writer_status(fp: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Describe which path is allowed to project ``herdr:*`` pills."""
-    force = plugin_force_writer()
-    env_live = _env_truthy(NATIVE_LIVE_ENV)
-    marker = native_live_marker_path(fp)
-    try:
-        marker_exists = os.path.isfile(marker)
-        global_exists = os.path.isfile(os.path.join(_state_dir(), "native-live"))
-    except OSError:
-        marker_exists = False
-        global_exists = False
-    detected = env_live or marker_exists or global_exists
-    live = detected and not force
-    if force and detected:
-        writer = "plugin-forced"
-    elif live:
-        writer = "native"
-    else:
-        writer = "plugin"
-    return {
-        "writer": writer,
-        "native_live": live,
-        "native_detected": detected,
-        "force_plugin": force,
-        "env_native_live": env_live,
-        "marker_path": marker,
-        "marker_exists": marker_exists,
-        "global_marker_exists": global_exists,
-    }
+    return handoff_writer_status(_parent_key(fp))
 
 
 _native_skip_logged = False

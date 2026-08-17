@@ -115,6 +115,11 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       live apply host. Detach never calls `server.stop`.
 - [x] Single-writer guard when native attachment is live (`CMUX_HERDR_NATIVE_LIVE` /
       `native-live-<fingerprint>` marker; `CMUX_HERDR_FORCE_PLUGIN` escape hatch).
+- [x] **Dual-path handoff** (`bridge/cmux_herdr_handoff.py`): plugin and
+      native share one lease + one restore file. Dead pid / expired
+      heartbeat is stale (plugin may resume). `attach` / `observe` /
+      `restore` / `watch` yield when native owns; they do not start a
+      competing in-memory host. Host close still never `server.stop`.
 - [x] Native-title lock + diff-before-write (`lock-title` / `unlock-title`,
       `CMUX_HERDR_LOCK_TITLES`).
 - [x] Heuristic-once parent map (`parent_tab_id` + `heuristic_satisfied`; session
