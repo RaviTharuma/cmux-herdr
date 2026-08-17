@@ -9,6 +9,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- Honest **contract vs live** inventory in
+  [docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md): the PR7
+  column is the target, not wired AppKit. Lists tmux-live behaviors Herdr
+  still lacks (Ghostty panels, pane seed, named keys, focus rollback,
+  user split, attach/detach, busy-close, tab activity).
+
 - **I/O isolation + session-tab verbs** (`bridge/cmux_herdr_io.py`,
   `bridge/cmux_herdr_session.py`): tmux `routeOutput` / `sendKeys` /
   `setActivePane` contract in userspace — unknown pane is a no-op, output
