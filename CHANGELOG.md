@@ -9,6 +9,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **Active-pane cwd → tab folder** on the live apply host: background
+  `cd` is cached and ignored; only the focused pane may set `tab_cwd`
+  (tmux `updateRemotePanelDirectory`). Focus changes promote a cached
+  path.
+
 - **Live ssh-tmux apply machine** (`bridge/cmux_herdr_live.py`): the
   missing depth — `make_panel`, `process_remote_output`, named keys,
   impose-before-rebuild, divider drag, first-responder

@@ -81,7 +81,7 @@ Status: **live** = runs in cmux today for tmux. Herdr column is honest.
 | Tab order = inner window order; drag-reorder pushes back | Plugin `move-tab` / live session host | Native TabManager still to apply |
 | Close default local tab once mirrors exist | Live machine | `close_default_tabs` |
 | Session rename → workspace title (no echo loop) | Live machine | inbound `apply_session_title` |
-| Active-pane cwd → tab folder (background `cd` ignored) | Contract only | Not wired to `updateRemotePanelDirectory` |
+| Active-pane cwd → tab folder (background `cd` ignored) | Live machine | `route_cwd` + focus promote; native calls `updateRemotePanelDirectory` |
 | Busy-pane close confirmation | Live machine | `agent_status` → `confirm_then_close_pane` |
 | Tab activity / unread / active command name | Live machine | `tab_activity` |
 | Host close **detaches**; does not `kill-server` / `server.stop` | Live machine | `detach()` |
