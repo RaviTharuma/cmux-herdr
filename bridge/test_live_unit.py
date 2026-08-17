@@ -201,6 +201,30 @@ class AttachDetachRestoreTests(unittest.TestCase):
         self.assertEqual(disabled["code"], "disabled")
 
 
+class CwdFolderTests(unittest.TestCase):
+    def test_background_cd_does_not_hijack_tab_folder(self) -> None:
+        host = apply_live_windows([_window(active="w2:p1")])
+        mirror = host.windows["w2:t1"]
+        background = host.route_cwd("w2:p2", "/tmp/other")
+        self.assertIsNotNone(background)
+        assert background is not None
+        self.assertFalse(background.apply_to_tab)
+        self.assertIsNone(mirror.tab_cwd)
+        active = host.route_cwd("w2:p1", "/tmp/here")
+        self.assertIsNotNone(active)
+        assert active is not None
+        self.assertTrue(active.apply_to_tab)
+        self.assertEqual(mirror.tab_cwd, "/tmp/here")
+
+    def test_focus_change_promotes_cached_cwd(self) -> None:
+        host = apply_live_windows([_window(active="w2:p1")])
+        mirror = host.windows["w2:t1"]
+        host.route_cwd("w2:p2", "/tmp/later")
+        self.assertIsNone(mirror.tab_cwd)
+        mirror.user_focus("w2:p2")
+        self.assertEqual(mirror.tab_cwd, "/tmp/later")
+
+
 class SeedAndTeardownTests(unittest.TestCase):
     def test_seed_waits_for_grid_then_paints(self) -> None:
         mirror = LiveWindowMirror(tab_id="t", title="t")

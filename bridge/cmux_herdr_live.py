@@ -178,6 +178,7 @@ class LiveWindowMirror:
     last_client_grid: Optional[Tuple[int, int]] = None
     drag_hold: object = None
     structure_version: int = 0
+    tab_cwd: Optional[str] = None
 
     def make_panel(self, pane_id: str) -> GhosttySurface:
         """Create the Ghostty surface *before* the Bonsplit rebuild."""
@@ -222,6 +223,7 @@ class LiveWindowMirror:
         if result.focus_pane_id:
             self._apply_provider_focus(result.focus_pane_id)
         self.title = apply_session_title(window.title, current=self.title) or window.title
+        self._apply_cached_cwd()
         return [item for item in log if item]
 
     def _apply_host_action(self, action: HostAction) -> str:
@@ -283,10 +285,32 @@ class LiveWindowMirror:
         self.is_applying_focus = True
         try:
             self.focus.provider_confirms(pane_id)
+            self.io.note_remote_active(pane_id)
             # Do not touch first_responder. Tmux ``isApplyingTmuxFocus``
             # projects the strip dot without stealing the keyboard.
+            self._apply_cached_cwd()
         finally:
             self.is_applying_focus = False
+
+    def route_cwd(self, pane_id: str, path: str) -> Optional[object]:
+        """Cache cwd; apply to the tab only when this pane is active.
+
+        Tmux ``updateRemotePanelDirectory``: a background ``cd`` must not
+        hijack the tab folder.
+        """
+        update = self.io.route_cwd(pane_id, path, self.tab_id)
+        if update is not None and update.apply_to_tab:
+            self.tab_cwd = update.path
+        return update
+
+    def _apply_cached_cwd(self) -> None:
+        """Promote the active pane's cached cwd onto the tab folder."""
+        active = self.io.active_pane_id or self.focus.active_pane_id
+        if not active:
+            return
+        path = self.io.cwd_by_pane.get(active)
+        if path:
+            self.tab_cwd = path
 
     def user_focus(self, pane_id: str) -> Optional[str]:
         """User click: optimistic select, send ``pane.focus`` once."""
@@ -298,6 +322,8 @@ class LiveWindowMirror:
             for other in self.surfaces.values():
                 other.first_responder = False
             surface.first_responder = True
+        self.io.user_focus(pane_id)
+        self._apply_cached_cwd()
         return command.pane_id if command.send_to_provider or command.pane_id else None
 
     def navigate_focus(self, direction: str) -> Optional[str]:
@@ -528,6 +554,13 @@ class LiveApplyHost:
             if pane_id in mirror.surfaces:
                 return mirror.route_output(pane_id, data)
         return False
+
+    def route_cwd(self, pane_id: str, path: str) -> Optional[object]:
+        """Active-pane cwd → tab folder. Background ``cd`` is ignored."""
+        for mirror in self.windows.values():
+            if pane_id in mirror.surfaces:
+                return mirror.route_cwd(pane_id, path)
+        return None
 
     def detach(self) -> Dict[str, object]:
         """Host close: teardown every mirror, never stop Herdr."""
