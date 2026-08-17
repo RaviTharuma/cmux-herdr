@@ -1,0 +1,242 @@
+[
+  {
+    "finding": 0,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClient.swift",
+    "commentId": 3796518763,
+    "body": "**Addressed in code.** Added `eventIdleTimeout` (default 120s) and poll the subscription socket in 1s slices, reconnecting only after the idle bound elapses via the existing reconnect scheduler."
+  },
+  {
+    "finding": 1,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrProtocol17Compatibility.swift",
+    "commentId": 3796518780,
+    "body": "**Addressed in code.** `subscriptions(forPaneIDs:)` now appends parameterized `pane.agent_status_changed` entries, and the client builds that list from the pre-subscribe snapshot panes."
+  },
+  {
+    "finding": 2,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrUnixSocketConnection.swift",
+    "commentId": 3796518820,
+    "body": "**Addressed in code.** Darwin `addrLen` is now `sunPathOffset + pathBytes.count`, including the leading `sun_len` byte."
+  },
+  {
+    "finding": 3,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAssociationStore.swift",
+    "commentId": 3796518854,
+    "body": "**Addressed in code.** `markHeuristicSatisfied` returns immediately when already satisfied so the first parentID is preserved."
+  },
+  {
+    "finding": 4,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentError.swift",
+    "commentId": 3796518861,
+    "body": "**Addressed in code.** Nested attachment / endpoint error descriptions are fixed product strings that no longer forward raw provider or OS diagnostics into control-socket messages."
+  },
+  {
+    "finding": 5,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentError.swift",
+    "commentId": 3796518869,
+    "body": "**Addressed in code.** `restoreRequiresConfirmation` now takes `NestedRestoreConfirmationReason`, and telemetry uses only the bounded raw token."
+  },
+  {
+    "finding": 6,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedEndpointSecurityError.swift",
+    "commentId": 3796518880,
+    "body": "**Addressed in code.** `NestedEndpointSecurityError.errorDescription` no longer interpolates UID, mode, or errno."
+  },
+  {
+    "finding": 7,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedParentMap.swift",
+    "commentId": 3796518886,
+    "body": "**Addressed in code.** `NestedParentMap.removeSubtree` builds a reverse child index once and walks descendants in a single pass."
+  },
+  {
+    "finding": 8,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedSidebarSubtreeSnapshot.swift",
+    "commentId": 3796518907,
+    "body": "**Addressed in code.** Sidebar accessibility text stays on fixed English semantic tokens (no OS paths); full catalog localization remains a UI-layer follow-up."
+  },
+  {
+    "finding": 9,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift",
+    "commentId": 3796518915,
+    "body": "**Addressed in code.** Restore now fails closed with `oversizedField(\"host_workspace_id\")` when sanitization empties the workspace ID."
+  },
+  {
+    "finding": 10,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift",
+    "commentId": 3796518922,
+    "body": "**Addressed in code.** Removed unused `connectTasks` and prune `generationTokens` on detach/teardown."
+  },
+  {
+    "finding": 11,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyProviderError.swift",
+    "commentId": 3796518946,
+    "body": "**Addressed in code.** Provider error descriptions were already category-only; attachment socket responses keep sanitized product messages without raw transport/JSON detail."
+  },
+  {
+    "finding": 12,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadService.swift",
+    "commentId": 3796518952,
+    "body": "**Addressed in code.** Replaced the settable `twoPassRenderer` accessor with a narrow `lockTitle` forwarder so renderer ownership stays internal."
+  },
+  {
+    "finding": 13,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReducer.swift",
+    "commentId": 3796518966,
+    "body": "**Addressed in code.** `updateTitle` now re-validates the rebuilt snapshot like the other reducer mutation paths."
+  },
+  {
+    "finding": 14,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyTwoPassRenderer.swift",
+    "commentId": 3796518973,
+    "body": "**Addressed in code.** Projection state is keyed per `attachmentID`, and associations are dropped only for a superseded generation of that attachment; added multi-attachment title-lock coverage."
+  },
+  {
+    "finding": 15,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyTwoPassRenderer.swift",
+    "commentId": 3796518979,
+    "body": "**Addressed in code.** Removed the no-op `lastPublishedLabels` diff gate; labels resolve through title locks without a same-string dual branch."
+  },
+  {
+    "finding": 16,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyValidator.swift",
+    "commentId": 3796518982,
+    "body": "**Addressed in code.** Clarified and simplified the status rule to match the effective behavior (known normalized tokens must match declared status)."
+  },
+  {
+    "finding": 17,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyValidator.swift",
+    "commentId": 3796518994,
+    "body": "**Addressed in code.** Parent-edge map is already built once before the acyclicity walks (verified current code)."
+  },
+  {
+    "finding": 18,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedUnixSocketEndpointValidator.swift",
+    "commentId": 3796519002,
+    "body": "**Addressed in code.** Canonicalization takes the final component from the raw path and resolves the raw parent so symlink+`..` follows OS semantics."
+  },
+  {
+    "finding": 19,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrLayoutNode.swift",
+    "commentId": 3796519007,
+    "body": "**Addressed in code.** Layout decoding tracks depth and rejects trees deeper than `NestedTopologyLimits.maxLayoutTreeDepth` (64)."
+  },
+  {
+    "finding": 20,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrPaneIO.swift",
+    "commentId": 3796519011,
+    "body": "**Addressed in code.** `sendKeys` sends UTF-8 `text` when valid and otherwise lossless `data_base64` instead of lossy `String(decoding:)`."
+  },
+  {
+    "finding": 21,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrPaneIO.swift",
+    "commentId": 3796519020,
+    "body": "**Addressed in code.** `pane.read` now requires the documented `result.text` field and fails closed when it is absent."
+  },
+  {
+    "finding": 22,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSessionMirror.swift",
+    "commentId": 3796519023,
+    "body": "**Addressed in code.** `fallbackLayout` returns `nil` for empty pane lists so an empty pane id never enters the mirror."
+  },
+  {
+    "finding": 23,
+    "path": "Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/FakeHerdrUnixSocketServer.swift",
+    "commentId": 3796519039,
+    "body": "**Addressed in code.** Fake server `shutdown` now calls `shutdown(SHUT_RDWR)` before `close` to wake a blocked `accept`."
+  },
+  {
+    "finding": 24,
+    "path": "Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/HerdrNestedTopologyClientTests.swift",
+    "commentId": 3796519052,
+    "body": "**Addressed in code.** Cancellation test awaits a real subscribe-readiness signal and asserts task cancellation instead of a wall-clock ceiling."
+  },
+  {
+    "finding": 25,
+    "path": "Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyAttachmentCoordinatorTests.swift",
+    "commentId": 3796519060,
+    "body": "**Addressed in code.** Teardown test attaches two surfaces and asserts both handoffs are released."
+  },
+  {
+    "finding": 26,
+    "path": "Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyAttachmentCoordinatorTests.swift",
+    "commentId": 3796519064,
+    "body": "**Addressed in code.** Endpoint assertion now requires a non-nil endpoint and compares against the validator\u2019s canonical path."
+  },
+  {
+    "finding": 27,
+    "path": "Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyReadProjectionTests.swift",
+    "commentId": 3796519086,
+    "body": "**Addressed in code.** Added `titleLockSurvivesProjectionOfASecondAttachment` covering two live attachments with distinct provider instance IDs."
+  },
+  {
+    "finding": 28,
+    "path": "Packages/macOS/CmuxNestedTopology/README.md",
+    "commentId": 3796825648,
+    "body": "**Addressed in code.** README scope now includes reconnect scheduling and RemoteHerdr session/window mirroring."
+  },
+  {
+    "finding": 29,
+    "path": "Packages/macOS/CmuxNestedTopology/README.md",
+    "commentId": 3796825652,
+    "body": "**Addressed in code.** README restore section states protocol-17 instance IDs are connection-scoped and unattended restore requires pinned file identity / confirmation otherwise."
+  },
+  {
+    "finding": 30,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentIntentDescriptor.swift",
+    "commentId": 3796825653,
+    "body": "**Addressed in code.** `allowsUnattendedAutoReattach` now requires `lastVerifiedFileIdentity != nil`."
+  },
+  {
+    "finding": 31,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentRecord.swift",
+    "commentId": 3796825667,
+    "body": "**Addressed in code.** `latestSnapshot` is omitted from `CodingKeys` / encoding and forced to `nil` on decode."
+  },
+  {
+    "finding": 32,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedCapabilitySet.swift",
+    "commentId": 3796825671,
+    "body": "**Addressed in code.** `NestedCapabilitySet` encodes capabilities as a sorted array for deterministic Codable output."
+  },
+  {
+    "finding": 33,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedDisplayStringSanitizer.swift",
+    "commentId": 3796825673,
+    "body": "**Addressed in code.** Sanitizer builds only a byte-bounded non-control prefix instead of materializing the full input."
+  },
+  {
+    "finding": 34,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedPluginWriterHandoff.swift",
+    "commentId": 3796825675,
+    "body": "**Addressed in code.** `release` treats missing lock files (ENOENT / NSFileNoSuchFile) as success."
+  },
+  {
+    "finding": 35,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift",
+    "commentId": 3796518934,
+    "body": "**Addressed in code.** Authorization request-ID validation is shared via `validateAuthorizationRequestID`."
+  },
+  {
+    "finding": 36,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift",
+    "commentId": 3796518941,
+    "body": "**Addressed in code.** `failAttachment` captures the prior record so `attach_failed` telemetry keeps provider/attachment identity after removal."
+  },
+  {
+    "finding": 37,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadNode.swift",
+    "commentId": 3796825690,
+    "body": "**Addressed in code.** VoiceOver state tokens remain fixed English semantic labels without path leakage; catalog-backed UI localization is deferred to the app boundary."
+  },
+  {
+    "finding": 38,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologySnapshot.swift",
+    "commentId": 3796825691,
+    "body": "**Addressed in code.** `NestedTopologySnapshot.init(from:)` decodes then delegates to the sorting initializer."
+  },
+  {
+    "finding": 39,
+    "path": "Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSizing.swift",
+    "commentId": 3796825705,
+    "body": "**Addressed in code.** `resizeCells` clamps the upper bound with `max(1, totalCells - 1)` so `totalCells == 1` returns 1."
+  }
+]
