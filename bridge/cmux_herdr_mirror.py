@@ -37,18 +37,27 @@ try:
         Snapshot,
         Tab,
         _load_association_map,
+        _log_native_skip_once,
         _save_association_map,
         cmux_cmd,
         collect_host_fingerprint,
         fetch_snapshot,
         focus_pane,
         herdr_json,
+        native_attachment_is_live,
         resolve_cmux_workspace,
         run_cmd,
         sync_to_cmux,
         which,
+        writer_status,
     )
-    from .cmux_herdr_engine import output_delta
+    from .cmux_herdr_engine import (
+        HerdrWindow,
+        WindowMirrorState,
+        apply_window,
+        output_delta,
+        reconcile_session,
+    )
     from .cmux_herdr_layout import (
         layouts_by_tab_id,
         pane_is_zoomed,
@@ -65,18 +74,27 @@ except ImportError:  # running as a loose file with PYTHONPATH=bridge
         Snapshot,
         Tab,
         _load_association_map,
+        _log_native_skip_once,
         _save_association_map,
         cmux_cmd,
         collect_host_fingerprint,
         fetch_snapshot,
         focus_pane,
         herdr_json,
+        native_attachment_is_live,
         resolve_cmux_workspace,
         run_cmd,
         sync_to_cmux,
         which,
+        writer_status,
     )
-    from cmux_herdr_engine import output_delta
+    from cmux_herdr_engine import (
+        HerdrWindow,
+        WindowMirrorState,
+        apply_window,
+        output_delta,
+        reconcile_session,
+    )
     from cmux_herdr_layout import (
         layouts_by_tab_id,
         pane_is_zoomed,
@@ -88,6 +106,7 @@ except ImportError:  # running as a loose file with PYTHONPATH=bridge
     from cmux_herdr_socket import HerdrEventSession
 
 ATTACH_ENV = "CMUX_HERDR_ATTACH_PANE"
+SIZE_AUTHORITY_ENV = "CMUX_HERDR_SIZE_AUTHORITY"
 MIRROR_KEY_PREFIX = "herdr-mirror:"
 DEFAULT_ATTACH_INTERVAL = 0.25
 
@@ -336,6 +355,200 @@ def desired_mirrors(
     return desired
 
 
+def build_herdr_windows(
+    snapshot: Snapshot,
+    desired: Sequence[DesiredMirror],
+) -> List[HerdrWindow]:
+    """Build engine ``HerdrWindow`` values from a snapshot + desired projection.
+
+    The engine uses the BASE layout for panel lifecycle (zoom never closes
+    surfaces). Visible/zoom state is carried for focus and ratio renders.
+    """
+    by_tab: Dict[str, List[DesiredMirror]] = {}
+    for item in desired:
+        by_tab.setdefault(item.tab_id, []).append(item)
+    panes_by_id = {p.pane_id: p for p in snapshot.panes if p.pane_id}
+    windows: List[HerdrWindow] = []
+    for tab_id, items in by_tab.items():
+        members = [panes_by_id[i.pane_id] for i in items if i.pane_id in panes_by_id]
+        node = _tab_layout_node(snapshot, tab_id, members)
+        if node is None:
+            ordered_ids = [i.pane_id for i in items]
+            if not ordered_ids:
+                continue
+            if len(ordered_ids) == 1:
+                node = parse_layout({"pane_id": ordered_ids[0]})
+            else:
+                node = parse_layout(
+                    {"horizontal": [{"pane_id": pid} for pid in ordered_ids]}
+                )
+        if node is None:
+            continue
+        root = next((i for i in items if i.role == "tab-root"), items[0])
+        zoomed = next((i for i in items if i.zoomed), None)
+        active = next((i.pane_id for i in items if i.focused), None)
+        visible = None
+        if zoomed is not None:
+            visible = parse_layout({"pane_id": zoomed.pane_id})
+        windows.append(
+            HerdrWindow(
+                tab_id=tab_id,
+                title=root.title,
+                order_index=root.tab_index if root.tab_index is not None else 0,
+                layout=node,
+                visible_layout=visible,
+                zoomed=zoomed is not None,
+                active_pane_id=active or (zoomed.pane_id if zoomed else root.pane_id),
+            )
+        )
+    return windows
+
+
+def _window_state_from_mirrors(
+    tab_id: str,
+    window: HerdrWindow,
+    existing: Dict[str, Any],
+) -> Optional[WindowMirrorState]:
+    """Rehydrate engine state from the association ``mirrors`` map."""
+    surfaces: Dict[str, str] = {}
+    version = 0
+    for pane_id, entry in existing.items():
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("tab_id") or "") != tab_id:
+            continue
+        surface = entry.get("cmux_surface_id")
+        if isinstance(surface, str) and surface:
+            surfaces[pane_id] = surface
+        raw_version = entry.get("layout_structure_version")
+        if isinstance(raw_version, int):
+            version = max(version, raw_version)
+    if not surfaces and version == 0:
+        return None
+    return WindowMirrorState(
+        tab_id=tab_id,
+        title=window.title,
+        layout=window.layout,
+        visible_layout=window.visible_layout,
+        zoomed=window.zoomed,
+        active_pane_id=window.active_pane_id,
+        pane_ids=list(surfaces.keys()) or list(window.base_pane_ids),
+        layout_structure_version=version,
+        surface_id_by_pane_id=surfaces,
+    )
+
+
+def reconcile_engine_for_desired(
+    snapshot: Snapshot,
+    desired: Sequence[DesiredMirror],
+    existing: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Run the window-mirror engine and return reconcile hints for planning.
+
+    Returns:
+        Dict with ``created_pane_ids``, ``closed_pane_ids``, ``protected_pane_ids``
+        (base panes that must survive zoom), ``structure_changed_tabs``,
+        ``ordered_tab_ids``, and per-tab ``states``.
+    """
+    windows = build_herdr_windows(snapshot, desired)
+    created: List[str] = []
+    closed: List[str] = []
+    protected: Set[str] = set()
+    structure_changed_tabs: Set[str] = set()
+    states: Dict[str, WindowMirrorState] = {}
+    for window in windows:
+        protected.update(window.base_pane_ids)
+        previous = _window_state_from_mirrors(window.tab_id, window, existing)
+        state, result = apply_window(window, previous)
+        states[window.tab_id] = state
+        created.extend(result.created_pane_ids)
+        closed.extend(result.closed_pane_ids)
+        if result.structure_changed:
+            structure_changed_tabs.add(window.tab_id)
+    previous_tabs = sorted(
+        {
+            str(entry.get("tab_id"))
+            for entry in existing.values()
+            if isinstance(entry, dict) and entry.get("tab_id")
+        }
+    )
+    session = reconcile_session(windows, previous_tabs)
+    closed_tabs = set(session.closed_tab_ids)
+    for pane_id, entry in existing.items():
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("tab_id") or "") in closed_tabs:
+            closed.append(pane_id)
+    return {
+        "created_pane_ids": created,
+        "closed_pane_ids": sorted(set(closed)),
+        "protected_pane_ids": sorted(protected),
+        "structure_changed_tabs": sorted(structure_changed_tabs),
+        "ordered_tab_ids": session.ordered_tab_ids,
+        "order_changed": session.order_changed,
+        "states": states,
+        "windows": windows,
+    }
+
+
+def size_authority_path(fp: Optional[Dict[str, Any]] = None) -> str:
+    """Per-fingerprint file naming the single pane allowed to claim client size."""
+    try:
+        from .cmux_herdr_bridge import _parent_key, _state_dir
+    except ImportError:
+        from cmux_herdr_bridge import _parent_key, _state_dir
+    return os.path.join(_state_dir(), f"size-authority-{_parent_key(fp)}")
+
+
+def write_size_authority(pane_id: Optional[str], fp: Optional[Dict[str, Any]] = None) -> None:
+    """Persist which mirrored pane may forward SIGWINCH to Herdr."""
+    try:
+        from .cmux_herdr_bridge import _state_dir
+    except ImportError:
+        from cmux_herdr_bridge import _state_dir
+    path = size_authority_path(fp)
+    directory = _state_dir()
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    if not pane_id:
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+        return
+    temporary = f"{path}.tmp"
+    with open(temporary, "w", encoding="utf-8") as handle:
+        handle.write(pane_id.strip() + "\n")
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, path)
+
+
+def read_size_authority(fp: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """Return the pane id currently allowed to claim Herdr client size."""
+    try:
+        with open(size_authority_path(fp), "r", encoding="utf-8") as handle:
+            text = handle.read().strip()
+        return text or None
+    except OSError:
+        return None
+
+
+def may_claim_client_size(pane_id: str) -> bool:
+    """True when this attach viewer is the sole size-claim writer.
+
+    Policy (tmux feed-forward analogue): only one viewer per host fingerprint
+    may call ``herdr pane resize``. Prefer ``CMUX_HERDR_SIZE_AUTHORITY``, then
+    the size-authority state file written by mirror/watch on focus changes.
+    """
+    env_auth = (os.environ.get(SIZE_AUTHORITY_ENV) or "").strip()
+    if env_auth:
+        return env_auth == pane_id
+    file_auth = read_size_authority()
+    if file_auth:
+        return file_auth == pane_id
+    # Single-viewer / first-attach fallback: allow until mirror elects one.
+    return True
+
+
 def plan_mirror(
     desired: Sequence[DesiredMirror],
     existing: Dict[str, Any],
@@ -345,6 +558,7 @@ def plan_mirror(
     sync_focus: bool = False,
     sync_order: bool = False,
     sync_ratios: bool = False,
+    engine: Optional[Dict[str, Any]] = None,
 ) -> MirrorPlan:
     """Diff desired Herdr panes against the persisted mirror map.
 
@@ -360,6 +574,16 @@ def plan_mirror(
     desired_ids = {item.pane_id for item in desired}
     tab_root_surface: Dict[str, str] = {}
     actions: List[MirrorAction] = []
+    engine_hints = engine if isinstance(engine, dict) else {}
+    protected = set(engine_hints.get("protected_pane_ids") or [])
+    structure_changed_tabs = set(engine_hints.get("structure_changed_tabs") or [])
+    engine_closed = set(engine_hints.get("closed_pane_ids") or [])
+    # When the engine ran, only create panes it says are new — geometry-only
+    # updates must not recreate splits. First-ever mirror has empty previous
+    # state so every pane is in created_pane_ids.
+    engine_created: Optional[Set[str]] = None
+    if engine_hints:
+        engine_created = set(engine_hints.get("created_pane_ids") or [])
 
     def mapped_surface(pane_id: str) -> Optional[str]:
         entry = existing_mirrors.get(pane_id)
@@ -398,18 +622,28 @@ def plan_mirror(
         surface = mapped_surface(item.pane_id)
         entry = existing_mirrors.get(item.pane_id)
         prior_title = ""
+        title_locked = False
         if isinstance(entry, dict):
             prior_title = str(entry.get("title") or "")
+            title_locked = bool(entry.get("title_lock"))
         if item.role == "tab-root" and surface:
             tab_root_surface[item.tab_id] = surface
         if surface:
             if item.role == "tab-root":
                 tab_root_surface[item.tab_id] = surface
-            if prior_title and prior_title != item.title:
+            if prior_title and prior_title != item.title and not title_locked:
                 actions.append(_base(item, op="rename", surface=surface, reason="title changed"))
             else:
                 actions.append(_base(item, op="keep", surface=surface))
             continue
+
+        # Dead/missing surface: recreate only when the engine says this pane is
+        # newly created OR we have no engine hints (legacy planner path).
+        if engine_created is not None and item.pane_id not in engine_created:
+            # Surface vanished but structure is unchanged — recreate allowed
+            # only when the pane is still in the base tree (protected).
+            if item.pane_id not in protected:
+                continue
 
         if item.role == "tab-root":
             actions.append(_base(item, op="create_tab", reason="missing tab-root surface"))
@@ -423,6 +657,13 @@ def plan_mirror(
             if pane_id in desired_ids:
                 continue
             if not isinstance(entry, dict):
+                continue
+            # Zoom / base-layout protection: never prune a pane the engine says
+            # must keep a surface (tmux base-vs-visible contract).
+            if pane_id in protected:
+                continue
+            # When the engine ran, only prune panes it explicitly closed.
+            if engine_hints and pane_id not in engine_closed:
                 continue
             surface = entry.get("cmux_surface_id")
             actions.append(
@@ -843,6 +1084,7 @@ def apply_mirror_plan(
     workspace: Optional[str] = None,
     dry_run: bool = False,
     log: bool = True,
+    engine_states: Optional[Dict[str, WindowMirrorState]] = None,
 ) -> Dict[str, Any]:
     """Execute a plan against cmux. Safe to re-run: keeps the map in sync."""
     mirrors = {key: dict(value) for key, value in existing.items() if isinstance(value, dict)}
@@ -855,6 +1097,7 @@ def apply_mirror_plan(
     focused: List[str] = []
     errors: List[str] = []
     tab_root_surface: Dict[str, str] = {}
+    states = engine_states if isinstance(engine_states, dict) else {}
 
     for pane_id, entry in mirrors.items():
         if entry.get("role") == "tab-root" and entry.get("cmux_surface_id"):
@@ -937,20 +1180,20 @@ def apply_mirror_plan(
                             created_info["cmux_pane_id"] = created_info.get(
                                 "cmux_pane_id"
                             ) or split_info.get("cmux_pane_id")
-                        except BridgeError:
-                            created_info = _create_terminal(
-                                key=action.key,
-                                name=action.title,
-                                command=command,
-                                workspace=workspace,
+                        except BridgeError as exc:
+                            # Fail closed: never fall back to an orphan tab that
+                            # destroys the layout tree and looks "green".
+                            errors.append(
+                                f"create_split {action.pane_id}: {exc} "
+                                "(refusing orphan-tab fallback)"
                             )
+                            continue
                     else:
-                        created_info = _create_terminal(
-                            key=action.key,
-                            name=action.title,
-                            command=command,
-                            workspace=workspace,
+                        errors.append(
+                            f"create_split {action.pane_id}: no split-from surface "
+                            "(refusing orphan-tab fallback)"
                         )
+                        continue
                 else:
                     created_info = _create_terminal(
                         key=action.key,
@@ -980,19 +1223,38 @@ def apply_mirror_plan(
                     "focused": False,
                     "updated_at": time.time(),
                 }
+                state = states.get(action.tab_id)
+                if state is not None:
+                    mirrors[action.pane_id]["layout_structure_version"] = (
+                        state.layout_structure_version
+                    )
+                    if surface_id:
+                        state.surface_id_by_pane_id[action.pane_id] = str(surface_id)
                 if surface_id and action.op == "create_split" and action.ratio is not None:
                     try:
                         _set_split_ratio(
                             str(surface_id), action.ratio, workspace=workspace
                         )
                         ratios.append(action.pane_id)
-                    except BridgeError:
-                        pass
+                    except BridgeError as exc:
+                        errors.append(f"set_ratio {action.pane_id}: {exc}")
                 created.append(action.pane_id)
         except BridgeError as exc:
             errors.append(f"{action.op} {action.pane_id}: {exc}")
 
     if not dry_run:
+        # Stamp layout_structure_version onto kept panes so the next engine
+        # pass can detect geometry-only vs structural changes.
+        for pane_id, entry in mirrors.items():
+            if not isinstance(entry, dict):
+                continue
+            state = states.get(str(entry.get("tab_id") or ""))
+            if state is None:
+                continue
+            entry["layout_structure_version"] = state.layout_structure_version
+            surface = entry.get("cmux_surface_id")
+            if isinstance(surface, str) and surface:
+                state.surface_id_by_pane_id[pane_id] = surface
         save_mirrors(mirrors, cmux_workspace=workspace)
         if log:
             summary = (
@@ -1048,17 +1310,51 @@ def mirror_to_cmux(
     sync_order: bool = False,
     sync_ratios: bool = False,
     tmux_parity: bool = False,
+    snapshot: Optional[Snapshot] = None,
 ) -> Dict[str, Any]:
     """Reconcile Herdr topology into cmux tabs/splits, then refresh status pills.
 
     ``tmux_parity`` is the ssh-tmux contract: full session, prune gone panes,
     layout-driven splits/ratios, tab order, and focus projection.
+
+    Yields to native attachment when ``native_attachment_is_live`` (single writer).
     """
     if is_attach_process():
         raise BridgeError(
             "refusing to nest mirror inside attach-pane "
             f"({ATTACH_ENV}={os.environ.get(ATTACH_ENV)})"
         )
+    writer = writer_status()
+    if writer["native_live"]:
+        _log_native_skip_once(log)
+        empty_plan = {
+            "created": [],
+            "renamed": [],
+            "kept": [],
+            "pruned": [],
+            "ratios": [],
+            "moved": [],
+            "focused": [],
+            "errors": [],
+            "dry_run": dry_run,
+            "mirrors": load_mirrors(),
+            "actions": [],
+        }
+        return {
+            "scope": scope,
+            "workspace": workspace,
+            "desired_count": 0,
+            "tmux_parity": tmux_parity,
+            "sync_focus": sync_focus,
+            "sync_order": sync_order,
+            "sync_ratios": sync_ratios,
+            "plan": empty_plan,
+            "status_sync": None,
+            "host_fingerprint": collect_host_fingerprint(),
+            "writer": writer["writer"],
+            "native_live": True,
+            "skipped_reason": "native_live",
+        }
     if tmux_parity:
         scope = "all"
         prune = True
@@ -1066,7 +1362,7 @@ def mirror_to_cmux(
         sync_focus = True
         sync_order = True
         sync_ratios = True
-    snap = fetch_snapshot()
+    snap = snapshot or fetch_snapshot()
     desired = desired_mirrors(
         snap,
         scope=scope,
@@ -1078,6 +1374,7 @@ def mirror_to_cmux(
     if not ws and not dry_run:
         ws = resolve_cmux_workspace()
     existing = load_mirrors()
+    engine = reconcile_engine_for_desired(snap, desired, existing)
     live_ids = None if dry_run else list_live_surface_ids(workspace=ws)
     plan = plan_mirror(
         desired,
@@ -1087,6 +1384,7 @@ def mirror_to_cmux(
         sync_focus=sync_focus,
         sync_order=sync_order,
         sync_ratios=sync_ratios,
+        engine=engine,
     )
     plan.scope = scope
     applied = apply_mirror_plan(
@@ -1095,12 +1393,24 @@ def mirror_to_cmux(
         workspace=ws,
         dry_run=dry_run,
         log=log,
+        engine_states=engine.get("states") if isinstance(engine.get("states"), dict) else None,
     )
     if sync_focus and not dry_run:
         try:
             _sync_focus_from_cmux(applied.get("mirrors") or {}, workspace=ws)
         except BridgeError as exc:
             applied.setdefault("errors", []).append(f"focus reverse: {exc}")
+        focused_id = next(
+            (
+                pane_id
+                for pane_id, entry in (applied.get("mirrors") or {}).items()
+                if isinstance(entry, dict) and entry.get("focused")
+            ),
+            None,
+        )
+        if not focused_id and desired:
+            focused_id = next((d.pane_id for d in desired if d.focused), desired[0].pane_id)
+        write_size_authority(focused_id)
     status_summary = None
     if sync_status and not dry_run:
         try:
@@ -1120,6 +1430,14 @@ def mirror_to_cmux(
         "plan": applied,
         "status_sync": status_summary,
         "host_fingerprint": collect_host_fingerprint(),
+        "writer": writer["writer"],
+        "native_live": False,
+        "engine": {
+            "created_pane_ids": engine.get("created_pane_ids"),
+            "closed_pane_ids": engine.get("closed_pane_ids"),
+            "structure_changed_tabs": engine.get("structure_changed_tabs"),
+            "order_changed": engine.get("order_changed"),
+        },
     }
 
 
@@ -1155,6 +1473,12 @@ def _sync_focus_from_cmux(
 
 def format_mirror_plan(result: Dict[str, Any]) -> str:
     """Human-readable mirror reconcile summary."""
+    if result.get("native_live") or result.get("skipped_reason") == "native_live":
+        return (
+            f"herdr → cmux mirror  SKIPPED (native attachment live; "
+            f"writer={result.get('writer') or 'native'})  "
+            f"set CMUX_HERDR_FORCE_PLUGIN=1 to force plugin projection"
+        )
     plan = result.get("plan") if isinstance(result.get("plan"), dict) else {}
     lines = [
         f"herdr → cmux mirror  scope={result.get('scope')}  "
@@ -1174,6 +1498,13 @@ def format_mirror_plan(result: Dict[str, Any]) -> str:
     ]
     if result.get("tmux_parity"):
         lines[0] += "  tmux-parity"
+    engine = result.get("engine") if isinstance(result.get("engine"), dict) else {}
+    if engine.get("structure_changed_tabs") is not None:
+        changed = engine.get("structure_changed_tabs") or []
+        lines.append(
+            f"  engine  structure_changed_tabs={changed or '[]'} "
+            f"order_changed={engine.get('order_changed')}"
+        )
     errors = plan.get("errors") or []
     if errors:
         lines.append(f"  errors  {len(errors)}")
@@ -1408,7 +1739,12 @@ def _drain_stdin_to_pane(pane_id: str) -> None:
 
 
 def _install_resize_handler(pane_id: str) -> None:
-    """Forward this viewer's SIGWINCH to Herdr (tmux client-size analogue)."""
+    """Forward SIGWINCH to Herdr only when this viewer is the size authority.
+
+    Multiple attach-pane processes must not fight over ``herdr pane resize`` —
+    that stomps the inner grid (anti-parity). Mirror/watch elects one pane via
+    ``size-authority-<fingerprint>`` / ``CMUX_HERDR_SIZE_AUTHORITY``.
+    """
     try:
         import shutil
         import signal
@@ -1416,6 +1752,8 @@ def _install_resize_handler(pane_id: str) -> None:
         return
 
     def _on_winch(_signum, _frame) -> None:  # noqa: ARG001
+        if not may_claim_client_size(pane_id):
+            return
         try:
             size = shutil.get_terminal_size()
             resize_herdr_pane(pane_id, size.columns, size.lines)
@@ -1442,6 +1780,6 @@ def wait_herdr_event(*, timeout: float = 3.0) -> bool:
         time.sleep(max(0.05, timeout))
         return False
     try:
-        return session.wait(timeout=timeout)
+        return session.wait(timeout=timeout) is not None
     finally:
         session.close()

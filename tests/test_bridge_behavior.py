@@ -426,6 +426,182 @@ class AssociationSyncTests(unittest.TestCase):
             self.assertEqual(json.loads(path_a.read_text())["cmux_workspace"], "workspace:A")
             self.assertEqual(json.loads(path_b.read_text())["cmux_workspace"], "workspace:B")
 
+    def test_sync_skips_when_native_attachment_live(self):
+        pane = bridge.Pane(
+            pane_id="w2:p34",
+            tab_id="w2:t17",
+            workspace_id="w2",
+            agent="pi",
+            agent_status="working",
+        )
+        snap = bridge.Snapshot(panes=[pane], tabs=[], workspaces=[])
+        calls = []
+
+        def fake_cmux(args, workspace=None):
+            calls.append(list(args))
+
+            class R:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+
+            return R()
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+                "HERDR_WORKSPACE_ID": "w2",
+                "CMUX_SURFACE_ID": "surface-uuid",
+                "CMUX_HERDR_NATIVE_LIVE": "1",
+            },
+            clear=False,
+        ), mock.patch.object(bridge, "cmux_cmd", side_effect=fake_cmux), mock.patch.object(
+            bridge, "fetch_snapshot", return_value=snap
+        ), mock.patch.object(
+            bridge, "list_cmux_herdr_keys", return_value=[]
+        ):
+            bridge.reset_native_skip_log()
+            summary = bridge.sync_to_cmux(snapshot=snap, workspace="workspace:7", log=False)
+            self.assertTrue(summary["native_live"])
+            self.assertEqual(summary["skipped_reason"], "native_live")
+            self.assertEqual(summary["applied"], [])
+            self.assertEqual(summary["writer"], "native")
+            self.assertFalse(any(c and c[0] == "set-status" for c in calls))
+            self.assertEqual(summary["associations"]["pane_count"], 1)
+
+    def test_sync_force_plugin_writes_when_native_live(self):
+        pane = bridge.Pane(
+            pane_id="w2:p34",
+            tab_id="w2:t17",
+            workspace_id="w2",
+            agent="pi",
+            agent_status="working",
+        )
+        snap = bridge.Snapshot(panes=[pane], tabs=[], workspaces=[])
+        calls = []
+
+        def fake_cmux(args, workspace=None):
+            calls.append(list(args))
+
+            class R:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+
+            return R()
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+                "HERDR_WORKSPACE_ID": "w2",
+                "CMUX_SURFACE_ID": "surface-uuid",
+                "CMUX_HERDR_NATIVE_LIVE": "1",
+                "CMUX_HERDR_FORCE_PLUGIN": "1",
+            },
+            clear=False,
+        ), mock.patch.object(bridge, "cmux_cmd", side_effect=fake_cmux), mock.patch.object(
+            bridge, "list_cmux_herdr_keys", return_value=[]
+        ):
+            bridge.reset_native_skip_log()
+            summary = bridge.sync_to_cmux(snapshot=snap, workspace="workspace:7", log=False)
+            self.assertFalse(summary["native_live"])
+            self.assertEqual(summary["writer"], "plugin-forced")
+            self.assertEqual(summary["applied"], ["herdr:w2:p34"])
+            self.assertTrue(any(c and c[0] == "set-status" for c in calls))
+
+    def test_sync_skips_identical_second_write(self):
+        pane = bridge.Pane(
+            pane_id="w2:p34",
+            tab_id="w2:t17",
+            workspace_id="w2",
+            agent="pi",
+            agent_status="working",
+            label="Bot",
+        )
+        snap = bridge.Snapshot(panes=[pane], tabs=[], workspaces=[])
+        calls = []
+
+        def fake_cmux(args, workspace=None):
+            calls.append(list(args))
+
+            class R:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+
+            return R()
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+                "HERDR_WORKSPACE_ID": "w2",
+                "CMUX_SURFACE_ID": "surface-uuid",
+            },
+            clear=False,
+        ), mock.patch.object(bridge, "cmux_cmd", side_effect=fake_cmux), mock.patch.object(
+            bridge, "list_cmux_herdr_keys", return_value=[]
+        ):
+            first = bridge.sync_to_cmux(snapshot=snap, workspace="workspace:7", log=False)
+            self.assertEqual(first["applied"], ["herdr:w2:p34"])
+            set_status_first = [c for c in calls if c and c[0] == "set-status"]
+            self.assertEqual(len(set_status_first), 1)
+            calls.clear()
+            second = bridge.sync_to_cmux(snapshot=snap, workspace="workspace:7", log=False)
+            self.assertEqual(second["applied"], [])
+            self.assertEqual(second["skipped_unchanged"], ["herdr:w2:p34"])
+            self.assertFalse(any(c and c[0] == "set-status" for c in calls))
+
+    def test_sync_title_lock_keeps_locked_display_name(self):
+        pane = bridge.Pane(
+            pane_id="w2:p34",
+            tab_id="w2:t17",
+            workspace_id="w2",
+            agent="pi",
+            agent_status="working",
+            label="NewName",
+        )
+        snap = bridge.Snapshot(panes=[pane], tabs=[], workspaces=[])
+        calls = []
+
+        def fake_cmux(args, workspace=None):
+            calls.append(list(args))
+
+            class R:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+
+            return R()
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+                "HERDR_WORKSPACE_ID": "w2",
+                "CMUX_SURFACE_ID": "surface-uuid",
+            },
+            clear=False,
+        ), mock.patch.object(bridge, "cmux_cmd", side_effect=fake_cmux), mock.patch.object(
+            bridge, "list_cmux_herdr_keys", return_value=[]
+        ):
+            bridge.set_title_lock("w2:p34", locked=True, title="Orchestrator")
+            summary = bridge.sync_to_cmux(snapshot=snap, workspace="workspace:7", log=False)
+            self.assertEqual(summary["applied"], ["herdr:w2:p34"])
+            set_calls = [c for c in calls if c and c[0] == "set-status"]
+            self.assertEqual(len(set_calls), 1)
+            self.assertIn("Orchestrator", set_calls[0][2])
+            self.assertNotIn("NewName", set_calls[0][2])
+            data = json.loads(Path(summary["associations"]["path"]).read_text())
+            self.assertTrue(data["panes"]["w2:p34"]["title_lock"])
+            self.assertEqual(data["panes"]["w2:p34"]["locked_title"], "Orchestrator")
+
 
 class FocusAndReadTests(unittest.TestCase):
     @mock.patch.object(bridge, "run_cmd")

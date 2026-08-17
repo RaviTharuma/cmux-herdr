@@ -14,6 +14,8 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+import tempfile
+
 from bridge.cmux_herdr_bridge import BridgeError, Pane, Snapshot, Tab
 from bridge.cmux_herdr_mirror import (
     ATTACH_ENV,
@@ -429,6 +431,167 @@ class ParseAndAttachTests(unittest.TestCase):
             send_pane_text("w2:p1", "x")
             sp_run.assert_called_once()
             self.assertEqual(sp_run.call_args.kwargs.get("input"), "x")
+
+
+class AdvancedParityTests(unittest.TestCase):
+    def test_mirror_skips_when_native_live(self):
+        from bridge import cmux_herdr_mirror as mirror
+        from bridge.cmux_herdr_bridge import reset_native_skip_log
+
+        snap = _snap(
+            [_pane("w2:p1", "w2:t1", label="A", focused=True)],
+            [Tab(tab_id="w2:t1", workspace_id="w2", label="Agents", number=1)],
+        )
+        reset_native_skip_log()
+        with mock.patch.dict(
+            os.environ, {"CMUX_HERDR_NATIVE_LIVE": "1"}, clear=False
+        ):
+            result = mirror.mirror_to_cmux(
+                scope="all",
+                dry_run=True,
+                sync_status=False,
+                log=False,
+                snapshot=snap,
+            )
+        self.assertTrue(result["native_live"])
+        self.assertEqual(result["skipped_reason"], "native_live")
+        self.assertEqual(result["plan"]["created"], [])
+        self.assertIn("SKIPPED", format_mirror_plan(result))
+
+    def test_engine_protects_base_panes_from_prune_under_zoom(self):
+        from bridge import cmux_herdr_mirror as mirror
+
+        snap = Snapshot(
+            panes=[
+                _pane("w2:p1", "w2:t1", label="A", focused=True, raw={"zoomed": True}),
+                _pane("w2:p2", "w2:t1", label="B"),
+            ],
+            tabs=[Tab(tab_id="w2:t1", workspace_id="w2", label="Agents", number=1)],
+            workspaces=[],
+            layouts={
+                "w2:t1": {
+                    "horizontal": [
+                        {"pane_id": "w2:p1", "width": 40, "height": 24},
+                        {"pane_id": "w2:p2", "width": 40, "height": 24},
+                    ]
+                }
+            },
+        )
+        desired = desired_mirrors(snap, scope="all", use_layout=True)
+        existing = {
+            "w2:p1": {
+                "pane_id": "w2:p1",
+                "tab_id": "w2:t1",
+                "role": "tab-root",
+                "cmux_surface_id": "s1",
+                "title": "Agents",
+            },
+            "w2:p2": {
+                "pane_id": "w2:p2",
+                "tab_id": "w2:t1",
+                "role": "split",
+                "cmux_surface_id": "s2",
+                "title": "B",
+            },
+            "w2:p-gone": {
+                "pane_id": "w2:p-gone",
+                "tab_id": "w2:t1",
+                "role": "split",
+                "cmux_surface_id": "s3",
+                "title": "Gone",
+            },
+        }
+        engine = mirror.reconcile_engine_for_desired(snap, desired, existing)
+        self.assertIn("w2:p1", engine["protected_pane_ids"])
+        self.assertIn("w2:p2", engine["protected_pane_ids"])
+        self.assertIn("w2:p-gone", engine["closed_pane_ids"])
+        plan = plan_mirror(
+            desired,
+            existing,
+            live_surface_ids={"s1", "s2", "s3"},
+            prune=True,
+            engine=engine,
+        )
+        pruned = [a.pane_id for a in plan.actions if a.op == "prune"]
+        self.assertEqual(pruned, ["w2:p-gone"])
+        self.assertNotIn("w2:p2", pruned)
+
+    def test_fail_closed_split_does_not_orphan_tab(self):
+        from bridge import cmux_herdr_mirror as mirror
+
+        plan = plan_mirror(
+            [
+                DesiredMirror(
+                    pane_id="w2:p1",
+                    tab_id="w2:t1",
+                    workspace_id="w2",
+                    title="Root",
+                    role="tab-root",
+                    split_direction="right",
+                ),
+                DesiredMirror(
+                    pane_id="w2:p2",
+                    tab_id="w2:t1",
+                    workspace_id="w2",
+                    title="Child",
+                    role="split",
+                    split_direction="right",
+                    split_from_pane_id="w2:p1",
+                ),
+            ],
+            {
+                "w2:p1": {
+                    "pane_id": "w2:p1",
+                    "tab_id": "w2:t1",
+                    "role": "tab-root",
+                    "cmux_surface_id": "s1",
+                    "title": "Root",
+                }
+            },
+            live_surface_ids={"s1"},
+        )
+        with mock.patch.object(
+            mirror, "_split_pane", side_effect=BridgeError("split denied")
+        ), mock.patch.object(mirror, "_create_terminal") as create:
+            applied = mirror.apply_mirror_plan(
+                plan,
+                existing={
+                    "w2:p1": {
+                        "pane_id": "w2:p1",
+                        "tab_id": "w2:t1",
+                        "role": "tab-root",
+                        "cmux_surface_id": "s1",
+                        "title": "Root",
+                    }
+                },
+                workspace="workspace:1",
+                dry_run=False,
+                log=False,
+            )
+        self.assertTrue(any("orphan-tab" in e for e in applied["errors"]))
+        self.assertNotIn("w2:p2", applied["created"])
+        create.assert_not_called()
+
+    def test_size_authority_gates_claim(self):
+        from bridge import cmux_herdr_mirror as mirror
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "CMUX_SURFACE_ID": "surface-1",
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+            },
+            clear=False,
+        ):
+            mirror.write_size_authority("w2:p1")
+            self.assertTrue(mirror.may_claim_client_size("w2:p1"))
+            self.assertFalse(mirror.may_claim_client_size("w2:p2"))
+            with mock.patch.dict(
+                os.environ, {"CMUX_HERDR_SIZE_AUTHORITY": "w2:p2"}, clear=False
+            ):
+                self.assertTrue(mirror.may_claim_client_size("w2:p2"))
+                self.assertFalse(mirror.may_claim_client_size("w2:p1"))
 
 
 if __name__ == "__main__":

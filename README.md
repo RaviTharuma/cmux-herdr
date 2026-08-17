@@ -30,7 +30,8 @@ See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [tmux p
 `sync` / `watch` keep a user-owned cache under `$XDG_STATE_HOME/cmux-herdr/` (default `~/.local/state/cmux-herdr/`):
 
 - `parent-<fingerprint>.json` — locked outer cmux workspace binding for one host fingerprint
-- `associations-<fingerprint>.json` — live inner `pane_id → status_key / agent_session / status` map plus `mirrors` (Herdr pane → cmux surface) for deep-mirror reconcile, pruned each sync
+- `associations-<fingerprint>.json` — live inner `pane_id → status_key / agent_session / status` map plus `mirrors` (Herdr pane → cmux surface), `parent_tab_id`, `heuristic_satisfied`, `title_lock`, last written pill; pruned each sync
+- `native-live-<fingerprint>` (or `native-live`) — optional marker: native attachment owns writes; plugin `sync`/`watch`/`mirror` skip competing projection
 
 **Host fingerprint** (selects which files `sync` / `watch` read/write):
 
@@ -48,7 +49,11 @@ This is the production stopgap data pattern while native nested topology lands. 
 ```bash
 cmux-herdr associations
 cmux-herdr associations --json
+cmux-herdr lock-title w2:p34 --title Orchestrator
+cmux-herdr unlock-title w2:p34
 ```
+
+**Single writer.** If native nested attachment is live for this host, the plugin must not also project competing `herdr:*` pills. Native (or a dogfood helper) can set `CMUX_HERDR_NATIVE_LIVE=1` or write the marker file above. `CMUX_HERDR_FORCE_PLUGIN=1` forces plugin writes anyway. `CMUX_HERDR_LOCK_TITLES=1` locks each display name after the first successful write.
 
 ## Requirements
 
@@ -108,6 +113,8 @@ cmux-herdr mirror --tmux-parity  # ssh-tmux contract (all + prune + layout/focus
 cmux-herdr mirror --dry-run
 cmux-herdr attach-pane w2:p34   # follow one pane in this terminal
 cmux-herdr associations   # hybrid pane/session association cache
+cmux-herdr lock-title w2:p34 --title Orchestrator
+cmux-herdr unlock-title w2:p34
 cmux-herdr clear          # remove herdr:* status pills
 ```
 

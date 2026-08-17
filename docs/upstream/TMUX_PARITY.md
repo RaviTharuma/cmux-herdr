@@ -33,7 +33,11 @@ Legend: **Yes** = required for tmux parity. Plugin column is what this repo impl
 | Event-driven reconcile + snapshot resync | Persistent `events.subscribe` via `watch --tmux-parity` | `events.subscribe` | Yes — events + snapshot after gaps |
 | Idempotent reconcile (re-run is a no-op) | `herdr-mirror:<pane_id>` keys | Compound nested IDs | Yes — paneId → panel map |
 | Titles from inner window/tab, not pane-border noise | Tab label on tab-root | Provider labels | Yes — copy tmux `windowTitle` rule |
-| Single writer vs plugin | Plugin yields if native attachment live | Plugin suppression | Same |
+| Single writer vs plugin | Plugin yields if native attachment live (pills + mirror) | Plugin suppression | Same |
+| Engine-owned reconcile | `apply_window` drives create/prune; geometry-only skips recreate | Snapshot order | Copy tmux structure version |
+| Fail-closed layout apply | Split failure never orphans a new tab | n/a | Host impose must not invent panes |
+| Single size-claim writer | `size-authority-<fp>` / `CMUX_HERDR_SIZE_AUTHORITY` | n/a | One `refresh-client -C` claim |
+| Socket-first topology | `session.snapshot` over Unix socket; CLI fallback | Direct adapter | Same wire |
 
 ## Honest remaining gaps
 

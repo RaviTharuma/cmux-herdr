@@ -104,3 +104,5 @@ cmux list-status --workspace <resolved>
 ## Hybrid association cache
 
 `cmux-herdr sync` rewrites `~/.local/state/cmux-herdr/associations-<fingerprint>.json` (and matching `parent-<fingerprint>.json`) keyed by outer surface + Herdr socket (+ optional server pid). Inspect with `cmux-herdr associations`. Treat it as cache only.
+
+If native nested attachment is live (`CMUX_HERDR_NATIVE_LIVE=1` or a `native-live-<fingerprint>` marker), `sync`/`watch` skip pill writes (single-writer). `CMUX_HERDR_FORCE_PLUGIN=1` overrides. Use `cmux-herdr lock-title` / `unlock-title` so polls do not thrash a locked display name.
