@@ -9,6 +9,17 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **Cmux-tmux attach / detach / restore / observability**
+  (`bridge/cmux_herdr_lifecycle.py`): same controller surface cmux
+  built for tmux (`RemoteTmuxController+Attach`, `remote.tmux.*`),
+  mapped onto the Herdr Unix socket. Beta gate, one-endpoint-one-window
+  affinity, re-entrant attach guard, connection reuse/replace, host
+  close detaches (never `server.stop`), restore **reattaches** after
+  restart (never replays a stale Bonsplit tree), `remote.herdr.sessions`
+  / `attach` / `mirror` / `window` / `detach` / `state` /
+  `pane_surfaces` / `pane_grids`. No SSH, ControlMaster, or
+  `tmux -CC`.
+
 - **Cmux-tmux control depth** (`bridge/cmux_herdr_control.py`): named
   keys (`C-Up` → `pane.send_keys` + CSI fallback), 256 KiB input
   forwarder, optimistic focus + rollback, layout-tree adjacent focus,
@@ -19,8 +30,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Honest **contract vs live** inventory in
   [docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md): the PR7
   column is the target, not wired AppKit. Lists tmux-live behaviors Herdr
-  still lacks (Ghostty panels, pane seed, named keys, focus rollback,
-  user split, attach/detach, busy-close, tab activity).
+  still lacks live Ghostty/Bonsplit apply (contracts now cover seed,
+  named keys, focus rollback, user split, attach/detach, busy-close,
+  tab activity).
 
 - **I/O isolation + session-tab verbs** (`bridge/cmux_herdr_io.py`,
   `bridge/cmux_herdr_session.py`): tmux `routeOutput` / `sendKeys` /

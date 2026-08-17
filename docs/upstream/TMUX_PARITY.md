@@ -10,7 +10,7 @@ Both Herdr paths must match that contract as closely as the host allows.
 
 [#10045](https://github.com/manaflow-ai/cmux/pull/10045) is the **sidebar/control-socket** nested-topology v1 (virtual rows). That is *not* ssh-tmux. **PR7 (`RemoteHerdrWindowMirror` + `RemoteHerdrImpose`)** is the surface mirror. Paste-ready plan: [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md).
 
-**Development continues.** Plugin userspace is at its ceiling (no PTY theft). Native work continues toward tmux depth: impose planner, host-apply verbs, I/O isolation, and session-tab verbs are landed as contracts; AppKit Bonsplit/Ghostty apply is the slice after that. Another chat owns #10045 CodeRabbit — see [LANES.md](./LANES.md).
+**Development continues.** Plugin userspace is at its ceiling (no PTY theft). Native work continues toward tmux depth: impose, host-apply, I/O, session tabs, control mutations, and attach/detach/restore/observability are landed as contracts; AppKit Bonsplit/Ghostty apply is the slice after that. Another chat owns #10045 CodeRabbit — see [LANES.md](./LANES.md).
 
 ## Capability matrix
 
@@ -85,11 +85,11 @@ Status: **live** = runs in cmux today for tmux. Herdr column is honest.
 | Busy-pane close confirmation | Contract only | Herdr `agent_status` working/blocked → confirm, then `pane.close` |
 | Tab activity / unread / active command name | Contract only | `tab_activity` from `agent_status` (Herdr-native, richer than tmux) |
 | Host close **detaches**; does not `kill-server` / `server.stop` | Contract only | `close_intent("host_tab")` → detach; AppKit must honor it |
-| Attach / detach / reuse connection / beta setting | Missing | Tmux `RemoteTmuxController` + `remoteTmux` flag |
-| Control-socket observability (`pane_surfaces`, `pane_grids`, attach/detach) | Missing | Tmux `remote.tmux.*` |
-| “Mirror tabs like ssh-tmux” setting next to sidebar | Missing | Acceptance item in [PR7](./PR7_HERDR_WINDOW_MIRROR.md) |
+| Attach / detach / reuse connection / beta setting | Contract only | `LifecycleController` + `betaFeatures.remoteHerdrMirror`; AppKit must own the live connection |
+| Control-socket observability (`pane_surfaces`, `pane_grids`, attach/detach) | Contract only | `remote.herdr.*` twins of `remote.tmux.*` |
+| “Mirror tabs like ssh-tmux” setting next to sidebar | Contract only | Setting key exists; no Settings UI yet |
 | Single-writer: suppress plugin while native mirror is live | Plugin yield exists | Native AppKit must set the live marker |
-| Restore after cmux restart (reattach, not stale tree) | Missing | Sidebar has revalidation; mirror does not |
+| Restore after cmux restart (reattach, not stale tree) | Contract only | Persist + `plan_restore` reseeds; never `replay_tree` |
 
 ### Nice-to-have / later (tmux has them; Herdr analogue TBD)
 
@@ -114,7 +114,9 @@ SSH ControlMaster, `tmux -CC` parser, `%layout-change` wire format, control-mode
 - No true `%output` byte stream; poll `pane.read` + incremental delta when the snapshot extends.
 - No Bonsplit divider-drag → `resize-pane` (CLI has no drag session).
 - `cmux split` / `set-ratio` / `move-tab` / `focus-surface` verbs differ across cmux CLI builds; the bridge tries fallbacks and records errors.
-- No named-key map, pane seed, busy-close dialog, or tab activity.
+- Named keys, pane seed, busy-close, tab activity, attach/detach, and
+  `remote.herdr.*` are **contracts** in the bridge; the plugin still
+  cannot open Ghostty panels or a live Bonsplit tree.
 
 ### Native PR7 (must copy tmux, not invent a third model)
 
@@ -125,7 +127,7 @@ Do **not** treat “virtual sidebar rows” as tmux parity. ssh-tmux is a **wind
 3. Herdr layout tree = imposed Bonsplit tree (tmux `reconcileBonsplitTree`).
 4. Sizing is feed-forward (see cmux `docs/remote-tmux-sizing-design.md`).
 5. Zoom uses base vs visible layout; panels stay alive.
-6. Then the table above: seed, named keys, focus rollback, user split, attach controller, detach-on-close, control-socket.
+6. Then the table above: seed, named keys, focus rollback, user split, attach controller, detach-on-close, restore-reattach, `remote.herdr.*`.
 
 Sidebar nested topology (#10045) stays as the **session navigator** (workspaces/agents/status), the same way cmux still has a tmux session list beside the mirrored window.
 
