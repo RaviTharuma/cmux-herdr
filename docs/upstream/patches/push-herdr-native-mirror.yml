@@ -1,0 +1,45 @@
+name: push-herdr-native-mirror
+on:
+  push:
+    paths:
+      - .github/workflows/push-herdr-native-mirror.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cursor/nested-topology-herdr-v1-becf
+          fetch-depth: 0
+
+      - name: Fetch mirror bundle and push branch
+        env:
+          BUNDLE_URL: https://raw.githubusercontent.com/RaviTharuma/cmux-herdr/cursor/pr10045-coderabbit-replies-f1c1/docs/upstream/patches/herdr-native-mirror.bundle
+        run: |
+          set -euo pipefail
+          git config user.name "Ravi Tharuma"
+          git config user.email "25951435+RaviTharuma@users.noreply.github.com"
+          curl -fsSL "$BUNDLE_URL" -o /tmp/herdr-native-mirror.bundle
+          git bundle verify /tmp/herdr-native-mirror.bundle
+          git fetch /tmp/herdr-native-mirror.bundle HEAD:refs/heads/cursor/herdr-native-mirror-f1c1
+          git push -u origin cursor/herdr-native-mirror-f1c1 --force
+          echo "Pushed $(git rev-parse cursor/herdr-native-mirror-f1c1)"
+
+      - name: Remove one-shot workflow from nested tip
+        if: always()
+        run: |
+          set -euo pipefail
+          git fetch origin cursor/nested-topology-herdr-v1-becf
+          git checkout -B cursor/nested-topology-herdr-v1-becf origin/cursor/nested-topology-herdr-v1-becf
+          if [ -f .github/workflows/push-herdr-native-mirror.yml ]; then
+            git rm -f .github/workflows/push-herdr-native-mirror.yml
+            git config user.name "Ravi Tharuma"
+            git config user.email "25951435+RaviTharuma@users.noreply.github.com"
+            git commit -m "chore: remove one-shot push-herdr-native-mirror workflow" || true
+            git push origin HEAD:cursor/nested-topology-herdr-v1-becf || true
+          fi
