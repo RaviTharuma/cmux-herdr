@@ -24,7 +24,9 @@ from bridge.cmux_herdr_bridge import (
     fingerprint_missing_fields,
     format_associations,
     map_status_to_style,
+    clear_native_live_marker,
     native_attachment_is_live,
+    write_native_live_marker,
     require_host_fingerprint,
     reset_native_skip_log,
     resolve_association_parents,
@@ -419,6 +421,26 @@ class SingleWriterTests(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write("live\n")
             self.assertTrue(native_attachment_is_live())
+
+    def test_write_and_clear_native_live_marker(self):
+        import os
+        import tempfile
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "CMUX_SURFACE_ID": "surface-1",
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+            },
+            clear=False,
+        ):
+            path = write_native_live_marker()
+            self.assertTrue(os.path.isfile(path))
+            self.assertTrue(native_attachment_is_live())
+            clear_native_live_marker()
+            self.assertFalse(native_attachment_is_live())
 
     def test_set_title_lock_round_trip(self):
         import os

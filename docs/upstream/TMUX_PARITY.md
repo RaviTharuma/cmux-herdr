@@ -10,7 +10,7 @@ Both Herdr paths must match that contract as closely as the host allows.
 
 [#10045](https://github.com/manaflow-ai/cmux/pull/10045) is the **sidebar/control-socket** nested-topology v1 (virtual rows). That is *not* ssh-tmux. **PR7 (`RemoteHerdrWindowMirror` + `RemoteHerdrImpose`)** is the surface mirror. Paste-ready plan: [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md).
 
-**Development continues.** Plugin userspace is at its ceiling (no PTY theft). Native work continues toward tmux depth: impose, host-apply, I/O, session tabs, control mutations, and attach/detach/restore/observability are landed as contracts; AppKit Bonsplit/Ghostty apply is the slice after that. Another chat owns #10045 CodeRabbit — see [LANES.md](./LANES.md).
+**Development continues.** The live apply *machine* now runs in the plugin (`LiveApplyHost`: makePanel, output, drag, focus, size, attach/restore). Plugin surfaces are still in-memory Ghostty analogues (no PTY theft). Native AppKit must swap those surfaces for real `TerminalPanel`s. Another chat owns #10045 CodeRabbit — see [LANES.md](./LANES.md).
 
 ## Capability matrix
 
@@ -63,33 +63,33 @@ Status: **live** = runs in cmux today for tmux. Herdr column is honest.
 
 | Tmux live behavior | Herdr now | Notes |
 |---|---|---|
-| `makePanel` → Ghostty `TerminalPanel` per inner pane | Missing | Plugin uses a second client; native engine only diffs pane ids |
-| `reconcileBonsplitTree` / `imposeDividerPlan` on a live controller | Contract only | Planner + verb list exist; no AppKit apply |
-| `%output` → `surface.processRemoteOutput` | Contract only | Plugin polls `pane.read`; no Ghostty write |
-| Ghostty typing → `send-keys` / named keys (Up, F1, PageDown, …) | Contract only | `encode_named_key` → `pane.send_keys` + CSI fallback |
-| Input forwarder with byte budget / overflow | Contract only | `InputForwarder` (256 KiB, epoch on detach) |
-| Pane **seed** (scrollback gated on Ghostty grid ready) | Contract only | `PaneSeedQueue` from `pane.read`; overflow defers full reseed |
-| Title `ESC k … ST` strip on the live stream | Contract only | Plugin/native filter exists; not on a Ghostty surface |
-| Provider focus does not steal first responder | Contract only | Tmux `focusBonsplitPane` skips unchanged + `isApplyingTmuxFocus` |
-| Optimistic user focus + **rollback** if command rejected | Contract only | `FocusController.command_rejected` |
-| Focus navigation (adjacent pane, keep first responder) | Contract only | `adjacent_pane` on the layout tree |
-| User split from cmux chrome → inner `split-window` | Contract only | `request_split` → `pane.split` |
-| Divider drag begin/hold/end → `resize-pane` | Contract only | No Bonsplit drag owner for Herdr |
-| Feed-forward `updateClientSize` from window geometry | Contract only | Plugin SIGWINCH; no live sizing transaction / grid parity |
-| Zoom: base tree keeps panels, visible tree renders | Contract only | Engine keeps ids; no live Bonsplit zoom |
-| Prune gone panes / close gone tabs | Plugin yes / native contract | No live `panel.close()` / `teardown()` |
-| Tab order = inner window order; drag-reorder pushes back | Plugin `move-tab` / native contract | No `reorderRemoteTmuxMirrorTabs` twin |
-| Close default local tab once mirrors exist | Contract only | Tmux `closeDefaultTabsIfNeeded` |
-| Session rename → workspace title (no echo loop) | Contract only | `apply_session_title` (inbound only, ANSI stripped) |
+| `makePanel` → Ghostty `TerminalPanel` per inner pane | Live machine | Plugin: in-memory `GhosttySurface`. Native must bind `TerminalPanel` |
+| `reconcileBonsplitTree` / `imposeDividerPlan` on a live controller | Live machine | `LiveWindowMirror.apply_window` runs host verbs in tmux order |
+| `%output` → `surface.processRemoteOutput` | Live machine | Isolated write + title strip; native swaps the surface |
+| Ghostty typing → `send-keys` / named keys (Up, F1, PageDown, …) | Live machine | `send-key` CLI + `InputForwarder` |
+| Input forwarder with byte budget / overflow | Live machine | 256 KiB, epoch on detach |
+| Pane **seed** (scrollback gated on Ghostty grid ready) | Live machine | `seed_pane` waits for grid match |
+| Title `ESC k … ST` strip on the live stream | Live machine | Stripped before `process_remote_output` |
+| Provider focus does not steal first responder | Live machine | `is_applying_focus` leaves the keyboard alone |
+| Optimistic user focus + **rollback** if command rejected | Live machine | `FocusController.command_rejected` |
+| Focus navigation (adjacent pane, keep first responder) | Live machine | `navigate_focus` |
+| User split from cmux chrome → inner `split-window` | Live machine | `user_split` → `pane.split` |
+| Divider drag begin/hold/end → `resize-pane` | Live machine | `begin_drag` / `end_drag`; native must own the Bonsplit divider |
+| Feed-forward `updateClientSize` from window geometry | Live machine | Claims from container + cell metrics only |
+| Zoom: base tree keeps panels, visible tree renders | Live machine | Hidden pane stays `live` |
+| Prune gone panes / close gone tabs | Live machine | `close_panel` / session `close_tab` |
+| Tab order = inner window order; drag-reorder pushes back | Plugin `move-tab` / live session host | Native TabManager still to apply |
+| Close default local tab once mirrors exist | Live machine | `close_default_tabs` |
+| Session rename → workspace title (no echo loop) | Live machine | inbound `apply_session_title` |
 | Active-pane cwd → tab folder (background `cd` ignored) | Contract only | Not wired to `updateRemotePanelDirectory` |
-| Busy-pane close confirmation | Contract only | Herdr `agent_status` working/blocked → confirm, then `pane.close` |
-| Tab activity / unread / active command name | Contract only | `tab_activity` from `agent_status` (Herdr-native, richer than tmux) |
-| Host close **detaches**; does not `kill-server` / `server.stop` | Contract only | `close_intent("host_tab")` → detach; AppKit must honor it |
-| Attach / detach / reuse connection / beta setting | Contract only | `LifecycleController` + `betaFeatures.remoteHerdrMirror`; AppKit must own the live connection |
-| Control-socket observability (`pane_surfaces`, `pane_grids`, attach/detach) | Contract only | `remote.herdr.*` twins of `remote.tmux.*` |
-| “Mirror tabs like ssh-tmux” setting next to sidebar | Contract only | Setting key exists; no Settings UI yet |
-| Single-writer: suppress plugin while native mirror is live | Plugin yield exists | Native AppKit must set the live marker |
-| Restore after cmux restart (reattach, not stale tree) | Contract only | Persist + `plan_restore` reseeds; never `replay_tree` |
+| Busy-pane close confirmation | Live machine | `agent_status` → `confirm_then_close_pane` |
+| Tab activity / unread / active command name | Live machine | `tab_activity` |
+| Host close **detaches**; does not `kill-server` / `server.stop` | Live machine | `detach()` |
+| Attach / detach / reuse connection / beta setting | Live machine | `LiveApplyHost.attach` + `SETTING_KEY` |
+| Control-socket observability (`pane_surfaces`, `pane_grids`, attach/detach) | Live machine | `cmux-herdr observe` |
+| “Mirror tabs like ssh-tmux” setting next to sidebar | Live machine (key) | Native Settings row still to land |
+| Single-writer: suppress plugin while native mirror is live | Live machine | `write_native_live_marker` / `clear_native_live_marker` |
+| Restore after cmux restart (reattach, not stale tree) | Live machine | `restore()` reseeds; never `replay_tree` |
 
 ### Nice-to-have / later (tmux has them; Herdr analogue TBD)
 
@@ -114,9 +114,9 @@ SSH ControlMaster, `tmux -CC` parser, `%layout-change` wire format, control-mode
 - No true `%output` byte stream; poll `pane.read` + incremental delta when the snapshot extends.
 - No Bonsplit divider-drag → `resize-pane` (CLI has no drag session).
 - `cmux split` / `set-ratio` / `move-tab` / `focus-surface` verbs differ across cmux CLI builds; the bridge tries fallbacks and records errors.
-- Named keys, pane seed, busy-close, tab activity, attach/detach, and
-  `remote.herdr.*` are **contracts** in the bridge; the plugin still
-  cannot open Ghostty panels or a live Bonsplit tree.
+- The live apply machine runs `make_panel` / output / drag / focus /
+  size / attach in-process. Surfaces are still in-memory Ghostty
+  analogues — the plugin cannot open a real `TerminalPanel`.
 
 ### Native PR7 (must copy tmux, not invent a third model)
 

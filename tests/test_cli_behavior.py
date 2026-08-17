@@ -104,6 +104,8 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("focus-agent", result.stdout)
         self.assertIn("mirror", result.stdout)
         self.assertIn("attach-pane", result.stdout)
+        self.assertIn("send-key", result.stdout)
+        self.assertIn("observe", result.stdout)
         self.assertIn("lock-title", result.stdout)
         self.assertIn("unlock-title", result.stdout)
 

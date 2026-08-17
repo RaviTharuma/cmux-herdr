@@ -67,6 +67,7 @@ try:
         split_specs,
         tree_from_rects,
     )
+    from .cmux_herdr_live import apply_live_windows
     from .cmux_herdr_socket import HerdrEventSession
 except ImportError:  # running as a loose file with PYTHONPATH=bridge
     from cmux_herdr_bridge import (
@@ -105,6 +106,7 @@ except ImportError:  # running as a loose file with PYTHONPATH=bridge
         split_specs,
         tree_from_rects,
     )
+    from cmux_herdr_live import apply_live_windows
     from cmux_herdr_socket import HerdrEventSession
 
 ATTACH_ENV = "CMUX_HERDR_ATTACH_PANE"
@@ -1415,6 +1417,23 @@ def mirror_to_cmux(
         if not focused_id and desired:
             focused_id = next((d.pane_id for d in desired if d.focused), desired[0].pane_id)
         write_size_authority(focused_id)
+    live_report = None
+    if tmux_parity:
+        live_windows = build_herdr_windows(snap, desired)
+        live_host = apply_live_windows(live_windows)
+        live_report = {
+            "tabs": list(live_host.windows),
+            "make_panel": [
+                pane_id
+                for mirror in live_host.windows.values()
+                for pane_id in mirror.surfaces
+            ],
+            "pane_surfaces": live_host.pane_surfaces(),
+            "pane_grids": live_host.pane_grids(),
+            "defaults_open": live_host.defaults_open,
+            "ops": list(live_host.log),
+        }
+
     status_summary = None
     if sync_status and not dry_run:
         try:
@@ -1436,6 +1455,7 @@ def mirror_to_cmux(
         "host_fingerprint": collect_host_fingerprint(),
         "writer": writer["writer"],
         "native_live": False,
+        "live": live_report,
         "engine": {
             "created_pane_ids": engine.get("created_pane_ids"),
             "closed_pane_ids": engine.get("closed_pane_ids"),
@@ -1502,6 +1522,12 @@ def format_mirror_plan(result: Dict[str, Any]) -> str:
     ]
     if result.get("tmux_parity"):
         lines[0] += "  tmux-parity"
+    live = result.get("live") if isinstance(result.get("live"), dict) else {}
+    if live:
+        lines.append(
+            f"  live    panels={len(live.get('make_panel') or [])} "
+            f"tabs={len(live.get('tabs') or [])}"
+        )
     engine = result.get("engine") if isinstance(result.get("engine"), dict) else {}
     if engine.get("structure_changed_tabs") is not None:
         changed = engine.get("structure_changed_tabs") or []
@@ -1553,6 +1579,32 @@ def send_pane_text(pane_id: str, text: str) -> None:
         return
     last_error = (proc.stderr or proc.stdout or last_error or str(proc.returncode)).strip()
     raise BridgeError(last_error or f"herdr pane send failed for {pane_id}")
+
+
+def send_pane_named_key(pane_id: str, name: str) -> Dict[str, Any]:
+    """Send a tmux-style named key (``C-Up``, ``F5``) via ``pane.send_keys``.
+
+    Falls back to CSI bytes on ``pane.send`` when send-keys is missing.
+    Unknown names fail closed — never invent a sequence.
+    """
+    try:
+        from .cmux_herdr_control import encode_named_key
+    except ImportError:
+        from cmux_herdr_control import encode_named_key
+
+    item = encode_named_key(pane_id, name)
+    if item is None:
+        raise BridgeError(f"unknown key name: {name}")
+    if item.key:
+        try:
+            send_pane_text(pane_id, item.key)
+            return {"pane_id": pane_id, "key": item.key, "via": "send_keys"}
+        except BridgeError:
+            pass
+    if item.csi:
+        send_pane_text(pane_id, item.csi.decode("latin-1"))
+        return {"pane_id": pane_id, "key": item.key, "via": "csi"}
+    raise BridgeError(f"could not send key {name} to {pane_id}")
 
 
 def read_pane_text(pane_id: str, *, lines: int = 200, ansi: bool = True) -> str:
