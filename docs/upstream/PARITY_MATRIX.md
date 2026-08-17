@@ -28,7 +28,7 @@ This matrix distinguishes three things: the plugin stopgap, native **sidebar** n
 | Read output | `pane.read` | `%output` → surface | `attach-pane` poll | Later | Push into `TerminalPanel` |
 | Send input | `pane.send_*` | `send-keys` | cbreak → `pane send` | Later/guarded | Ghostty → `pane.send_*` |
 | Split pane | `pane.split` | `split-window` | `cmux split` from layout | Later | User split → provider |
-| Resize/layout | `pane.resize` | `resize-pane` + claim | SIGWINCH + `set-ratio` | Later | Divider drag + claim |
+| Resize/layout | `pane.resize` | `resize-pane` + claim | SIGWINCH + impose `set-ratio` | Later | `RemoteHerdrImpose` + divider drag |
 | Close inner node | `*.close` | kill-pane | `--prune` | Later | Reconcile teardown |
 | Zoom | pane zoom flag | base vs visible layout | keep mapped viewers | n/a | Same as tmux |
 

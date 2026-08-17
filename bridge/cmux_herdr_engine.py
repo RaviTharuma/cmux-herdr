@@ -11,13 +11,18 @@ This is the ssh-tmux reconcile contract in userspace:
 - pane-read polling yields an incremental output delta when possible
 
 AppKit/Bonsplit/Ghostty stay in native cmux. The plugin applies the same
-diffs via ``cmux split`` / ``attach-pane``.
+diffs via ``cmux split`` / ``attach-pane``. ``impose_after_apply`` is the
+Python twin of native ``RemoteHerdrImposePlan`` (divider fractions, tree
+action, drag-hold).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
+
+if TYPE_CHECKING:
+    from .cmux_herdr_impose import ImposePlan
 
 try:
     from .cmux_herdr_layout import LayoutNode, SplitSpec, split_specs
@@ -266,3 +271,21 @@ def output_delta(previous: Optional[str], current: str) -> Tuple[str, bool]:
     if current.startswith(previous):
         return current[len(previous) :], False
     return current, True
+
+
+def impose_after_apply(
+    result: ReconcileResult,
+    previous_rendered: Optional[LayoutNode] = None,
+    title: str = "",
+) -> "ImposePlan":
+    """Host impose plan for one ``apply_window`` result (Swift twin entry)."""
+    try:
+        from .cmux_herdr_impose import plan_from_reconcile
+    except ImportError:
+        from cmux_herdr_impose import plan_from_reconcile
+
+    return plan_from_reconcile(
+        result,
+        previous_rendered=previous_rendered,
+        title=title,
+    )

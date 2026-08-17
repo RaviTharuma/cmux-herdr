@@ -215,7 +215,7 @@ shims/README.md             optional shim guidance
 
 ## Limitations
 
-- The plugin cannot steal inner Herdr PTYs into Ghostty/Bonsplit the way native `ssh-tmux` does. `mirror --tmux-parity` creates extra cmux tabs/splits running `attach-pane` followers instead (layout, focus, order, prune). Native window mirror is PR7 (`RemoteHerdrWindowMirror`); sidebar nested topology is [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045). See [docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md).
+- The plugin cannot steal inner Herdr PTYs into Ghostty/Bonsplit the way native `ssh-tmux` does. `mirror --tmux-parity` creates extra cmux tabs/splits running `attach-pane` followers instead (layout, focus, order, prune, tmux divider fractions via `cmux_herdr_impose.py`). Native window mirror is PR7 (`RemoteHerdrWindowMirror` + `RemoteHerdrImpose`); sidebar nested topology is [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045). Tmux-depth development continues on the native apply path. See [docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md).
 - `watch --tmux-parity` prefers a persistent Herdr Unix-socket `events.subscribe` session when present; otherwise it polls. Native PR7 should push bytes into Ghostty.
 - Nested shells may carry stale outer cmux IDs. The bridge resolves the live containing workspace before writing status.
 - Status pills depend on Herdr `agent_status`. Multi-parent hosts need a complete fingerprint (`CMUX_SURFACE_ID` + `HERDR_SOCKET_PATH`); see hybrid association state above ([#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)).

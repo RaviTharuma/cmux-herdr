@@ -8,7 +8,9 @@ Both Herdr paths must match that contract as closely as the host allows.
 | **Plugin** | this repo | Userspace analogue: extra cmux viewers + layout/focus/order/prune. Ships today. |
 | **Native** | `manaflow-ai/cmux` ([#10045](https://github.com/manaflow-ai/cmux/pull/10045) + **PR7**) | In-app copy of `RemoteTmuxWindowMirror` for Herdr: real Bonsplit panes, Ghostty surfaces, output/input, layout, resize. |
 
-[#10045](https://github.com/manaflow-ai/cmux/pull/10045) is the **sidebar/control-socket** nested-topology v1 (virtual rows). That is *not* ssh-tmux. **PR7 (`RemoteHerdrWindowMirror`)** is the missing surface mirror. Paste-ready plan: [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md).
+[#10045](https://github.com/manaflow-ai/cmux/pull/10045) is the **sidebar/control-socket** nested-topology v1 (virtual rows). That is *not* ssh-tmux. **PR7 (`RemoteHerdrWindowMirror` + `RemoteHerdrImpose`)** is the surface mirror. Paste-ready plan: [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md).
+
+**Development continues.** Plugin userspace is at its ceiling (no PTY theft). Native work continues toward tmux depth: the impose planner is the next landed slice; AppKit Bonsplit/Ghostty apply is the slice after that.
 
 ## Capability matrix
 
@@ -21,8 +23,8 @@ Legend: **Yes** = required for tmux parity. Plugin column is what this repo impl
 | Layout tree is source of truth (`horizontal` / `vertical` / leaf) | Yes (`cmux_herdr_layout.py`, same JSON shape as `RemoteTmuxLayoutNode`) | Layout hints later | Yes — parse Herdr layouts into the same node type |
 | Pane create-order = DFS `paneIDsInOrder` | Yes | Snapshot order | Yes |
 | Split direction from tree (not alternate right/down) | Yes | n/a | Yes — `split-window` analogue = `pane.split` |
-| Divider **ratio** from assigned cells | Best-effort `cmux set-ratio` | n/a | Yes — `imposeDividerPlan()` from Herdr rects |
-| User **divider drag** → inner `resize-pane` | Not available (no Bonsplit owner) | n/a | Yes — same drag-end → `pane.resize` round trip |
+| Divider **ratio** from assigned cells | `cmux set-ratio` via `RemoteHerdrImpose` fractions (tmux +1 cell) | n/a | Yes — `RemoteHerdrImpose.plan` → host `imposeDividerPlan()` |
+| User **divider drag** → inner `resize-pane` | Session model only (`begin`/`resolve`/`end`); no Bonsplit owner | n/a | Yes — same drag-end → `pane.resize` round trip |
 | Feed-forward sizing (claim size, inner mux owns grid) | SIGWINCH → `herdr pane resize` | n/a | Yes — copy tmux `updateClientSize` / `refresh-client -C` |
 | Output stream into the surface | Poll `herdr pane read` (ANSI/raw) | Read API later | Yes — subscribe pane output / `pane.read` push |
 | Typed input → inner pane | `herdr pane send` (cbreak) | Guarded later | Yes — `pane.send_*` from Ghostty input |

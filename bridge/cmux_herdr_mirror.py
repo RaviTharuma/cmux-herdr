@@ -58,6 +58,7 @@ try:
         output_delta,
         reconcile_session,
     )
+    from .cmux_herdr_impose import specs_with_impose_fractions
     from .cmux_herdr_layout import (
         layouts_by_tab_id,
         pane_is_zoomed,
@@ -95,6 +96,7 @@ except ImportError:  # running as a loose file with PYTHONPATH=bridge
         output_delta,
         reconcile_session,
     )
+    from cmux_herdr_impose import specs_with_impose_fractions
     from cmux_herdr_layout import (
         layouts_by_tab_id,
         pane_is_zoomed,
@@ -304,7 +306,9 @@ def desired_mirrors(
             node = _tab_layout_node(snapshot, tab_id, members)
             if node is not None:
                 order = node.pane_ids_in_order
-                spec_by_id = {spec.pane_id: spec for spec in split_specs(node)}
+                spec_by_id = {
+                    spec.pane_id: spec for spec in specs_with_impose_fractions(node)
+                }
 
         def member_key(pane: Pane) -> Tuple[int, int, str]:
             if order and pane.pane_id in order:
