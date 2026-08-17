@@ -473,6 +473,41 @@ raise SystemExit(9)
         self.assertTrue(detach_payload["ok"])
         self.assertFalse(detach_payload["server_stopped"])
 
+    def test_attach_yields_when_native_live(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            path, env = self._lifecycle_env(tmp, fake_bin)
+            env["CMUX_HERDR_NATIVE_LIVE"] = "1"
+            attached = self.run_cli("attach", "--json", path=path, env_extra=env)
+            observed = self.run_cli(
+                "observe",
+                "--method",
+                "pane_surfaces",
+                "--json",
+                path=path,
+                env_extra=env,
+            )
+            restored = self.run_cli("restore", "--json", path=path, env_extra=env)
+            detached = self.run_cli("detach", "--json", path=path, env_extra=env)
+        self.assertEqual(attached.returncode, 0, attached.stderr + attached.stdout)
+        attach_payload = json.loads(attached.stdout)
+        self.assertTrue(attach_payload["ok"])
+        self.assertEqual(attach_payload["outcome"], "native_owns")
+        self.assertFalse(attach_payload["server_stopped"])
+        self.assertIsNone(attach_payload.get("restore_path"))
+        observe_payload = json.loads(observed.stdout)
+        self.assertEqual(observe_payload["outcome"], "native_owns")
+        self.assertEqual(observe_payload["panes"], [])
+        restore_payload = json.loads(restored.stdout)
+        self.assertEqual(restore_payload["outcome"], "native_owns")
+        self.assertEqual(restore_payload["mode"], "reattach")
+        detach_payload = json.loads(detached.stdout)
+        self.assertEqual(detach_payload["outcome"], "native_owns")
+        self.assertFalse(detach_payload["detached"])
+        self.assertFalse(detach_payload["server_stopped"])
+
     def test_restore_without_persist_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             fake_bin = Path(tmp) / "bin"

@@ -28,6 +28,7 @@ Two chats are pushing Herdr ↔ cmux tmux-depth at the same time.
 - Plugin control-depth: `bridge/cmux_herdr_control.py` ([cmux-herdr#25](https://github.com/RaviTharuma/cmux-herdr/pull/25), merged)
 - Plugin attach/detach/restore/observability: `bridge/cmux_herdr_lifecycle.py` ([cmux-herdr#26](https://github.com/RaviTharuma/cmux-herdr/pull/26), merged)
 - Plugin live apply machine: `bridge/cmux_herdr_live.py` ([cmux-herdr#27](https://github.com/RaviTharuma/cmux-herdr/pull/27), merged)
+- Plugin ↔ native handoff: `bridge/cmux_herdr_handoff.py` (this slice; native twin is a new-file fork PR, not #10045)
 - Plugin active-pane cwd → tab folder: this slice
 - Native lifecycle twin: draft [RaviTharuma/cmux#14](https://github.com/RaviTharuma/cmux/pull/14)
 - Native live apply twin: branch `cursor/herdr-live-apply-6e7a` (draft, not merged into #10045)

@@ -18,11 +18,12 @@ One ``LiveApplyHost`` owns:
 - attach / detach / restore (never ``server.stop``)
 - tab activity / busy-close from ``agent_status``
 - ``remote.herdr.*`` observability
-- native-live single-writer marker (native path only)
+- shared plugin ↔ native writer lease (one live apply host)
 
 Plugin ceiling: surfaces are byte buffers, not Ghostty PTYs. The
 *sequence* is the same one AppKit must run. Native
-``RemoteHerdrLiveApply`` is the Swift twin.
+``RemoteHerdrLiveApply`` is the Swift twin. The two paths share
+``cmux_herdr_handoff`` so they do not double-project.
 """
 
 from __future__ import annotations
@@ -69,6 +70,7 @@ try:
         AttachWindowTarget,
         DiscoveredSession,
         LifecycleController,
+        RestoreRecord,
         decode_beta,
         dispatch,
         endpoint_hash,
@@ -115,6 +117,7 @@ except ImportError:
         AttachWindowTarget,
         DiscoveredSession,
         LifecycleController,
+        RestoreRecord,
         decode_beta,
         dispatch,
         endpoint_hash,
@@ -594,11 +597,18 @@ class LiveApplyHost:
             "apply": applied,
         }
 
-    def set_native_live(self, marker_writer) -> None:
+    def set_native_live(self, marker_writer=None) -> None:
         """Native AppKit claims the single-writer lock."""
         if not self.claim_native_writer:
             return
-        marker_writer()
+        if marker_writer is not None:
+            marker_writer()
+        else:
+            _handoff().claim_native_writer(
+                _fingerprint_key(),
+                socket_path=self.socket_path,
+                endpoint_hash=endpoint_hash(self.socket_path) if self.socket_path else "",
+            )
         self.native_live = True
         self.log.append("native_live")
 
@@ -665,13 +675,27 @@ def apply_live_windows(
     return machine
 
 
-def restore_record_path(socket_path: str) -> Path:
-    """Host-owned persist file for the last successful attach."""
+def _fingerprint_key() -> str:
+    """Host fingerprint the lease files are keyed by."""
     try:
-        from .cmux_herdr_bridge import _state_dir
+        from .cmux_herdr_bridge import _parent_key
     except ImportError:
-        from cmux_herdr_bridge import _state_dir
-    return Path(_state_dir()) / f"restore-{endpoint_hash(socket_path)}.json"
+        from cmux_herdr_bridge import _parent_key
+    return _parent_key()
+
+
+def _handoff():
+    """Shared plugin ↔ native lease helpers."""
+    try:
+        from . import cmux_herdr_handoff as handoff
+    except ImportError:
+        import cmux_herdr_handoff as handoff
+    return handoff
+
+
+def restore_record_path(socket_path: str) -> Path:
+    """Canonical persist file (XDG). Copies also land in the native state dir."""
+    return _handoff().restore_paths(endpoint_hash(socket_path))[0]
 
 
 def resolve_socket_path(explicit: Optional[str] = None) -> Optional[str]:
@@ -709,23 +733,37 @@ def sessions_from_snapshot(snap) -> List[DiscoveredSession]:
 
 
 def persist_host_restore(host: LiveApplyHost) -> Optional[str]:
-    """Write the last attach so ``restore`` can reattach after restart."""
+    """Write the last attach so either path can reattach after restart."""
     record = host.lifecycle.persist
     if record is None:
         return None
-    path = restore_record_path(host.socket_path)
-    write_restore(path, record)
-    return str(path)
+    return _handoff().write_shared_restore(record.endpoint_hash, record.to_dict())
 
 
 def clear_host_restore(socket_path: str) -> bool:
-    """Drop the persist file after an explicit detach."""
-    path = restore_record_path(socket_path)
-    try:
-        path.unlink()
-    except FileNotFoundError:
-        return False
-    return True
+    """Drop persist files after an explicit detach."""
+    return _handoff().clear_shared_restore(endpoint_hash(socket_path))
+
+
+def _foreign_payload(action: str, method: Optional[str] = None) -> Optional[Dict[str, object]]:
+    """Return a yield blob when the other path already owns the host."""
+    handoff = _handoff()
+    decision = handoff.resolve_writer(_fingerprint_key())
+    if action == "observe" and (
+        decision.yields
+        or (
+            decision.plugin_live
+            and decision.lease is not None
+            and decision.lease.pid not in (0, os.getpid())
+        )
+    ):
+        return handoff.observe_foreign(decision, method or "remote.herdr.state")
+    if decision.yields:
+        body = decision.payload(action=action, method=method)
+        if action == "restore":
+            body["mode"] = "reattach"
+        return body
+    return None
 
 
 def attach_live(
@@ -735,18 +773,36 @@ def attach_live(
     socket_path: str,
     activate: bool = True,
     persist: bool = True,
-) -> Tuple[LiveApplyHost, Dict[str, object]]:
-    """Apply windows, attach, and optionally persist the restore record."""
+) -> Tuple[Optional[LiveApplyHost], Dict[str, object]]:
+    """Apply windows, attach, and optionally persist the restore record.
+
+    When native already owns a fresh lease, this does not start a
+    competing in-memory host.
+    """
+    yielded = _foreign_payload("attach")
+    if yielded is not None:
+        yielded["restore_path"] = None
+        yielded["apply"] = None
+        yielded["attach"] = {"ok": True, "outcome": yielded.get("outcome")}
+        return None, yielded
     host = LiveApplyHost(enabled=True, socket_path=socket_path)
     applied = host.apply_session(windows)
     attached = host.attach(sessions, activate=activate)
     path = persist_host_restore(host) if persist and attached.get("ok") else None
+    if attached.get("ok"):
+        _handoff().claim_plugin_writer(
+            _fingerprint_key(),
+            socket_path=socket_path,
+            endpoint_hash=endpoint_hash(socket_path),
+        )
     return host, {
         "ok": bool(applied.get("ok") and attached.get("ok")),
         "apply": applied,
         "attach": attached,
         "restore_path": path,
         "server_stopped": False,
+        "writer": "plugin",
+        "outcome": (attached or {}).get("outcome"),
     }
 
 
@@ -755,18 +811,68 @@ def restore_live(
     sessions: Sequence[DiscoveredSession],
     *,
     socket_path: str,
-) -> Tuple[LiveApplyHost, Dict[str, object]]:
+) -> Tuple[Optional[LiveApplyHost], Dict[str, object]]:
     """Reattach from the persist file. Never replays a stale tree."""
+    yielded = _foreign_payload("restore")
+    if yielded is not None:
+        return None, yielded
     host = LiveApplyHost(enabled=True, socket_path=socket_path)
-    record = read_restore(restore_record_path(socket_path))
+    hashed = endpoint_hash(socket_path)
+    payload = _handoff().read_shared_restore(hashed)
+    record = RestoreRecord.from_dict(payload) if payload else read_restore(
+        restore_record_path(socket_path)
+    )
     if record is None:
         return host, {"ok": False, "outcome": "no_persist", "server_stopped": False}
     host.lifecycle.persist = record
     restored = host.restore(sessions, windows)
     path = persist_host_restore(host) if restored.get("ok") else None
+    if restored.get("ok"):
+        _handoff().claim_plugin_writer(
+            _fingerprint_key(),
+            socket_path=socket_path,
+            endpoint_hash=hashed,
+        )
     restored["restore_path"] = path
     restored["server_stopped"] = False
+    restored["writer"] = "plugin"
     return host, restored
+
+
+def observe_live(
+    windows: Sequence[HerdrWindow],
+    *,
+    socket_path: str,
+    method: str,
+    session: str = "main",
+) -> Tuple[Optional[LiveApplyHost], Dict[str, object]]:
+    """Serve ``remote.herdr.*``. Yields when the other path owns surfaces."""
+    yielded = _foreign_payload("observe", method=method)
+    if yielded is not None:
+        return None, yielded
+    host = apply_live_windows(windows)
+    host.socket_path = socket_path
+    return host, host.observe(method, {"socket": socket_path, "session": session})
+
+
+def detach_live(
+    windows: Sequence[HerdrWindow],
+    *,
+    socket_path: str,
+) -> Dict[str, object]:
+    """Detach plugin mirrors. Does not tear down a live native host."""
+    yielded = _foreign_payload("detach")
+    if yielded is not None:
+        yielded["detached"] = False
+        yielded["restore_cleared"] = False
+        return yielded
+    host = apply_live_windows(windows)
+    host.socket_path = socket_path
+    closed = host.detach()
+    closed["restore_cleared"] = clear_host_restore(socket_path)
+    closed["detached"] = True
+    _handoff().release_plugin_writer(_fingerprint_key())
+    return closed
 
 
 __all__ = [
@@ -782,9 +888,11 @@ __all__ = [
     "attach_live",
     "clear_host_restore",
     "decode_beta",
+    "detach_live",
     "dispatch",
     "endpoint_hash",
     "grid_match",
+    "observe_live",
     "persist_host_restore",
     "read_restore",
     "resolve_socket_path",

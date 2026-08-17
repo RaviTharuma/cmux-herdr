@@ -9,6 +9,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **Plugin ↔ native handoff** (`bridge/cmux_herdr_handoff.py`): one
+  writer lease (JSON `owner` / `pid` / `heartbeat_ms`) and one shared
+  restore file (`mode: reattach` only). Native live → plugin
+  attach/observe/restore/watch yield. Plugin watch → native should
+  yield (same files). Stale lease (dead pid or expired heartbeat) →
+  the other path may resume. Not Ghostty PTY theft.
+
 - **CLI attach / detach / restore** for the live apply host
   (`cmux-herdr attach`, `detach`, `restore`). `watch --tmux-parity`
   attaches on start and detaches on stop; host close never stops

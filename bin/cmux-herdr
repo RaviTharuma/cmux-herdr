@@ -23,6 +23,7 @@ if str(_ROOT) not in sys.path:
 from bridge.cmux_herdr_bridge import (  # noqa: E402
     BridgeError,
     _load_association_map,
+    _parent_key,
     clear_cmux_herdr_statuses,
     default_herdr_socket_path,
     diagnose_install,
@@ -43,10 +44,16 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
     split_pane,
     sync_to_cmux,
 )
+from bridge.cmux_herdr_handoff import (  # noqa: E402
+    heartbeat_plugin_writer,
+    release_plugin_writer,
+    resolve_writer,
+)
 from bridge.cmux_herdr_live import (  # noqa: E402
-    apply_live_windows,
     attach_live,
     clear_host_restore,
+    detach_live,
+    observe_live,
     resolve_socket_path,
     restore_live,
     sessions_from_snapshot,
@@ -136,6 +143,9 @@ def cmd_status(_args: argparse.Namespace) -> int:
     print("writer:")
     print(f"  path         : {writer.get('writer') or 'plugin'}")
     print(f"  native live  : {writer.get('native_live')}")
+    print(f"  plugin live  : {writer.get('plugin_live')}")
+    if writer.get("lease_stale"):
+        print("  lease        : stale (other path may resume)")
     if writer.get("force_plugin"):
         print("  force plugin : yes")
     if _args.json:
@@ -251,20 +261,14 @@ def cmd_watch(args: argparse.Namespace) -> int:
                 "cmux-herdr watch: holding Herdr events.subscribe session",
                 file=sys.stderr,
             )
+    watch_note = {"text": ""}
     if getattr(args, "tmux_parity", False):
-        try:
-            live_host, attached = _attach_from_snapshot(args)
-            outcome = (attached.get("attach") or {}).get("outcome") or attached.get("outcome")
-            print(
-                f"cmux-herdr watch: attached ({outcome}); "
-                "Ctrl-C detaches and leaves Herdr running",
-                file=sys.stderr,
-            )
-        except BridgeError as exc:
-            print(f"cmux-herdr watch: attach skipped: {exc}", file=sys.stderr)
+        live_host = _watch_reconcile_host(args, live_host, watch_note)
     try:
         while not stop["flag"]:
             try:
+                if getattr(args, "tmux_parity", False):
+                    live_host = _watch_reconcile_host(args, live_host, watch_note)
                 if getattr(args, "mirror", False) or getattr(args, "tmux_parity", False):
                     result = mirror_to_cmux(
                         **_mirror_kwargs(args),
@@ -302,6 +306,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
         if live_host is not None:
             closed = live_host.detach()
             clear_host_restore(live_host.socket_path)
+            release_plugin_writer(_parent_key())
             print(
                 "cmux-herdr watch: detached "
                 f"(server_stopped={closed.get('server_stopped')})",
@@ -310,6 +315,60 @@ def cmd_watch(args: argparse.Namespace) -> int:
         if event_session is not None:
             event_session.close()
     return 0
+
+
+def _watch_note(note: dict, text: str) -> None:
+    """Print a watch handoff line once per state, not every poll."""
+    if note.get("text") == text:
+        return
+    note["text"] = text
+    print(text, file=sys.stderr)
+
+
+def _watch_reconcile_host(args: argparse.Namespace, live_host, note: dict):
+    """Attach, yield to native, or resume after a stale native lease.
+
+    Native takeover: detach the in-memory host and leave Herdr running.
+    Native crash / expired heartbeat: plugin attach may resume.
+    """
+    decision = resolve_writer(_parent_key())
+    if decision.yields:
+        if live_host is not None:
+            live_host.detach()
+            release_plugin_writer(_parent_key())
+            _watch_note(
+                note,
+                "cmux-herdr watch: yielded to native "
+                "(Herdr session left running)",
+            )
+        else:
+            _watch_note(
+                note,
+                "cmux-herdr watch: native owns this host; plugin apply idle",
+            )
+        return None
+    if live_host is not None:
+        heartbeat_plugin_writer(_parent_key())
+        return live_host
+    try:
+        host, attached = _attach_from_snapshot(args)
+    except BridgeError as exc:
+        _watch_note(note, f"cmux-herdr watch: attach skipped: {exc}")
+        return None
+    if host is None:
+        _watch_note(
+            note,
+            f"cmux-herdr watch: {attached.get('outcome')}; "
+            "not starting a competing apply host",
+        )
+        return None
+    outcome = (attached.get("attach") or {}).get("outcome") or attached.get("outcome")
+    _watch_note(
+        note,
+        f"cmux-herdr watch: attached ({outcome}); "
+        "Ctrl-C detaches and leaves Herdr running",
+    )
+    return host
 
 
 def _mirror_scope(args: argparse.Namespace) -> str:
@@ -427,13 +486,17 @@ def cmd_attach(args: argparse.Namespace) -> int:
         print(json.dumps(payload, indent=2, default=str))
     else:
         attach = payload.get("attach") if isinstance(payload.get("attach"), dict) else {}
-        print(
-            f"attached {attach.get('outcome') or payload.get('outcome')} "
-            f"tabs={len((payload.get('apply') or {}).get('tabs') or [])} "
-            f"server_stopped={payload.get('server_stopped')}"
-        )
-        if payload.get("restore_path"):
-            print(f"restore: {payload['restore_path']}")
+        outcome = attach.get("outcome") or payload.get("outcome")
+        if payload.get("writer") == "native" or outcome == "native_owns":
+            print("native owns this host; plugin apply not started")
+        else:
+            print(
+                f"attached {outcome} "
+                f"tabs={len((payload.get('apply') or {}).get('tabs') or [])} "
+                f"server_stopped={payload.get('server_stopped')}"
+            )
+            if payload.get("restore_path"):
+                print(f"restore: {payload['restore_path']}")
     return 0 if payload.get("ok") else 2
 
 
@@ -449,19 +512,19 @@ def cmd_detach(args: argparse.Namespace) -> int:
             raise BridgeError(
                 "need an absolute Herdr socket (--socket or HERDR_SOCKET_PATH)"
             )
-        host = apply_live_windows(windows)
-        host.socket_path = socket
-        closed = host.detach()
-        closed["restore_cleared"] = clear_host_restore(socket)
+        closed = detach_live(windows, socket_path=socket)
     except BridgeError as exc:
         _die(str(exc))
     if args.json:
         print(json.dumps(closed, indent=2, default=str))
     else:
-        print(
-            f"detached (server_stopped={closed.get('server_stopped')}; "
-            "Herdr session left running)"
-        )
+        if closed.get("outcome") == "native_owns":
+            print("native owns this host; plugin did not detach native")
+        else:
+            print(
+                f"detached (server_stopped={closed.get('server_stopped')}; "
+                "Herdr session left running)"
+            )
     return 0 if closed.get("ok") else 2
 
 
@@ -487,10 +550,13 @@ def cmd_restore(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(payload, indent=2, default=str))
     else:
-        print(
-            f"restore {payload.get('mode') or payload.get('outcome')} "
-            f"server_stopped={payload.get('server_stopped')}"
-        )
+        if payload.get("outcome") == "native_owns":
+            print("native owns this host; restore stays on the native path")
+        else:
+            print(
+                f"restore {payload.get('mode') or payload.get('outcome')} "
+                f"server_stopped={payload.get('server_stopped')}"
+            )
     return 0 if payload.get("ok") else 2
 
 
@@ -504,11 +570,11 @@ def cmd_observe(args: argparse.Namespace) -> int:
         desired = desired_mirrors(snap, scope="all", use_layout=True)
         windows = build_herdr_windows(snap, desired)
         socket = resolve_socket_path(args.socket) or default_herdr_socket_path()
-        host = apply_live_windows(windows)
-        host.socket_path = socket
-        payload = host.observe(
-            method,
-            {"socket": socket, "session": args.session},
+        _host, payload = observe_live(
+            windows,
+            socket_path=socket,
+            method=method,
+            session=args.session,
         )
     except BridgeError as exc:
         _die(str(exc))

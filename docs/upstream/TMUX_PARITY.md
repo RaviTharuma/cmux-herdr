@@ -35,7 +35,7 @@ Legend: **Yes** in the plugin column is shipped userspace. **Yes** in the Native
 | Event-driven reconcile + snapshot resync | Persistent `events.subscribe` via `watch --tmux-parity` | `events.subscribe` | Yes — events + snapshot after gaps |
 | Idempotent reconcile (re-run is a no-op) | `herdr-mirror:<pane_id>` keys | Compound nested IDs | Yes — paneId → panel map |
 | Titles from inner window/tab, not pane-border noise | Tab label on tab-root | Provider labels | Yes — copy tmux `windowTitle` rule |
-| Single writer vs plugin | Plugin yields if native attachment live (pills + mirror) | Plugin suppression | Same |
+| Single writer vs plugin | Shared lease: yield, resume on stale, same restore file | Plugin suppression | Same files (`RemoteHerdrHandoff`) |
 | Engine-owned reconcile | `apply_window` drives create/prune; geometry-only skips recreate | Snapshot order | Copy tmux structure version |
 | Fail-closed layout apply | Split failure never orphans a new tab | n/a | Host impose must not invent panes |
 | Single size-claim writer | `size-authority-<fp>` / `CMUX_HERDR_SIZE_AUTHORITY` | n/a | One `refresh-client -C` claim |
@@ -88,7 +88,7 @@ Status: **live** = runs in cmux today for tmux. Herdr column is honest.
 | Attach / detach / reuse connection / beta setting | Live machine | `LiveApplyHost.attach` + `SETTING_KEY` |
 | Control-socket observability (`pane_surfaces`, `pane_grids`, attach/detach) | Live machine | `cmux-herdr observe` |
 | “Mirror tabs like ssh-tmux” setting next to sidebar | Live machine (key) | Native Settings row still to land |
-| Single-writer: suppress plugin while native mirror is live | Live machine | `write_native_live_marker` / `clear_native_live_marker` |
+| Single-writer: one lease, resume if the other path dies | Live machine | `cmux_herdr_handoff` (pid + heartbeat; shared restore) |
 | Restore after cmux restart (reattach, not stale tree) | Live machine | `restore()` reseeds; never `replay_tree` |
 
 ### Nice-to-have / later (tmux has them; Herdr analogue TBD)
