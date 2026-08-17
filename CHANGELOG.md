@@ -9,6 +9,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **Cmux-tmux control depth** (`bridge/cmux_herdr_control.py`): named
+  keys (`C-Up` → `pane.send_keys` + CSI fallback), 256 KiB input
+  forwarder, optimistic focus + rollback, layout-tree adjacent focus,
+  user `pane.split`, `pane.read` seed queue, tab activity / busy-close
+  from Herdr `agent_status`, host-close detach, inbound session title.
+  Same user mutations cmux built for tmux; no SSH/`tmux -CC`/`respawn`.
+
 - Honest **contract vs live** inventory in
   [docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md): the PR7
   column is the target, not wired AppKit. Lists tmux-live behaviors Herdr

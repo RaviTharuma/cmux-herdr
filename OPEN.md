@@ -129,6 +129,9 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       proves the order. Native twin stays on a **separate** fork branch —
       do not land on #10045 while the other chat is mid CodeRabbit. See
       [docs/upstream/LANES.md](docs/upstream/LANES.md).
+- [x] **Cmux-tmux control depth** (`bridge/cmux_herdr_control.py`):
+      named keys, input budget, focus rollback, adjacent pane, user
+      split, seed queue, agent-status activity, detach-on-host-close.
 - [x] **I/O + session host** (`bridge/cmux_herdr_io.py` /
       `bridge/cmux_herdr_session.py`): isolated `route_output` /
       `route_input`, provider-vs-user focus (no echo loop), session
