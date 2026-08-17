@@ -543,6 +543,24 @@ def native_attachment_is_live(fp: Optional[Dict[str, Any]] = None) -> bool:
     return False
 
 
+def write_native_live_marker(fp: Optional[Dict[str, Any]] = None) -> str:
+    """Native AppKit claims the single-writer lock (tmux mirror live)."""
+    path = native_live_marker_path(fp)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write("1\n")
+    return path
+
+
+def clear_native_live_marker(fp: Optional[Dict[str, Any]] = None) -> None:
+    """Drop the single-writer lock on detach / process exit."""
+    for path in (native_live_marker_path(fp), os.path.join(_state_dir(), "native-live")):
+        try:
+            os.remove(path)
+        except OSError:
+            continue
+
+
 def writer_status(fp: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Describe which path is allowed to project ``herdr:*`` pills."""
     force = plugin_force_writer()

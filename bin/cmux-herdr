@@ -42,11 +42,17 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
     split_pane,
     sync_to_cmux,
 )
+from bridge.cmux_herdr_live import (  # noqa: E402
+    apply_live_windows,
+)
 from bridge.cmux_herdr_mirror import (  # noqa: E402
     attach_pane_loop,
+    build_herdr_windows,
+    desired_mirrors,
     format_mirror_plan,
     is_attach_process,
     mirror_to_cmux,
+    send_pane_named_key,
     wait_herdr_event,
 )
 from bridge.cmux_herdr_socket import HerdrEventSession  # noqa: E402
@@ -345,6 +351,39 @@ def cmd_attach_pane(args: argparse.Namespace) -> int:
     except BridgeError as exc:
         _die(str(exc))
     return 1
+
+
+def cmd_send_key(args: argparse.Namespace) -> int:
+    _ensure_herdr()
+    try:
+        result = send_pane_named_key(args.pane_id, args.key)
+    except BridgeError as exc:
+        _die(str(exc))
+    print(f"sent {result.get('key')} to {result.get('pane_id')} via {result.get('via')}")
+    return 0
+
+
+def cmd_observe(args: argparse.Namespace) -> int:
+    _ensure_herdr()
+    method = args.method
+    if not method.startswith("remote.herdr."):
+        method = f"remote.herdr.{method}"
+    try:
+        snap = fetch_snapshot()
+        desired = desired_mirrors(snap, scope="all", use_layout=True)
+        windows = build_herdr_windows(snap, desired)
+        host = apply_live_windows(windows)
+        payload = host.observe(
+            method,
+            {"socket": args.socket, "session": args.session},
+        )
+    except BridgeError as exc:
+        _die(str(exc))
+    if args.json:
+        print(json.dumps(payload, indent=2, default=str))
+    else:
+        print(json.dumps(payload, default=str))
+    return 0 if payload.get("ok") else 2
 
 
 def cmd_focus_tab(args: argparse.Namespace) -> int:
@@ -838,6 +877,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("json-dump", help="Raw snapshot for debugging")
     s.set_defaults(func=cmd_json_dump)
+
+    s = sub.add_parser(
+        "send-key",
+        help="Send a tmux-style named key (C-Up, F5, PPage) to one Herdr pane",
+    )
+    s.add_argument("pane_id")
+    s.add_argument("key")
+    s.set_defaults(func=cmd_send_key)
+
+    s = sub.add_parser(
+        "observe",
+        help="remote.herdr.* observability (pane_surfaces / pane_grids / state)",
+    )
+    s.add_argument(
+        "--method",
+        default="remote.herdr.pane_surfaces",
+        help="remote.herdr.pane_surfaces | pane_grids | state",
+    )
+    s.add_argument("--socket", default="/tmp/herdr.sock")
+    s.add_argument("--session", default="main")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_observe)
 
     return p
 

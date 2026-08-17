@@ -55,11 +55,11 @@ Cross-links: PR and issue reference each other; both point back here as the fall
    PR7 feeds `%output`-style bytes into Ghostty; the plugin still polls
    `pane.read` and applies an incremental delta.
 
-3. **Reattach after cmux restart is a contract, not live AppKit.**
-   `bridge/cmux_herdr_lifecycle.py` persists the last attach and
-   **reattaches** (fresh snapshot + reseed) — it never replays a stale
-   Bonsplit tree. Parent binding under `~/.local/state/cmux-herdr/` is
-   still best-effort until native AppKit owns the connection.
+3. **Live apply runs in the plugin; Ghostty panels are still native.**
+   `bridge/cmux_herdr_live.py` is the ssh-tmux apply machine
+   (makePanel, output, drag, focus, size, attach/restore). Surfaces are
+   in-memory until native `TerminalPanel.processRemoteOutput` is wired.
+   Restore **reattaches** (never a stale Bonsplit tree).
 
 4. **Flat outer workspace projection (not nested hierarchy).**
    Status pills are still a flat projection onto one outer workspace per host fingerprint.

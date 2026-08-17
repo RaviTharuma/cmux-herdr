@@ -9,6 +9,16 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **Live ssh-tmux apply machine** (`bridge/cmux_herdr_live.py`): the
+  missing depth — `make_panel`, `process_remote_output`, named keys,
+  impose-before-rebuild, divider drag, first-responder
+  (`is_applying_focus` does not steal the keyboard), feed-forward
+  `update_client_size`, zoom-keeps-panels, attach/detach/restore,
+  busy-close, `remote.herdr.*`, and the native-live writer marker.
+  `mirror --tmux-parity` now runs this host. CLI: `send-key`,
+  `observe`. Plugin surfaces are in-memory Ghostty analogues; native
+  `RemoteHerdrLiveApply` swaps in `TerminalPanel`.
+
 - **Cmux-tmux attach / detach / restore / observability**
   (`bridge/cmux_herdr_lifecycle.py`): same controller surface cmux
   built for tmux (`RemoteTmuxController+Attach`, `remote.tmux.*`),
