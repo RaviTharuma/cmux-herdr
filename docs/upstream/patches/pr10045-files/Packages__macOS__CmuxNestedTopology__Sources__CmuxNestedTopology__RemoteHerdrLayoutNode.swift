@@ -88,6 +88,14 @@ public struct RemoteHerdrLayoutNode: Hashable, Sendable, Codable {
                 try RemoteHerdrLayoutNode(from: childDecoder, depth: depth + 1, maxDepth: maxDepth)
             )
         }
+        guard !children.isEmpty else {
+            throw DecodingError.dataCorrupted(
+                .init(
+                    codingPath: container.codingPath + [key],
+                    debugDescription: "layout split requires at least one child"
+                )
+            )
+        }
         return children
     }
 

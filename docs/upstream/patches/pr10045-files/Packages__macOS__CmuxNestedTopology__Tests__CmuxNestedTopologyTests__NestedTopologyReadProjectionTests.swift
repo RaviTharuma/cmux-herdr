@@ -180,7 +180,12 @@ struct NestedTopologyReadProjectionTests {
         #expect(mapA.sortedEdges.map { "\($0.child.rawID)->\($0.parent.rawID)" }
             == mapB.sortedEdges.map { "\($0.child.rawID)->\($0.parent.rawID)" })
 
-        renderer.applyParentMapEvents(batchA)
+        let attachmentID = NestedTopologyFixtures.hostSurfaceID
+        renderer.applyParentMapEvents(batchA, attachmentID: attachmentID)
+        #expect(renderer.parentMap.parent(of: tree.pane.id) == tab2.id)
+        // Second attachment must not share parent-map ownership.
+        let otherAttachmentID = UUID()
+        renderer.applyParentMapEvents(batchB, attachmentID: otherAttachmentID)
         #expect(renderer.parentMap.parent(of: tree.pane.id) == tab2.id)
     }
 

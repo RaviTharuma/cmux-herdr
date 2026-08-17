@@ -175,14 +175,23 @@ public actor HerdrNestedTopologyClient: NestedTopologyProviderClient {
                 if !isFirstAttempt {
                     // Mandatory full resnapshot on every reconnect.
                     _ = try await handshake()
-                    let snap = try await snapshot()
-                    continuation.yield(.replaceSnapshot(snap))
                 } else {
                     _ = try await ensureHandshake()
                 }
+                // One required snapshot per attempt: drives pane-scoped subscriptions and
+                // (on reconnect) the authoritative replaceSnapshot. Fail closed — never
+                // subscribe with an empty pane set after a silent snapshot failure.
+                let snap = try await snapshot()
+                let paneIDs = snap.panes.map(\.id.rawID)
+                if !isFirstAttempt {
+                    continuation.yield(.replaceSnapshot(snap))
+                }
                 isFirstAttempt = false
                 backoff = configuration.reconnectInitialBackoff
-                try await subscribeAndForward(continuation: continuation)
+                try await subscribeAndForward(
+                    continuation: continuation,
+                    paneIDs: paneIDs
+                )
                 throw NestedTopologyProviderError.unexpectedEOF
             } catch is CancellationError {
                 continuation.finish(throwing: NestedTopologyProviderError.cancelled)
@@ -226,12 +235,18 @@ public actor HerdrNestedTopologyClient: NestedTopologyProviderClient {
     }
 
     private func subscribeAndForward(
-        continuation: AsyncThrowingStream<NestedTopologyEvent, any Error>.Continuation
+        continuation: AsyncThrowingStream<NestedTopologyEvent, any Error>.Continuation,
+        paneIDs: [String]
     ) async throws {
         let handshake = try await ensureHandshake()
-        // Parameterized status events require pane_id; subscribe for panes known now.
-        let paneIDs = (try? await snapshot().panes.map(\.id.rawID)) ?? []
-        let subscriptions = HerdrProtocol17Compatibility.subscriptions(forPaneIDs: paneIDs)
+        // Parameterized status events require pane_id; subscribe for panes from the
+        // snapshot already taken by runEventLoop (no second session.snapshot here).
+        let normalizedPaneIDs = paneIDs
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let subscriptions = HerdrProtocol17Compatibility.subscriptions(
+            forPaneIDs: normalizedPaneIDs
+        )
         let requestID = HerdrJSONRPCRequestID.random(prefix: "cmux-sub")
         let requestObject: [String: Any] = [
             "id": requestID.rawValue,
@@ -253,6 +268,7 @@ public actor HerdrNestedTopologyClient: NestedTopologyProviderClient {
         let connectTimeout = configuration.connectTimeout
         let idleTimeout = configuration.eventIdleTimeout
         let socketPath = configuration.socketPath
+        let initialPaneIDs = normalizedPaneIDs
 
         let connection = try HerdrUnixSocketConnection(path: socketPath, timeout: connectTimeout)
         try await withTaskCancellationHandler {
@@ -265,6 +281,7 @@ public actor HerdrNestedTopologyClient: NestedTopologyProviderClient {
                         connection.close()
                         cont.resume(with: result)
                     }
+                    var subscribedPaneIDs = Set(initialPaneIDs)
 
                     do {
                         try connection.writeAll(requestData + Data([UInt8(ascii: "\n")]))
@@ -316,6 +333,17 @@ public actor HerdrNestedTopologyClient: NestedTopologyProviderClient {
                                 )
                                 for event in events {
                                     continuation.yield(event)
+                                    // pane.agent_status_changed is subscribed per pane_id at
+                                    // connect time. A newly upserted pane is not covered until
+                                    // we reconnect and resubscribe from a fresh snapshot.
+                                    if case let .paneUpserted(pane) = event {
+                                        let rawID = pane.id.rawID.trimmingCharacters(
+                                            in: .whitespacesAndNewlines
+                                        )
+                                        if !rawID.isEmpty, !subscribedPaneIDs.contains(rawID) {
+                                            throw NestedTopologyProviderError.unexpectedEOF
+                                        }
+                                    }
                                 }
                             }
                         }

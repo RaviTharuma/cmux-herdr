@@ -100,9 +100,19 @@ public struct NestedTopologyTwoPassRenderer: Sendable {
         return NestedTopologyReadListResult(attachments: projected)
     }
 
-    /// Applies an ordered event batch to the parent map without retitling.
-    public mutating func applyParentMapEvents(_ events: [NestedTopologyEvent]) {
-        parentMap.apply(events: events)
+    /// Applies an ordered event batch to the parent map for one attachment.
+    ///
+    /// Updates the per-attachment ``stateByAttachment`` owner (not only the public
+    /// mirror). The public ``parentMap`` mirrors the last mutated attachment for
+    /// single-attachment tests.
+    public mutating func applyParentMapEvents(
+        _ events: [NestedTopologyEvent],
+        attachmentID: UUID
+    ) {
+        var state = stateByAttachment[attachmentID] ?? AttachmentProjectionState()
+        state.parentMap.apply(events: events)
+        stateByAttachment[attachmentID] = state
+        parentMap = state.parentMap
     }
 
     /// Locks a native title so subsequent projections cannot overwrite it.

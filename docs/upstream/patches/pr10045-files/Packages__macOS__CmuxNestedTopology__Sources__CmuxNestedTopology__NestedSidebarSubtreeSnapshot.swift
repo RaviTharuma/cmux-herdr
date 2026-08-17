@@ -39,7 +39,10 @@ public struct NestedSidebarSubtreeSnapshot: Hashable, Sendable {
         self.roots = roots
     }
 
-    /// Accessibility label for the expandable host section (fixed English tokens; no paths).
+    /// Technical accessibility tokens for tests/debug (fixed English).
+    ///
+    /// VoiceOver-facing UI must localize at the SwiftUI boundary
+    /// (``NestedSidebarSubtreeView``) from semantic state instead of this value.
     public var accessibilityLabel: String {
         var parts = ["nested", providerKind.rawValue]
         if isStale {
@@ -95,7 +98,9 @@ public struct NestedSidebarRowSnapshot: Hashable, Sendable {
         self.children = children
     }
 
-    /// Accessibility label for the row.
+    /// Technical accessibility tokens forwarded from the read node (fixed English).
+    ///
+    /// VoiceOver UI localizes at ``NestedSidebarSubtreeView`` from semantic state.
     public var accessibilityLabel: String {
         node.accessibilityLabel
     }

@@ -27,6 +27,8 @@ public actor NestedTopologyAttachmentCoordinator {
     private var liveEnvironmentSurfaceIDs: Set<UUID>
     /// Live provider clients retained for capability-gated mutations (PR5).
     private var liveClients: [UUID: any NestedTopologyProviderClient]
+    /// Persistent topology reducers keyed by host surface (one per attachment generation).
+    private var topologyReducers: [UUID: NestedTopologyReducer]
 
     private let validator: any NestedEndpointValidating
     private let clientFactory: any NestedTopologyProviderClientFactory
@@ -79,6 +81,7 @@ public actor NestedTopologyAttachmentCoordinator {
         self.generationTokens = [:]
         self.liveEnvironmentSurfaceIDs = []
         self.liveClients = [:]
+        self.topologyReducers = [:]
         self.validator = validator
         self.clientFactory = clientFactory
         self.handoff = handoff
@@ -192,7 +195,15 @@ public actor NestedTopologyAttachmentCoordinator {
             }
         }
 
-        if attachments.count >= limits.maxConcurrentAttachments {
+        let activeAttachmentCount = attachments.values.reduce(into: 0) { count, record in
+            switch record.state {
+            case .connecting, .live, .stale:
+                count += 1
+            case .disconnected, .incompatible, .rejected:
+                break
+            }
+        }
+        if activeAttachmentCount >= limits.maxConcurrentAttachments {
             throw NestedAttachmentError.attachmentLimitExceeded(
                 limit: limits.maxConcurrentAttachments
             )
@@ -745,6 +756,7 @@ public actor NestedTopologyAttachmentCoordinator {
             await detach(hostStableSurfaceID: id, reason: .hostWindowTeardown)
         }
         generationTokens.removeAll()
+        topologyReducers.removeAll()
         proposals.removeAll()
         publishPersistenceIntents()
     }
@@ -904,6 +916,7 @@ public actor NestedTopologyAttachmentCoordinator {
         if generation != nil {
             eventTasks.removeValue(forKey: hostStableSurfaceID)?.cancel()
             liveClients.removeValue(forKey: hostStableSurfaceID)
+            topologyReducers.removeValue(forKey: hostStableSurfaceID)
             liveEnvironmentSurfaceIDs.remove(hostStableSurfaceID)
             publishEnvironmentMirror()
             try? handoff.release(hostStableSurfaceID: hostStableSurfaceID)
@@ -958,6 +971,7 @@ public actor NestedTopologyAttachmentCoordinator {
         generationTokens.removeValue(forKey: hostStableSurfaceID)
         eventTasks.removeValue(forKey: hostStableSurfaceID)?.cancel()
         liveClients.removeValue(forKey: hostStableSurfaceID)
+        topologyReducers.removeValue(forKey: hostStableSurfaceID)
 
         let previous = attachments.removeValue(forKey: hostStableSurfaceID)
         liveEnvironmentSurfaceIDs.remove(hostStableSurfaceID)
@@ -988,6 +1002,7 @@ public actor NestedTopologyAttachmentCoordinator {
         guard generationTokens[hostStableSurfaceID] == generation else { return }
         eventTasks.removeValue(forKey: hostStableSurfaceID)?.cancel()
         liveClients.removeValue(forKey: hostStableSurfaceID)
+        topologyReducers.removeValue(forKey: hostStableSurfaceID)
         liveEnvironmentSurfaceIDs.remove(hostStableSurfaceID)
         publishEnvironmentMirror()
         try? handoff.release(hostStableSurfaceID: hostStableSurfaceID)
@@ -1076,6 +1091,17 @@ public actor NestedTopologyAttachmentCoordinator {
             record.latestSnapshot = snapshot
             record.providerInstanceID = snapshot.provider.providerInstanceID
             record.capabilities = snapshot.provider.capabilities
+            var reducer = NestedTopologyReducer(
+                providerKind: record.providerKind,
+                providerInstanceID: snapshot.provider.providerInstanceID,
+                limits: clientConfigurationDefaults.topologyLimits
+            )
+            do {
+                _ = try reducer.apply(.replaceSnapshot(snapshot))
+                topologyReducers[hostStableSurfaceID] = reducer
+            } catch {
+                topologyReducers.removeValue(forKey: hostStableSurfaceID)
+            }
             if record.state == .stale {
                 record.state = .live
                 if !record.pluginWriterHandoffActive {
@@ -1108,14 +1134,38 @@ public actor NestedTopologyAttachmentCoordinator {
         else {
             return
         }
-        var reducer = NestedTopologyReducer(
-            providerKind: record.providerKind,
-            providerInstanceID: instanceID,
-            limits: clientConfigurationDefaults.topologyLimits
-        )
+        var reducer: NestedTopologyReducer
+        if let existing = topologyReducers[hostStableSurfaceID],
+           existing.providerInstanceID == instanceID,
+           existing.snapshot != nil
+        {
+            reducer = existing
+        } else {
+            var seeded = NestedTopologyReducer(
+                providerKind: record.providerKind,
+                providerInstanceID: instanceID,
+                limits: clientConfigurationDefaults.topologyLimits
+            )
+            do {
+                _ = try seeded.apply(.replaceSnapshot(current))
+            } catch {
+                emit(
+                    NestedAttachmentTelemetryEvent(
+                        name: "event_rejected",
+                        state: record.state,
+                        providerKind: record.providerKind,
+                        errorClass: "event_validation_failed",
+                        hostStableSurfaceID: hostStableSurfaceID,
+                        attachmentID: record.attachmentID
+                    )
+                )
+                return
+            }
+            reducer = seeded
+        }
         do {
-            _ = try reducer.apply(.replaceSnapshot(current))
             let changed = try reducer.apply(event)
+            topologyReducers[hostStableSurfaceID] = reducer
             guard changed, let next = reducer.snapshot else { return }
             record.latestSnapshot = next
             attachments[hostStableSurfaceID] = record

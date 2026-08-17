@@ -82,7 +82,10 @@ public struct NestedTopologyReadNode: Hashable, Codable, Sendable {
         self.metadata = Self.boundedMetadata(metadata)
     }
 
-    /// Accessibility / VoiceOver label for sidebar rows (fixed English tokens; no paths).
+    /// Technical accessibility tokens for tests/debug (fixed English).
+    ///
+    /// VoiceOver-facing UI must localize at the SwiftUI boundary
+    /// (``NestedSidebarSubtreeView``) from semantic state instead of this value.
     public var accessibilityLabel: String {
         var parts = [id.kind.rawValue, label]
         if focused {

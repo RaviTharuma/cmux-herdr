@@ -1,0 +1,97 @@
+name: sync-coderabbit-review2
+on:
+  push:
+    paths:
+      - .github/workflows/sync-coderabbit-review2.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cursor/nested-topology-herdr-v1-becf
+          fetch-depth: 0
+
+      - name: Pull fixed sources from cmux-herdr staging
+        env:
+          BASE: https://raw.githubusercontent.com/RaviTharuma/cmux-herdr/cursor/pr10045-coderabbit-replies-f1c1/docs/upstream/patches/pr10045-files
+        run: |
+          set -euo pipefail
+          mapfile -t FILES <<'EOF'
+          Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClient.swift
+          Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedSidebarSubtreeSnapshot.swift
+          Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift
+          Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadNode.swift
+          Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyTwoPassRenderer.swift
+          Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrImposePlan.swift
+          Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrLayoutNode.swift
+          Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyReadProjectionTests.swift
+          Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/RemoteHerdrImposeTests.swift
+          Sources/NestedSidebarSubtreeView.swift
+          EOF
+          for path in "${FILES[@]}"; do
+            path="$(echo "$path" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+            [ -z "$path" ] && continue
+            safe="${path//\//__}"
+            url="$BASE/$safe"
+            echo "fetch $path"
+            curl -fsSL "$url" -o "$path"
+            bytes=$(wc -c < "$path")
+            if [ "$bytes" -lt 200 ]; then
+              echo "ERROR: $path only $bytes bytes" >&2
+              exit 1
+            fi
+          done
+          curl -fsSL "$BASE/nested-a11y-strings.json" -o /tmp/nested-a11y-strings.json
+          python3 <<'PY'
+          import json
+          catalog_path = "Resources/Localizable.xcstrings"
+          with open(catalog_path) as f:
+              data = json.load(f)
+          with open("/tmp/nested-a11y-strings.json") as f:
+              frag = json.load(f)
+          data["strings"].update(frag)
+          with open(catalog_path, "w") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          print("merged", len(frag), "localization keys")
+          PY
+          grep -q 'subscribeAndForward' Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClient.swift
+          grep -q 'measuredFirstExtent' Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrImposePlan.swift
+          grep -q 'topologyReducers' Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift
+          grep -q 'applyParentMapEvents' Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyTwoPassRenderer.swift
+          grep -q 'localizedRowAccessibilityLabel' Sources/NestedSidebarSubtreeView.swift
+          grep -q 'layout split requires at least one child' Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrLayoutNode.swift
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "Ravi Tharuma"
+          git config user.email "25951435+RaviTharuma@users.noreply.github.com"
+          git add \
+            Packages/macOS/CmuxNestedTopology \
+            Sources/NestedSidebarSubtreeView.swift \
+            Resources/Localizable.xcstrings
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+            exit 0
+          fi
+          git commit -m "fix(nested-topology): address CodeRabbit review 4953187593 on #10045"
+          git push origin HEAD:cursor/nested-topology-herdr-v1-becf
+
+      - name: Remove one-shot workflow
+        if: always()
+        run: |
+          set -euo pipefail
+          git fetch origin cursor/nested-topology-herdr-v1-becf
+          git checkout -B cursor/nested-topology-herdr-v1-becf origin/cursor/nested-topology-herdr-v1-becf
+          if [ -f .github/workflows/sync-coderabbit-review2.yml ]; then
+            git rm -f .github/workflows/sync-coderabbit-review2.yml
+            git commit -m "chore: remove one-shot CodeRabbit review2 sync workflow" || true
+            git push origin HEAD:cursor/nested-topology-herdr-v1-becf || true
+          fi
