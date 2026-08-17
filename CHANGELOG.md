@@ -9,6 +9,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **Bonsplit impose planner** (`bridge/cmux_herdr_impose.py`): ssh-tmux
+  `imposeDividerPlan` contract in userspace — right-associated binary tree,
+  targeted leaf expand/remove, tmux +1 divider-cell fraction, `plan(w) <= w`,
+  divider-drag hold/resolve. `mirror --tmux-parity` overlays those fractions
+  onto `cmux set-ratio`. Native twin is `RemoteHerdrImpose` on the cmux fork.
+  Tmux-depth development continues (host Bonsplit/Ghostty apply).
+
 - `AGENTS.md` for Cursor Cloud (stdlib-only test/run notes; fake herdr/cmux on Linux).
 - Community poll [cmux#10106](https://github.com/manaflow-ai/cmux/discussions/10106) on README / OPEN / upstream banners. Native window-mirror engine [RaviTharuma/cmux#8](https://github.com/RaviTharuma/cmux/pull/8) is merged.
 

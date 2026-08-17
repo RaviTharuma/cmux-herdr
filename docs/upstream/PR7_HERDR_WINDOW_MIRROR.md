@@ -6,16 +6,19 @@ Base: nested-topology tip (`cursor/nested-topology-herdr-v1-becf` / #10045). Do 
 
 ## Implementation status
 
-The **pure reconcile engine** lives in `Packages/macOS/CmuxNestedTopology` on fork PR [RaviTharuma/cmux#8](https://github.com/RaviTharuma/cmux/pull/8):
+The **pure reconcile engine + impose planner** live in `Packages/macOS/CmuxNestedTopology` (fork PR [RaviTharuma/cmux#8](https://github.com/RaviTharuma/cmux/pull/8) and follow-ups on #10045):
 
 - `RemoteHerdrLayoutNode` / `RemoteHerdrWindow` / `RemoteHerdrWindowMirror` / `RemoteHerdrSessionMirror`
 - `RemoteHerdrSizing` (feed-forward client grid)
+- `RemoteHerdrImpose` / `RemoteHerdrImposePlan` — tmux `imposeDividerPlan` contract (binary tree, leaf expand/remove, `plan(w) <= w`, drag hold)
 - `RemoteHerdrPaneIO` on `HerdrNestedTopologyClient` (`pane.send` / `split` / `resize` / `close` / `read`)
 - `RemoteHerdrOutput` (incremental `pane.read` delta)
 - `session.snapshot` now decodes `layouts` (map or `[{tab_id, layout}]`)
-- Tests: `RemoteHerdrWindowMirrorTests.swift`
+- Tests: `RemoteHerdrWindowMirrorTests.swift` + `RemoteHerdrImposeTests`
 
-Still host-side (cmux app, not this package): Bonsplit impose, Ghostty `TerminalPanel`, divider-drag session, plugin single-writer suppression UI. The package is the ssh-tmux contract; AppKit wiring is the remaining native slice.
+Plugin twin: `bridge/cmux_herdr_impose.py` (same fractions, tree actions, drag session).
+
+**Still host-side (cmux app):** apply the impose plan onto a live `BonsplitController`, Ghostty `TerminalPanel` I/O, and the divider-drag UI that feeds `begin`/`end`. Development of that apply path continues; the planner is no longer a doc-only gap.
 
 ## Summary
 

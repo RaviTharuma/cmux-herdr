@@ -120,6 +120,11 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] Single size-claim writer (no per-viewer SIGWINCH resize war).
 - [x] Fail-closed layout application (no orphan-tab fallback on split failure).
 - [x] Socket-first snapshot for `watch --tmux-parity` (CLI fan-out only on socket drop).
+- [x] **Bonsplit impose planner** (`bridge/cmux_herdr_impose.py`, Swift twin
+      `RemoteHerdrImpose`): tmux +1 divider-cell fractions, targeted leaf
+      expand/remove, `plan(w) <= w`, divider-drag hold/resolve. Plugin applies
+      fractions via `set-ratio`. Native AppKit apply (Ghostty/Bonsplit owner)
+      is the remaining tmux-depth slice — **development continues there**.
 
 ### B. Native MVP PR (#8736) — open + mergeable
 
