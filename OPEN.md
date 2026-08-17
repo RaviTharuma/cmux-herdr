@@ -55,9 +55,11 @@ Cross-links: PR and issue reference each other; both point back here as the fall
    PR7 feeds `%output`-style bytes into Ghostty; the plugin still polls
    `pane.read` and applies an incremental delta.
 
-3. **No reattach model after cmux restart.**
-   Parent binding is best-effort local state under `~/.local/state/cmux-herdr/`. There is no
-   cmux-owned surface↔provider session identity. That is part of the native design.
+3. **Reattach after cmux restart is a contract, not live AppKit.**
+   `bridge/cmux_herdr_lifecycle.py` persists the last attach and
+   **reattaches** (fresh snapshot + reseed) — it never replays a stale
+   Bonsplit tree. Parent binding under `~/.local/state/cmux-herdr/` is
+   still best-effort until native AppKit owns the connection.
 
 4. **Flat outer workspace projection (not nested hierarchy).**
    Status pills are still a flat projection onto one outer workspace per host fingerprint.
