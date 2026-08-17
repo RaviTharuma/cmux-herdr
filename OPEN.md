@@ -159,7 +159,7 @@ Remaining for that PR is maintainer review / merge — not more missing-PATH wor
 Two native layers (do not collapse them):
 
 1. **Sidebar nested topology** — [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (open, dirty). Virtual rows + `nested.node.focus`. **Not** ssh-tmux.
-2. **Window mirror (PR7)** — paste-ready [docs/upstream/PR7_HERDR_WINDOW_MIRROR.md](./docs/upstream/PR7_HERDR_WINDOW_MIRROR.md). Copy `RemoteTmuxWindowMirror`: real cmux tabs, Bonsplit panes, Ghostty I/O, layout, resize, zoom, prune.
+2. **Window mirror (PR7)** — paste-ready [docs/upstream/PR7_HERDR_WINDOW_MIRROR.md](./docs/upstream/PR7_HERDR_WINDOW_MIRROR.md). Copy `RemoteTmuxWindowMirror`: real cmux tabs, Bonsplit panes, Ghostty I/O, layout, resize, zoom, prune. Honest missing list (seed, named keys, focus rollback, attach/detach, …): [TMUX_PARITY.md — contract vs live](./docs/upstream/TMUX_PARITY.md#contract-vs-live-appkit).
 
 Matrix: [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
 
