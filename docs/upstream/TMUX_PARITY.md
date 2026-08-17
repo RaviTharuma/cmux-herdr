@@ -10,7 +10,7 @@ Both Herdr paths must match that contract as closely as the host allows.
 
 [#10045](https://github.com/manaflow-ai/cmux/pull/10045) is the **sidebar/control-socket** nested-topology v1 (virtual rows). That is *not* ssh-tmux. **PR7 (`RemoteHerdrWindowMirror` + `RemoteHerdrImpose`)** is the surface mirror. Paste-ready plan: [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md).
 
-**Development continues.** Plugin userspace is at its ceiling (no PTY theft). Native work continues toward tmux depth: the impose planner is the next landed slice; AppKit Bonsplit/Ghostty apply is the slice after that.
+**Development continues.** Plugin userspace is at its ceiling (no PTY theft). Native work continues toward tmux depth: impose planner + host-apply verb list are landed; AppKit Bonsplit/Ghostty apply is the slice after that. Another chat owns #10045 CodeRabbit — see [LANES.md](./LANES.md).
 
 ## Capability matrix
 

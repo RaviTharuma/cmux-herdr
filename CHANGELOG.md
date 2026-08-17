@@ -9,6 +9,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **Host-apply verbs** (`bridge/cmux_herdr_host.py`): linearize impose +
+  reconcile into tmux apply order (create panels, mutate tree, impose
+  dividers, focus). `FakeBonsplitHost` proves the order without AppKit.
+  Native twin is `RemoteHerdrHostApply` on a separate fork branch (not
+  merged into #10045 while the other chat owns CodeRabbit). See
+  [docs/upstream/LANES.md](docs/upstream/LANES.md).
+
 - **Bonsplit impose planner** (`bridge/cmux_herdr_impose.py`): ssh-tmux
   `imposeDividerPlan` contract in userspace — right-associated binary tree,
   targeted leaf expand/remove, tmux +1 divider-cell fraction, `plan(w) <= w`,

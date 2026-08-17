@@ -123,8 +123,12 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] **Bonsplit impose planner** (`bridge/cmux_herdr_impose.py`, Swift twin
       `RemoteHerdrImpose`): tmux +1 divider-cell fractions, targeted leaf
       expand/remove, `plan(w) <= w`, divider-drag hold/resolve. Plugin applies
-      fractions via `set-ratio`. Native AppKit apply (Ghostty/Bonsplit owner)
-      is the remaining tmux-depth slice — **development continues there**.
+      fractions via `set-ratio`.
+- [x] **Host-apply verb list** (`bridge/cmux_herdr_host.py`): ordered
+      create→tree→impose→focus (tmux `makePanel` before rebuild). Fake host
+      proves the order. Native twin stays on a **separate** fork branch —
+      do not land on #10045 while the other chat is mid CodeRabbit. See
+      [docs/upstream/LANES.md](docs/upstream/LANES.md).
 
 ### B. Native MVP PR (#8736) — open + mergeable
 
