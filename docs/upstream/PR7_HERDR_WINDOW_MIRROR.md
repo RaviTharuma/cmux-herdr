@@ -13,10 +13,11 @@ The **pure reconcile engine + impose planner** live in `Packages/macOS/CmuxNeste
 - `RemoteHerdrImpose` / `RemoteHerdrImposePlan` — tmux `imposeDividerPlan` contract (binary tree, leaf expand/remove, `plan(w) <= w`, drag hold)
 - `RemoteHerdrPaneIO` on `HerdrNestedTopologyClient` (`pane.send` / `split` / `resize` / `close` / `read`)
 - `RemoteHerdrOutput` (incremental `pane.read` delta)
+- `RemoteHerdrHostApply` / `RemoteHerdrPaneRoute` / `RemoteHerdrSessionApply` (draft fork files; not on #10045 yet)
 - `session.snapshot` now decodes `layouts` (map or `[{tab_id, layout}]`)
 - Tests: `RemoteHerdrWindowMirrorTests.swift` + `RemoteHerdrImposeTests`
 
-Plugin twin: `bridge/cmux_herdr_impose.py` (same fractions, tree actions, drag session).
+Plugin twins: `bridge/cmux_herdr_impose.py`, `cmux_herdr_host.py`, `cmux_herdr_io.py`, `cmux_herdr_session.py`.
 
 **Still host-side (cmux app):** apply the impose plan onto a live `BonsplitController`, Ghostty `TerminalPanel` I/O, and the divider-drag UI that feeds `begin`/`end`. Development of that apply path continues; the planner is no longer a doc-only gap.
 

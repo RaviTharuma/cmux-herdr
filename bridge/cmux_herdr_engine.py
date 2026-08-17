@@ -9,6 +9,8 @@ This is the ssh-tmux reconcile contract in userspace:
 - session tab order follows Herdr tab numbers
 - client-size claim is feed-forward (window geometry + cell metrics)
 - pane-read polling yields an incremental output delta when possible
+- I/O isolation and session-tab verbs live in ``cmux_herdr_io`` /
+  ``cmux_herdr_session`` (tmux ``routeOutput`` / ``rebuildTopology``)
 
 AppKit/Bonsplit/Ghostty stay in native cmux. The plugin applies the same
 diffs via ``cmux split`` / ``attach-pane``. ``impose_after_apply`` is the
@@ -288,4 +290,27 @@ def impose_after_apply(
         result,
         previous_rendered=previous_rendered,
         title=title,
+    )
+
+
+def session_host_actions(
+    session: SessionReconcile,
+    *,
+    titles: Optional[Dict[str, str]] = None,
+    previous_titles: Optional[Dict[str, str]] = None,
+    defaults_open: bool = False,
+    focus_tab_id: Optional[str] = None,
+) -> List["SessionAction"]:
+    """Session-tab verbs for one ``reconcile_session`` (Swift twin entry)."""
+    try:
+        from .cmux_herdr_session import session_actions
+    except ImportError:
+        from cmux_herdr_session import session_actions
+
+    return session_actions(
+        session,
+        titles=titles,
+        previous_titles=previous_titles,
+        defaults_open=defaults_open,
+        focus_tab_id=focus_tab_id,
     )

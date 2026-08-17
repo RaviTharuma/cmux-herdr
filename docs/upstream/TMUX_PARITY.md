@@ -10,7 +10,7 @@ Both Herdr paths must match that contract as closely as the host allows.
 
 [#10045](https://github.com/manaflow-ai/cmux/pull/10045) is the **sidebar/control-socket** nested-topology v1 (virtual rows). That is *not* ssh-tmux. **PR7 (`RemoteHerdrWindowMirror` + `RemoteHerdrImpose`)** is the surface mirror. Paste-ready plan: [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md).
 
-**Development continues.** Plugin userspace is at its ceiling (no PTY theft). Native work continues toward tmux depth: impose planner + host-apply verb list are landed; AppKit Bonsplit/Ghostty apply is the slice after that. Another chat owns #10045 CodeRabbit — see [LANES.md](./LANES.md).
+**Development continues.** Plugin userspace is at its ceiling (no PTY theft). Native work continues toward tmux depth: impose planner, host-apply verbs, I/O isolation, and session-tab verbs are landed as contracts; AppKit Bonsplit/Ghostty apply is the slice after that. Another chat owns #10045 CodeRabbit — see [LANES.md](./LANES.md).
 
 ## Capability matrix
 
@@ -26,10 +26,10 @@ Legend: **Yes** = required for tmux parity. Plugin column is what this repo impl
 | Divider **ratio** from assigned cells | `cmux set-ratio` via `RemoteHerdrImpose` fractions (tmux +1 cell) | n/a | Yes — `RemoteHerdrImpose.plan` → host `imposeDividerPlan()` |
 | User **divider drag** → inner `resize-pane` | Session model only (`begin`/`resolve`/`end`); no Bonsplit owner | n/a | Yes — same drag-end → `pane.resize` round trip |
 | Feed-forward sizing (claim size, inner mux owns grid) | SIGWINCH → `herdr pane resize` | n/a | Yes — copy tmux `updateClientSize` / `refresh-client -C` |
-| Output stream into the surface | Poll `herdr pane read` (ANSI/raw) | Read API later | Yes — subscribe pane output / `pane.read` push |
-| Typed input → inner pane | `herdr pane send` (cbreak) | Guarded later | Yes — `pane.send_*` from Ghostty input |
-| Focus: inner active pane ↔ cmux pane | `--focus` / `--tmux-parity` | `nested.node.focus` | Yes — `noteRemoteActivePane` + `select-pane` analogue |
-| Tab **order** follows inner numbers | `--order` / `--tmux-parity` | Virtual row order | Yes — `TabManager` order = Herdr tab numbers |
+| Output stream into the surface | Poll `herdr pane read` + isolated `route_output` (never cross-pane; strip `ESC k` titles) | Read API later | Yes — `routeOutput(paneId, data)` into that Ghostty only |
+| Typed input → inner pane | `herdr pane send` (cbreak) + `route_input` (bound pane only) | Guarded later | Yes — `pane.send_*` from Ghostty input for that pane only |
+| Focus: inner active pane ↔ cmux pane | `--focus` / `--tmux-parity` + `project_focus` (provider never echoes) | `nested.node.focus` | Yes — `noteRemoteActivePane` + `select-pane` analogue |
+| Tab **order** follows inner numbers | `--order` / `--tmux-parity` + `session_actions` (`create_tab` / `close_tab` / `reorder_tabs`) | Virtual row order | Yes — `TabManager` order = Herdr tab numbers |
 | **Prune** gone panes (close surfaces) | `--prune` (default on `--tmux-parity`) | Event close | Yes — teardown panel like tmux reconcile |
 | **Zoom** does not destroy hidden pane panels | Mapped viewers kept | n/a | Yes — base vs visible layout (copy tmux) |
 | Event-driven reconcile + snapshot resync | Persistent `events.subscribe` via `watch --tmux-parity` | `events.subscribe` | Yes — events + snapshot after gaps |
