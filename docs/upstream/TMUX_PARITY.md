@@ -135,8 +135,10 @@ Sidebar nested topology (#10045) stays as the **session navigator** (workspaces/
 
 ```bash
 cmux-herdr mirror --tmux-parity          # full ssh-tmux contract
-cmux-herdr watch --tmux-parity           # live reconcile + event wait
-cmux-herdr mirror --focus --order --ratios --prune --all
+cmux-herdr watch --tmux-parity           # attach, live reconcile, detach on stop
+cmux-herdr attach / detach / restore     # apply-host lifecycle (never server.stop)
+cmux-herdr send-key <pane_id> C-Up       # named keys
+cmux-herdr observe --method pane_surfaces
 cmux-herdr attach-pane <pane_id>         # cbreak + SIGWINCH + ANSI read
 ```
 

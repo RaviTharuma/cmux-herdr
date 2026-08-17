@@ -116,6 +116,11 @@ cmux-herdr attach-pane w2:p34   # follow one pane in this terminal
 cmux-herdr associations   # hybrid pane/session association cache
 cmux-herdr lock-title w2:p34 --title Orchestrator
 cmux-herdr unlock-title w2:p34
+cmux-herdr send-key w2:p34 C-Up
+cmux-herdr observe --method pane_surfaces
+cmux-herdr attach         # live apply host (tmux attach analogue)
+cmux-herdr detach         # leaves the Herdr session running
+cmux-herdr restore        # reattach after restart; never replay a stale tree
 cmux-herdr clear          # remove herdr:* status pills
 ```
 
@@ -186,7 +191,7 @@ Status keys use `herdr:<pane_id>`. Every sync removes stale `herdr:*` keys while
 ## Layout
 
 ```text
-VERSION                     version source of truth (e.g. 0.1.0)
+VERSION                     version source of truth (e.g. 0.2.0)
 CHANGELOG.md                release notes
 RELEASE.md                  tag / gh release / install-from-tag steps
 OPEN.md                     stopgap inventory + open checklist
@@ -194,9 +199,13 @@ bin/cmux-herdr              CLI (Python, stdlib only)
 bridge/cmux_herdr_bridge.py fetch/map/sync library
 bridge/cmux_herdr_mirror.py tab/pane deep-mirror planner + attach-pane
 bridge/cmux_herdr_layout.py Herdr layout tree (tmux RemoteTmuxLayoutNode analogue)
-bridge/test_bridge_unit.py  pure unit tests
-bridge/test_mirror_unit.py  deep-mirror planner tests
-bridge/test_layout_unit.py  Herdr layout tree tests
+bridge/cmux_herdr_impose.py Bonsplit impose planner
+bridge/cmux_herdr_host.py   host-apply verb order
+bridge/cmux_herdr_io.py     isolated pane I/O + title-escape strip
+bridge/cmux_herdr_session.py session-tab verbs
+bridge/cmux_herdr_control.py named keys, focus rollback, seed, activity
+bridge/cmux_herdr_lifecycle.py attach / detach / restore / remote.herdr.*
+bridge/cmux_herdr_live.py   running apply host (in-memory Ghostty analogue)
 tests/                      mocked CLI and behavior tests
 scripts/install.sh          idempotent user install
 scripts/uninstall.sh        scoped uninstall

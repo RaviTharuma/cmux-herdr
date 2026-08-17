@@ -27,7 +27,9 @@ Plugin ceiling: surfaces are byte buffers, not Ghostty PTYs. The
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 try:
@@ -663,6 +665,110 @@ def apply_live_windows(
     return machine
 
 
+def restore_record_path(socket_path: str) -> Path:
+    """Host-owned persist file for the last successful attach."""
+    try:
+        from .cmux_herdr_bridge import _state_dir
+    except ImportError:
+        from cmux_herdr_bridge import _state_dir
+    return Path(_state_dir()) / f"restore-{endpoint_hash(socket_path)}.json"
+
+
+def resolve_socket_path(explicit: Optional[str] = None) -> Optional[str]:
+    """Prefer ``explicit``, then ``HERDR_SOCKET_PATH``, then the default socket."""
+    try:
+        from .cmux_herdr_bridge import default_herdr_socket_path
+        from .cmux_herdr_lifecycle import validate_socket_path
+    except ImportError:
+        from cmux_herdr_bridge import default_herdr_socket_path
+        from cmux_herdr_lifecycle import validate_socket_path
+
+    for raw in (explicit, os.environ.get("HERDR_SOCKET_PATH"), default_herdr_socket_path()):
+        validated = validate_socket_path(raw)
+        if validated:
+            return validated
+    return None
+
+
+def sessions_from_snapshot(snap) -> List[DiscoveredSession]:
+    """Map a Herdr snapshot onto attach-session rows."""
+    rows: List[DiscoveredSession] = []
+    for workspace in getattr(snap, "workspaces", None) or []:
+        session_id = getattr(workspace, "workspace_id", "") or "main"
+        rows.append(
+            DiscoveredSession(
+                session_id=session_id,
+                name=getattr(workspace, "label", None) or session_id,
+                window_count=int(getattr(workspace, "tab_count", 0) or 0),
+            )
+        )
+    if rows:
+        return rows
+    tabs = getattr(snap, "tabs", None) or []
+    return [DiscoveredSession("main", "main", window_count=len(tabs))]
+
+
+def persist_host_restore(host: LiveApplyHost) -> Optional[str]:
+    """Write the last attach so ``restore`` can reattach after restart."""
+    record = host.lifecycle.persist
+    if record is None:
+        return None
+    path = restore_record_path(host.socket_path)
+    write_restore(path, record)
+    return str(path)
+
+
+def clear_host_restore(socket_path: str) -> bool:
+    """Drop the persist file after an explicit detach."""
+    path = restore_record_path(socket_path)
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return False
+    return True
+
+
+def attach_live(
+    windows: Sequence[HerdrWindow],
+    sessions: Sequence[DiscoveredSession],
+    *,
+    socket_path: str,
+    activate: bool = True,
+    persist: bool = True,
+) -> Tuple[LiveApplyHost, Dict[str, object]]:
+    """Apply windows, attach, and optionally persist the restore record."""
+    host = LiveApplyHost(enabled=True, socket_path=socket_path)
+    applied = host.apply_session(windows)
+    attached = host.attach(sessions, activate=activate)
+    path = persist_host_restore(host) if persist and attached.get("ok") else None
+    return host, {
+        "ok": bool(applied.get("ok") and attached.get("ok")),
+        "apply": applied,
+        "attach": attached,
+        "restore_path": path,
+        "server_stopped": False,
+    }
+
+
+def restore_live(
+    windows: Sequence[HerdrWindow],
+    sessions: Sequence[DiscoveredSession],
+    *,
+    socket_path: str,
+) -> Tuple[LiveApplyHost, Dict[str, object]]:
+    """Reattach from the persist file. Never replays a stale tree."""
+    host = LiveApplyHost(enabled=True, socket_path=socket_path)
+    record = read_restore(restore_record_path(socket_path))
+    if record is None:
+        return host, {"ok": False, "outcome": "no_persist", "server_stopped": False}
+    host.lifecycle.persist = record
+    restored = host.restore(sessions, windows)
+    path = persist_host_restore(host) if restored.get("ok") else None
+    restored["restore_path"] = path
+    restored["server_stopped"] = False
+    return host, restored
+
+
 __all__ = [
     "GhosttySurface",
     "LiveApplyHost",
@@ -673,10 +779,17 @@ __all__ = [
     "SOCKET_METHODS",
     "TitleEscapeFilter",
     "apply_live_windows",
+    "attach_live",
+    "clear_host_restore",
     "decode_beta",
     "dispatch",
     "endpoint_hash",
     "grid_match",
+    "persist_host_restore",
     "read_restore",
+    "resolve_socket_path",
+    "restore_live",
+    "restore_record_path",
+    "sessions_from_snapshot",
     "write_restore",
 ]

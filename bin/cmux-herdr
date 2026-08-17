@@ -24,6 +24,7 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
     BridgeError,
     _load_association_map,
     clear_cmux_herdr_statuses,
+    default_herdr_socket_path,
     diagnose_install,
     dual_status,
     fetch_agents,
@@ -44,6 +45,11 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
 )
 from bridge.cmux_herdr_live import (  # noqa: E402
     apply_live_windows,
+    attach_live,
+    clear_host_restore,
+    resolve_socket_path,
+    restore_live,
+    sessions_from_snapshot,
 )
 from bridge.cmux_herdr_mirror import (  # noqa: E402
     attach_pane_loop,
@@ -237,6 +243,7 @@ def cmd_watch(args: argparse.Namespace) -> int:
         file=sys.stderr,
     )
     event_session = None
+    live_host = None
     if getattr(args, "tmux_parity", False) or getattr(args, "events", False):
         event_session = HerdrEventSession.try_open(timeout=interval)
         if event_session is not None:
@@ -244,6 +251,17 @@ def cmd_watch(args: argparse.Namespace) -> int:
                 "cmux-herdr watch: holding Herdr events.subscribe session",
                 file=sys.stderr,
             )
+    if getattr(args, "tmux_parity", False):
+        try:
+            live_host, attached = _attach_from_snapshot(args)
+            outcome = (attached.get("attach") or {}).get("outcome") or attached.get("outcome")
+            print(
+                f"cmux-herdr watch: attached ({outcome}); "
+                "Ctrl-C detaches and leaves Herdr running",
+                file=sys.stderr,
+            )
+        except BridgeError as exc:
+            print(f"cmux-herdr watch: attach skipped: {exc}", file=sys.stderr)
     try:
         while not stop["flag"]:
             try:
@@ -281,6 +299,14 @@ def cmd_watch(args: argparse.Namespace) -> int:
             while not stop["flag"] and time.time() < end:
                 time.sleep(min(0.25, end - time.time()))
     finally:
+        if live_host is not None:
+            closed = live_host.detach()
+            clear_host_restore(live_host.socket_path)
+            print(
+                "cmux-herdr watch: detached "
+                f"(server_stopped={closed.get('server_stopped')})",
+                file=sys.stderr,
+            )
         if event_session is not None:
             event_session.close()
     return 0
@@ -363,6 +389,111 @@ def cmd_send_key(args: argparse.Namespace) -> int:
     return 0
 
 
+def _attach_from_snapshot(args: argparse.Namespace):
+    """Build windows from the live snapshot and attach the apply host."""
+    snap = fetch_snapshot()
+    desired = desired_mirrors(snap, scope="all", use_layout=True)
+    windows = build_herdr_windows(snap, desired)
+    socket = resolve_socket_path(getattr(args, "socket", None))
+    if not socket:
+        raise BridgeError(
+            "need an absolute Herdr socket (--socket or HERDR_SOCKET_PATH)"
+        )
+    sessions = sessions_from_snapshot(snap)
+    session_name = getattr(args, "session", None)
+    if session_name:
+        matched = [
+            item
+            for item in sessions
+            if item.session_id == session_name or item.name == session_name
+        ]
+        sessions = matched or sessions
+    return attach_live(
+        windows,
+        sessions,
+        socket_path=socket,
+        activate=not getattr(args, "no_activate", False),
+    )
+
+
+def cmd_attach(args: argparse.Namespace) -> int:
+    """Attach the live apply host (tmux ``remote.tmux.attach`` analogue)."""
+    _ensure_herdr()
+    try:
+        _host, payload = _attach_from_snapshot(args)
+    except BridgeError as exc:
+        _die(str(exc))
+    if args.json:
+        print(json.dumps(payload, indent=2, default=str))
+    else:
+        attach = payload.get("attach") if isinstance(payload.get("attach"), dict) else {}
+        print(
+            f"attached {attach.get('outcome') or payload.get('outcome')} "
+            f"tabs={len((payload.get('apply') or {}).get('tabs') or [])} "
+            f"server_stopped={payload.get('server_stopped')}"
+        )
+        if payload.get("restore_path"):
+            print(f"restore: {payload['restore_path']}")
+    return 0 if payload.get("ok") else 2
+
+
+def cmd_detach(args: argparse.Namespace) -> int:
+    """Detach every live mirror. Never stops the Herdr server."""
+    _ensure_herdr()
+    try:
+        snap = fetch_snapshot()
+        desired = desired_mirrors(snap, scope="all", use_layout=True)
+        windows = build_herdr_windows(snap, desired)
+        socket = resolve_socket_path(getattr(args, "socket", None))
+        if not socket:
+            raise BridgeError(
+                "need an absolute Herdr socket (--socket or HERDR_SOCKET_PATH)"
+            )
+        host = apply_live_windows(windows)
+        host.socket_path = socket
+        closed = host.detach()
+        closed["restore_cleared"] = clear_host_restore(socket)
+    except BridgeError as exc:
+        _die(str(exc))
+    if args.json:
+        print(json.dumps(closed, indent=2, default=str))
+    else:
+        print(
+            f"detached (server_stopped={closed.get('server_stopped')}; "
+            "Herdr session left running)"
+        )
+    return 0 if closed.get("ok") else 2
+
+
+def cmd_restore(args: argparse.Namespace) -> int:
+    """Reattach after restart. Never replays a stale Bonsplit tree."""
+    _ensure_herdr()
+    try:
+        snap = fetch_snapshot()
+        desired = desired_mirrors(snap, scope="all", use_layout=True)
+        windows = build_herdr_windows(snap, desired)
+        socket = resolve_socket_path(getattr(args, "socket", None))
+        if not socket:
+            raise BridgeError(
+                "need an absolute Herdr socket (--socket or HERDR_SOCKET_PATH)"
+            )
+        _host, payload = restore_live(
+            windows,
+            sessions_from_snapshot(snap),
+            socket_path=socket,
+        )
+    except BridgeError as exc:
+        _die(str(exc))
+    if args.json:
+        print(json.dumps(payload, indent=2, default=str))
+    else:
+        print(
+            f"restore {payload.get('mode') or payload.get('outcome')} "
+            f"server_stopped={payload.get('server_stopped')}"
+        )
+    return 0 if payload.get("ok") else 2
+
+
 def cmd_observe(args: argparse.Namespace) -> int:
     _ensure_herdr()
     method = args.method
@@ -372,10 +503,12 @@ def cmd_observe(args: argparse.Namespace) -> int:
         snap = fetch_snapshot()
         desired = desired_mirrors(snap, scope="all", use_layout=True)
         windows = build_herdr_windows(snap, desired)
+        socket = resolve_socket_path(args.socket) or default_herdr_socket_path()
         host = apply_live_windows(windows)
+        host.socket_path = socket
         payload = host.observe(
             method,
-            {"socket": args.socket, "session": args.session},
+            {"socket": socket, "session": args.session},
         )
     except BridgeError as exc:
         _die(str(exc))
@@ -895,10 +1028,47 @@ def build_parser() -> argparse.ArgumentParser:
         default="remote.herdr.pane_surfaces",
         help="remote.herdr.pane_surfaces | pane_grids | state",
     )
-    s.add_argument("--socket", default="/tmp/herdr.sock")
+    s.add_argument(
+        "--socket",
+        help="Herdr Unix socket (default: HERDR_SOCKET_PATH or the default path)",
+    )
     s.add_argument("--session", default="main")
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_observe)
+
+    def add_lifecycle_flags(sp: argparse.ArgumentParser) -> None:
+        sp.add_argument(
+            "--socket",
+            help="Herdr Unix socket (default: HERDR_SOCKET_PATH or the default path)",
+        )
+        sp.add_argument("--session", help="Herdr session / workspace id")
+        sp.add_argument("--json", action="store_true")
+
+    s = sub.add_parser(
+        "attach",
+        help="Attach the live apply host (tmux remote.tmux.attach analogue)",
+    )
+    add_lifecycle_flags(s)
+    s.add_argument(
+        "--no-activate",
+        action="store_true",
+        help="Do not mark the destination window active",
+    )
+    s.set_defaults(func=cmd_attach)
+
+    s = sub.add_parser(
+        "detach",
+        help="Detach every live mirror; never stops the Herdr server",
+    )
+    add_lifecycle_flags(s)
+    s.set_defaults(func=cmd_detach)
+
+    s = sub.add_parser(
+        "restore",
+        help="Reattach after restart (never replay a stale tree)",
+    )
+    add_lifecycle_flags(s)
+    s.set_defaults(func=cmd_restore)
 
     return p
 

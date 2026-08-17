@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -14,7 +16,15 @@ if str(_ROOT) not in sys.path:
 from bridge.cmux_herdr_engine import HerdrWindow
 from bridge.cmux_herdr_layout import parse_layout
 from bridge.cmux_herdr_lifecycle import DiscoveredSession
-from bridge.cmux_herdr_live import LiveApplyHost, LiveWindowMirror, apply_live_windows
+from bridge.cmux_herdr_live import (
+    LiveApplyHost,
+    LiveWindowMirror,
+    apply_live_windows,
+    attach_live,
+    clear_host_restore,
+    restore_live,
+    restore_record_path,
+)
 
 HORIZONTAL = {
     "width": 200,
@@ -199,6 +209,32 @@ class AttachDetachRestoreTests(unittest.TestCase):
             {"socket": "/tmp/herdr.sock", "session": "main"},
         )
         self.assertEqual(disabled["code"], "disabled")
+
+    def test_attach_live_persists_and_restore_live_reattaches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            os.environ["XDG_STATE_HOME"] = tmp
+            socket = "/tmp/herdr.sock"
+            host, attached = attach_live(
+                [_window()],
+                [DiscoveredSession("sess-1", "main")],
+                socket_path=socket,
+            )
+            self.assertTrue(attached["ok"])
+            self.assertFalse(attached["server_stopped"])
+            self.assertTrue(restore_record_path(socket).is_file())
+            host.detach()
+            restored_host, restored = restore_live(
+                [_window()],
+                [DiscoveredSession("sess-1", "main")],
+                socket_path=socket,
+            )
+            self.assertTrue(restored["ok"])
+            self.assertEqual(restored["mode"], "reattach")
+            self.assertIn("w2:t1", restored_host.windows)
+            closed = restored_host.detach()
+            self.assertFalse(closed["server_stopped"])
+            self.assertTrue(clear_host_restore(socket))
+            self.assertFalse(restore_record_path(socket).is_file())
 
 
 class CwdFolderTests(unittest.TestCase):
