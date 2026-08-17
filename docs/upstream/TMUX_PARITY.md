@@ -66,25 +66,25 @@ Status: **live** = runs in cmux today for tmux. Herdr column is honest.
 | `makePanel` → Ghostty `TerminalPanel` per inner pane | Missing | Plugin uses a second client; native engine only diffs pane ids |
 | `reconcileBonsplitTree` / `imposeDividerPlan` on a live controller | Contract only | Planner + verb list exist; no AppKit apply |
 | `%output` → `surface.processRemoteOutput` | Contract only | Plugin polls `pane.read`; no Ghostty write |
-| Ghostty typing → `send-keys` / named keys (Up, F1, PageDown, …) | Partial | Plugin cbreak text; no `RemoteTmuxKeyName` analogue |
-| Input forwarder with byte budget / overflow | Missing | Tmux `RemoteTmuxPaneInputForwarder` (256 KiB) |
-| Pane **seed** (scrollback gated on Ghostty grid ready) | Missing | Tmux `routeSeed` + pending-byte ceiling + deadline |
+| Ghostty typing → `send-keys` / named keys (Up, F1, PageDown, …) | Contract only | `encode_named_key` → `pane.send_keys` + CSI fallback |
+| Input forwarder with byte budget / overflow | Contract only | `InputForwarder` (256 KiB, epoch on detach) |
+| Pane **seed** (scrollback gated on Ghostty grid ready) | Contract only | `PaneSeedQueue` from `pane.read`; overflow defers full reseed |
 | Title `ESC k … ST` strip on the live stream | Contract only | Plugin/native filter exists; not on a Ghostty surface |
 | Provider focus does not steal first responder | Contract only | Tmux `focusBonsplitPane` skips unchanged + `isApplyingTmuxFocus` |
-| Optimistic user focus + **rollback** if command rejected | Missing | Tmux `requestControlFocus` |
-| Focus navigation (adjacent pane, keep first responder) | Missing | Tmux `navigateFocus(direction:)` |
-| User split from cmux chrome → inner `split-window` | Missing | Tmux `requestSplit` + created-pane focus |
+| Optimistic user focus + **rollback** if command rejected | Contract only | `FocusController.command_rejected` |
+| Focus navigation (adjacent pane, keep first responder) | Contract only | `adjacent_pane` on the layout tree |
+| User split from cmux chrome → inner `split-window` | Contract only | `request_split` → `pane.split` |
 | Divider drag begin/hold/end → `resize-pane` | Contract only | No Bonsplit drag owner for Herdr |
 | Feed-forward `updateClientSize` from window geometry | Contract only | Plugin SIGWINCH; no live sizing transaction / grid parity |
 | Zoom: base tree keeps panels, visible tree renders | Contract only | Engine keeps ids; no live Bonsplit zoom |
 | Prune gone panes / close gone tabs | Plugin yes / native contract | No live `panel.close()` / `teardown()` |
 | Tab order = inner window order; drag-reorder pushes back | Plugin `move-tab` / native contract | No `reorderRemoteTmuxMirrorTabs` twin |
 | Close default local tab once mirrors exist | Contract only | Tmux `closeDefaultTabsIfNeeded` |
-| Session rename → workspace title (no echo loop) | Missing | Tmux `applySessionNameToWorkspaceTitle` |
+| Session rename → workspace title (no echo loop) | Contract only | `apply_session_title` (inbound only, ANSI stripped) |
 | Active-pane cwd → tab folder (background `cd` ignored) | Contract only | Not wired to `updateRemotePanelDirectory` |
-| Busy-pane close confirmation | Missing | Tmux foreground-state + `queryPaneActivity` |
-| Tab activity / unread / active command name | Missing | Tmux `RemoteTmuxMirrorTabActivity` |
-| Host close **detaches**; does not `kill-server` / `server.stop` | Documented, not wired | Must land with AppKit teardown |
+| Busy-pane close confirmation | Contract only | Herdr `agent_status` working/blocked → confirm, then `pane.close` |
+| Tab activity / unread / active command name | Contract only | `tab_activity` from `agent_status` (Herdr-native, richer than tmux) |
+| Host close **detaches**; does not `kill-server` / `server.stop` | Contract only | `close_intent("host_tab")` → detach; AppKit must honor it |
 | Attach / detach / reuse connection / beta setting | Missing | Tmux `RemoteTmuxController` + `remoteTmux` flag |
 | Control-socket observability (`pane_surfaces`, `pane_grids`, attach/detach) | Missing | Tmux `remote.tmux.*` |
 | “Mirror tabs like ssh-tmux” setting next to sidebar | Missing | Acceptance item in [PR7](./PR7_HERDR_WINDOW_MIRROR.md) |
