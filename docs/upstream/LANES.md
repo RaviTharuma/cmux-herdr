@@ -8,7 +8,7 @@ Two chats are pushing Herdr ↔ cmux tmux-depth at the same time.
 | Lane | Who | What they own | Do not touch |
 |---|---|---|---|
 | **A. #10045 review** | Other chat (CodeRabbit 1/5 at `f8d64f9f`, more coming) | Existing files on `cursor/nested-topology-herdr-v1-becf`: `HerdrNestedTopologyClient*`, coordinator, controller, AppDelegate, Workspace, xcstrings, review nits | New impose/host-apply files; do not rewrite the planner |
-| **B. Tmux-depth contract** | This chat (`bc-19886765-137b-4458-bb10-d6b48d0d6e7a`) | **New files only.** Plugin `bridge/cmux_herdr_impose.py` + `bridge/cmux_herdr_host.py`. Native twins `RemoteHerdrImpose*.swift` / `RemoteHerdrHostApply.swift` on **separate** fork branches | Do **not** commit onto `cursor/nested-topology-herdr-v1-becf` until lane A finishes 5/5 |
+| **B. Tmux-depth contract** | This chat (`bc-19886765-137b-4458-bb10-d6b48d0d6e7a`) | **New files only.** Plugin `bridge/cmux_herdr_impose.py` + `host.py` + `io.py` + `session.py`. Native twins on **separate** fork branches | Do **not** commit onto `cursor/nested-topology-herdr-v1-becf` until lane A finishes 5/5 |
 
 ## Rules
 
@@ -22,4 +22,6 @@ Two chats are pushing Herdr ↔ cmux tmux-depth at the same time.
 
 - Plugin impose planner: [cmux-herdr#21](https://github.com/RaviTharuma/cmux-herdr/pull/21) (merged)
 - Native impose planner: squash `aeb11e08` already on #10045 (landed before lane A’s 1/5)
-- Native host-apply twin: branch `cursor/herdr-host-apply-6e7a` (draft, not merged into #10045)
+- Native host-apply twin: branch `cursor/herdr-host-apply-6e7a` (draft [RaviTharuma/cmux#12](https://github.com/RaviTharuma/cmux/pull/12), not merged into #10045)
+- Plugin I/O + session host: `bridge/cmux_herdr_io.py` + `bridge/cmux_herdr_session.py` (this slice)
+- Native I/O + session twins: branch `cursor/herdr-io-session-6e7a` (draft, not merged into #10045)

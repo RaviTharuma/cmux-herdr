@@ -9,6 +9,16 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **I/O isolation + session-tab verbs** (`bridge/cmux_herdr_io.py`,
+  `bridge/cmux_herdr_session.py`): tmux `routeOutput` / `sendKeys` /
+  `setActivePane` contract in userspace — unknown pane is a no-op, output
+  never crosses panes, provider focus never echoes `pane.focus`, title
+  `ESC k` sequences are stripped, cwd updates only the active pane.
+  Session host linearizes `reconcile_session` into create/rename/close/
+  close-defaults/reorder/focus (tmux `rebuildTopology`). Native twins stay
+  on a separate fork branch (not merged into #10045 while the other chat
+  owns CodeRabbit). See [docs/upstream/LANES.md](docs/upstream/LANES.md).
+
 - **Host-apply verbs** (`bridge/cmux_herdr_host.py`): linearize impose +
   reconcile into tmux apply order (create panels, mutate tree, impose
   dividers, focus). `FakeBonsplitHost` proves the order without AppKit.
