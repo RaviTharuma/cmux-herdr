@@ -4,19 +4,22 @@ This repo is the **plugin / stopgap** path. It works today without cmux acceptin
 Native first-class nested topology is tracked upstream; this file records what the plugin
 does **not** claim to solve, and what is still open on each path.
 
-As of **2026-08-12** (prep for tagged **v0.1.0**).
+As of **2026-08-17**.
 
 ## Live upstream artifacts
 
 | Artifact | URL | Status |
 |---|---|---|
-| Community poll (native Herdr as tmux counterpart) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open |
-| Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open + mergeable |
-| Nested topology v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open |
-| Window-mirror engine | https://github.com/RaviTharuma/cmux/pull/8 | Merged |
-| Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open (no implementation in this repo) |
-| This plugin | https://github.com/RaviTharuma/cmux-herdr | Implemented; v0.2.0 tagged |
+| Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open + **mergeable/clean**; review threads resolved; waiting maintainer merge |
+| Nested topology Herdr v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open + **mergeable** (0 behind `main`); CodeRabbit blockers addressed on fork branch `cursor/nested-topology-herdr-v1-becf` |
+| Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open (native work lives on the cmux fork / #10045, not in this plugin) |
+| Community poll (native Herdr vs plugin) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open; **0 votes / 0 comments** — needs browser votes (API PAT cannot write upstream) |
+| This plugin | https://github.com/RaviTharuma/cmux-herdr | Advanced tmux-parity on `main` (v0.2.0); stopgap until native lands |
 | Thrash / annoyance report | [docs/upstream/ANNOYANCES.md](./docs/upstream/ANNOYANCES.md) | Living doc |
+
+### Upstream engagement blocker (agents)
+
+GitHub writes to `manaflow-ai/cmux` (comments, discussion votes, resolve threads) return **403** for the available PAT (`Resource not accessible by personal access token`). Code on `RaviTharuma/cmux` can still be updated via GitHub MCP as RaviTharuma. Until a PAT with write access to `manaflow-ai/cmux` (or browser login) is available, bumps/votes on upstream must be done manually once.
 
 Cross-links: PR and issue reference each other; both point back here as the fallback.
 
