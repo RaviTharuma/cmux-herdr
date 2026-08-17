@@ -1,0 +1,49 @@
+{
+  "review": 4953187593,
+  "pr": 10045,
+  "note": "Upstream replies/resolve require a PAT with write access to manaflow-ai/cmux (current token gets 403). Fixes are on RaviTharuma/cmux@cursor/nested-topology-herdr-v1-becf.",
+  "threads": [
+    {
+      "comment_id": 3797640219,
+      "thread_id": "PRRT_kwDORDHQWM6Z2ORJ",
+      "path": "HerdrNestedTopologyClient.swift",
+      "reply": "Fixed: `runEventLoop` now takes one required `session.snapshot` per attempt and passes `paneIDs` into `subscribeAndForward` (no `try?`, no second snapshot). Snapshot failure fails the attempt so reconnect retries instead of subscribing without pane-scoped `pane.agent_status_changed`."
+    },
+    {
+      "comment_id": 3797640226,
+      "thread_id": "PRRT_kwDORDHQWM6Z2ORM",
+      "path": "HerdrProtocol17Compatibility.swift",
+      "already_resolved": true,
+      "reply": "Also covered: new `paneUpserted` IDs force reconnect so `pane.agent_status_changed` is resubscribed from a fresh snapshot."
+    },
+    {
+      "comment_id": 3797640231,
+      "thread_id": "PRRT_kwDORDHQWM6Z2ORQ",
+      "path": "NestedTopologyTwoPassRenderer.swift",
+      "reply": "Fixed: `applyParentMapEvents` is now keyed by `attachmentID` and mutates `stateByAttachment[attachmentID].parentMap` (public `parentMap` only mirrors the last touched attachment for tests)."
+    },
+    {
+      "comment_id": 3797640233,
+      "thread_id": "PRRT_kwDORDHQWM6Z2ORS",
+      "path": "RemoteHerdrImposePlan.swift",
+      "reply": "Fixed: empty splits are rejected in `RemoteHerdrLayoutNode.decodeChildren`, and `RemoteHerdrImpose.join`/`binaryTree`/`plan` return `nil` instead of synthesizing `.leaf(paneID: \"\")`."
+    },
+    {
+      "comment_id": 3797640236,
+      "thread_id": "PRRT_kwDORDHQWM6Z2ORT",
+      "path": "RemoteHerdrImposePlan.swift",
+      "reply": "Fixed: renamed the local to `measuredFirstExtent` so it no longer shadows the static `firstExtent(...)` helper."
+    },
+    {
+      "comment_id": 3797707307,
+      "thread_id": "PRRT_kwDORDHQWM6Z2ZnL",
+      "path": "RemoteHerdrLayoutNode.swift",
+      "reply": "Fixed: decoder now rejects empty `horizontal`/`vertical` child arrays; impose path never emits an empty pane id."
+    }
+  ],
+  "outside_diff_also_fixed": [
+    "VoiceOver labels + agent status localized in NestedSidebarSubtreeView (catalog keys added)",
+    "attach concurrency counts only .connecting/.live/.stale",
+    "persistent NestedTopologyReducer per attachment generation in applyEvent"
+  ]
+}
