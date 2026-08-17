@@ -1,0 +1,971 @@
+From fea4788f1465a761c769f689bb82cf853e876541 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Mon, 17 Aug 2026 19:44:50 +0000
+Subject: [PATCH] =?UTF-8?q?feat(herdr):=20deepen=20native=20mirror=20?=
+ =?UTF-8?q?=E2=80=94=20BonsplitDelegate,=20divider,=20focus,=20sizing?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Wire Herdr window mirrors to the remaining ssh-tmux host contracts:
+BonsplitDelegate (split/focus/close/divider drag), focus navigation,
+divider→pane.resize, feed-forward client size claims, control mutations,
+and workspace surface navigation first-refusal for mirrored Herdr tabs.
+---
+ .../RemoteHerdrControl.swift                  |  15 +-
+ Sources/RemoteHerdrSessionHost.swift          |  66 +++++++
+ ...RemoteHerdrWindowMirrorHost+Bonsplit.swift |  98 ++++++++++
+ ...eHerdrWindowMirrorHost+Configuration.swift |  15 ++
+ ...rdrWindowMirrorHost+ControlMutations.swift |  48 +++++
+ ...eHerdrWindowMirrorHost+DividerSizing.swift | 173 ++++++++++++++++++
+ ...erdrWindowMirrorHost+FocusNavigation.swift |  66 +++++++
+ .../RemoteHerdrWindowMirrorHost+Sizing.swift  |  81 ++++++++
+ Sources/RemoteHerdrWindowMirrorHost.swift     |  52 ++++--
+ .../RemoteHerdrWindowMirrorSplitView.swift    |  62 ++++++-
+ Sources/Workspace+SurfaceNavigation.swift     |  15 +-
+ cmux.xcodeproj/project.pbxproj                |  20 ++
+ 12 files changed, 689 insertions(+), 22 deletions(-)
+ create mode 100644 Sources/RemoteHerdrWindowMirrorHost+Configuration.swift
+ create mode 100644 Sources/RemoteHerdrWindowMirrorHost+ControlMutations.swift
+ create mode 100644 Sources/RemoteHerdrWindowMirrorHost+DividerSizing.swift
+ create mode 100644 Sources/RemoteHerdrWindowMirrorHost+FocusNavigation.swift
+ create mode 100644 Sources/RemoteHerdrWindowMirrorHost+Sizing.swift
+
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrControl.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrControl.swift
+index 738bbe2343..7dcab6cc9b 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrControl.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrControl.swift
+@@ -463,27 +463,32 @@ public struct RemoteHerdrCloseIntent: Hashable, Sendable {
+ }
+ 
+ extension RemoteHerdrLayoutNode {
+-    var isPane: Bool {
++    /// True when this node is a leaf pane.
++    public var isPane: Bool {
+         if case .pane = content { return true }
+         return false
+     }
+ 
+-    var isHorizontal: Bool {
++    /// True when this node is a horizontal split.
++    public var isHorizontal: Bool {
+         if case .horizontal = content { return true }
+         return false
+     }
+ 
+-    var isVertical: Bool {
++    /// True when this node is a vertical split.
++    public var isVertical: Bool {
+         if case .vertical = content { return true }
+         return false
+     }
+ 
+-    var paneID: String? {
++    /// Leaf pane id when this node is a pane.
++    public var paneID: String? {
+         if case let .pane(id) = content { return id }
+         return nil
+     }
+ 
+-    var children: [RemoteHerdrLayoutNode]? {
++    /// Split children when this node is a split.
++    public var children: [RemoteHerdrLayoutNode]? {
+         switch content {
+         case .pane:
+             return nil
+diff --git a/Sources/RemoteHerdrSessionHost.swift b/Sources/RemoteHerdrSessionHost.swift
+index 49185e022b..6d13b8f556 100644
+--- a/Sources/RemoteHerdrSessionHost.swift
++++ b/Sources/RemoteHerdrSessionHost.swift
+@@ -323,6 +323,27 @@ final class RemoteHerdrSessionHost {
+                 )
+             }
+         )
++        mirror.onClosePaneRequest = { [weak self] paneID in
++            Task { @MainActor in
++                await self?.closePane(paneID)
++            }
++        }
++        mirror.onFocusPaneRequest = { [weak self] paneID in
++            Task { @MainActor in
++                await self?.focusPane(paneID)
++            }
++        }
++        mirror.onSplitPaneRequest = { [weak self] paneID, vertical in
++            Task { @MainActor in
++                await self?.splitPane(paneID, vertical: vertical)
++            }
++        }
++        mirror.onResizePaneRequest = { [weak self] paneID, cols, rows in
++            Task { @MainActor in
++                await self?.resizePane(paneID, cols: cols, rows: rows)
++            }
++        }
++        mirror.observeWorkspaceBonsplitConfiguration()
+         mirror.apply(window: window)
+         windowMirrorByTabId[window.tabID] = mirror
+         workspace.setRemoteHerdrWindowMirror(mirror, forPanelId: panelId)
+@@ -334,6 +355,51 @@ final class RemoteHerdrSessionHost {
+         }
+     }
+ 
++    private func closePane(_ paneID: String) async {
++        do {
++            try await client.closePane(paneID: paneID)
++        } catch {
++            Self.logger.error(
++                "remote-herdr: pane.close failed pane=\(paneID, privacy: .public)"
++            )
++        }
++    }
++
++    private func focusPane(_ paneID: String) async {
++        do {
++            guard let handshake = await client.currentHandshake() else { return }
++            try await client.focus(
++                nodeID: NestedNodeID(
++                    providerKind: .herdr,
++                    providerInstanceID: handshake.providerInstanceID,
++                    kind: .pane,
++                    rawID: paneID
++                )
++            )
++        } catch {
++            Self.logger.debug("remote-herdr: pane.focus failed")
++        }
++    }
++
++    private func splitPane(_ paneID: String, vertical: Bool) async {
++        let direction: RemoteHerdrSplitDirection = vertical ? .down : .right
++        do {
++            try await client.splitPane(paneID: paneID, direction: direction)
++        } catch {
++            Self.logger.error(
++                "remote-herdr: pane.split failed pane=\(paneID, privacy: .public)"
++            )
++        }
++    }
++
++    private func resizePane(_ paneID: String, cols: Int, rows: Int) async {
++        do {
++            try await client.resizePane(paneID: paneID, cols: cols, rows: rows)
++        } catch {
++            Self.logger.debug("remote-herdr: pane.resize failed")
++        }
++    }
++
+     private func closeDefaultTabsIfNeeded(in workspace: Workspace) {
+         guard !defaultClosed, !panelIdByTab.isEmpty else { return }
+         for panelId in defaultPanelIds {
+diff --git a/Sources/RemoteHerdrWindowMirrorHost+Bonsplit.swift b/Sources/RemoteHerdrWindowMirrorHost+Bonsplit.swift
+index 049b8d782c..50e8a4d3c5 100644
+--- a/Sources/RemoteHerdrWindowMirrorHost+Bonsplit.swift
++++ b/Sources/RemoteHerdrWindowMirrorHost+Bonsplit.swift
+@@ -11,6 +11,7 @@ extension RemoteHerdrWindowMirrorHost {
+     }
+ 
+     func configureBonsplitController() {
++        bonsplitController.delegate = self
+         bonsplitController.tabShortcutHintsEnabled = false
+         bonsplitController.onExternalTabDrop = { _ in false }
+     }
+@@ -224,3 +225,100 @@ extension RemoteHerdrWindowMirrorHost {
+         }
+     }
+ }
++
++// MARK: - BonsplitDelegate (tmux RemoteTmuxWindowMirror+Bonsplit)
++
++extension RemoteHerdrWindowMirrorHost: BonsplitDelegate {
++    func splitTabBar(
++        _ controller: BonsplitController,
++        shouldCloseTab tab: Bonsplit.Tab,
++        inPane pane: PaneID
++    ) -> Bool {
++        guard !isApplyingRemoteLayout else { return true }
++        if let herdrPane = paneIdByTabId[tab.id] {
++            onClosePaneRequest?(herdrPane)
++        }
++        return false
++    }
++
++    func splitTabBar(_ controller: BonsplitController, shouldClosePane pane: PaneID) -> Bool {
++        isApplyingRemoteLayout
++    }
++
++    func splitTabBar(
++        _ controller: BonsplitController,
++        shouldSplitPane pane: PaneID,
++        orientation: SplitOrientation
++    ) -> Bool {
++        guard !isApplyingRemoteLayout else { return true }
++        if let herdrPane = paneIdByBonsplitPane[pane] {
++            _ = requestSplit(fromPane: herdrPane, vertical: orientation == .vertical)
++        }
++        return false
++    }
++
++    func splitTabBar(_ controller: BonsplitController, didFocusPane pane: PaneID) {
++        guard !isApplyingRemoteLayout, !isApplyingFocus,
++              let herdrPane = paneIdByBonsplitPane[pane],
++              activePaneID != herdrPane else { return }
++        focus(pane: herdrPane)
++    }
++
++    func splitTabBar(_ controller: BonsplitController, didChangeGeometry snapshot: LayoutSnapshot) {
++        guard !isApplyingRemoteLayout else { return }
++        guard !controller.isDividerDragActive else { return }
++        _ = syncChangedDividerPositions()
++    }
++
++    func splitTabBarDividerDragDidBegin(_ controller: BonsplitController) {
++        TerminalWindowPortalRegistry.beginInteractiveGeometryResize(
++            owner: controller,
++            in: NSApp.currentEvent?.window ?? visibleHostingWindow()
++        )
++        dividerResizeSentSinceDragBegan = false
++        seedMissingDividerBaselines(from: controller.treeSnapshot())
++    }
++
++    func splitTabBarDividerDragDidEnd(_ controller: BonsplitController) {
++        defer { TerminalWindowPortalRegistry.endInteractiveGeometryResize(owner: controller) }
++        guard !isApplyingRemoteLayout else {
++            setNeedsSizingPass()
++            DispatchQueue.main.async { [weak self] in
++                self?.flushDeferredDividerDragEnd()
++            }
++            return
++        }
++        sendDividerDragEnd(controller)
++    }
++
++    private func seedMissingDividerBaselines(from treeNode: ExternalTreeNode) {
++        guard case .split(let split) = treeNode else { return }
++        if let splitId = UUID(uuidString: split.id), lastDividerPositions[splitId] == nil {
++            lastDividerPositions[splitId] = CGFloat(split.dividerPosition)
++        }
++        seedMissingDividerBaselines(from: split.first)
++        seedMissingDividerBaselines(from: split.second)
++    }
++
++    private func flushDeferredDividerDragEnd() {
++        guard !isTornDown else { return }
++        guard !isApplyingRemoteLayout else {
++            DispatchQueue.main.async { [weak self] in
++                self?.flushDeferredDividerDragEnd()
++            }
++            return
++        }
++        sendDividerDragEnd(bonsplitController)
++    }
++
++    private func sendDividerDragEnd(_ controller: BonsplitController) {
++        let sent = syncChangedDividerPositions(sendWithoutBaseline: true)
++            || dividerResizeSentSinceDragBegan
++        dividerResizeSentSinceDragBegan = false
++        if sent {
++            setNeedsSizingPass()
++        } else {
++            setNeedsSizingPassIgnoringInputs()
++        }
++    }
++}
+diff --git a/Sources/RemoteHerdrWindowMirrorHost+Configuration.swift b/Sources/RemoteHerdrWindowMirrorHost+Configuration.swift
+new file mode 100644
+index 0000000000..030af6fcfb
+--- /dev/null
++++ b/Sources/RemoteHerdrWindowMirrorHost+Configuration.swift
+@@ -0,0 +1,15 @@
++import Bonsplit
++import Foundation
++
++@MainActor
++extension RemoteHerdrWindowMirrorHost {
++    /// Keeps the embedded mirror chrome in sync with the workspace Bonsplit theme.
++    func observeWorkspaceBonsplitConfiguration() {
++        guard let workspaceBonsplitController else { return }
++        applyWorkspaceBonsplitConfiguration(workspaceBonsplitController.configuration)
++    }
++
++    func applyWorkspaceBonsplitConfiguration(_ workspaceConfiguration: BonsplitConfiguration) {
++        bonsplitController.configuration = workspaceConfiguration.remoteTmuxEmbedded
++    }
++}
+diff --git a/Sources/RemoteHerdrWindowMirrorHost+ControlMutations.swift b/Sources/RemoteHerdrWindowMirrorHost+ControlMutations.swift
+new file mode 100644
+index 0000000000..53d220396b
+--- /dev/null
++++ b/Sources/RemoteHerdrWindowMirrorHost+ControlMutations.swift
+@@ -0,0 +1,48 @@
++import CmuxNestedTopology
++import Foundation
++
++@MainActor
++extension RemoteHerdrWindowMirrorHost {
++    /// Forwards typed bytes to a Herdr pane (`pane.send` / `pane.send_keys`).
++    @discardableResult
++    func sendInput(toPane paneID: String, text: String) -> Bool {
++        guard !text.isEmpty, panelsByPaneId[paneID] != nil else { return false }
++        let data = Data(text.utf8)
++        Task { @MainActor [paneIO] in
++            try? await paneIO.sendKeys(paneID: paneID, data: data)
++        }
++        return true
++    }
++
++    /// User chrome split → ``pane.split`` (never a local Bonsplit split).
++    @discardableResult
++    func requestSplit(fromPane paneID: String, vertical: Bool) -> Bool {
++        guard panelsByPaneId[paneID] != nil else { return false }
++        guard RemoteHerdrControl.requestSplit(
++            fromPaneID: paneID,
++            vertical: vertical
++        ) != nil else { return false }
++        onSplitPaneRequest?(paneID, vertical)
++        return true
++    }
++
++    /// Absolute cell resize → ``pane.resize``.
++    @discardableResult
++    func requestResizePane(_ paneID: String, cols: Int, rows: Int) -> Bool {
++        guard panelsByPaneId[paneID] != nil, cols >= 1, rows >= 1 else { return false }
++        onResizePaneRequest?(paneID, cols, rows)
++        return true
++    }
++
++    /// User pane close → ``pane.close`` (host tab close still detaches only).
++    @discardableResult
++    func requestKillPane(_ paneID: String) -> Bool {
++        guard panelsByPaneId[paneID] != nil else { return false }
++        let intent = RemoteHerdrControl.closeIntent(source: "user_pane", paneID: paneID)
++        guard intent.action == "close_pane" || intent.action == "confirm_then_close_pane" else {
++            return false
++        }
++        onClosePaneRequest?(paneID)
++        return true
++    }
++}
+diff --git a/Sources/RemoteHerdrWindowMirrorHost+DividerSizing.swift b/Sources/RemoteHerdrWindowMirrorHost+DividerSizing.swift
+new file mode 100644
+index 0000000000..317bb2c6d9
+--- /dev/null
++++ b/Sources/RemoteHerdrWindowMirrorHost+DividerSizing.swift
+@@ -0,0 +1,173 @@
++import Bonsplit
++import CmuxNestedTopology
++import Foundation
++
++@MainActor
++extension RemoteHerdrWindowMirrorHost {
++    func pruneDividerBaselines(to treeNode: ExternalTreeNode) {
++        var splitIDs: Set<UUID> = []
++        collectSplitIDs(treeNode, into: &splitIDs)
++        lastDividerPositions = lastDividerPositions.filter { splitIDs.contains($0.key) }
++    }
++
++    private func collectSplitIDs(_ treeNode: ExternalTreeNode, into result: inout Set<UUID>) {
++        guard case .split(let split) = treeNode else { return }
++        if let splitID = UUID(uuidString: split.id) { result.insert(splitID) }
++        collectSplitIDs(split.first, into: &result)
++        collectSplitIDs(split.second, into: &result)
++    }
++
++    /// Synchronizes changed native dividers to Herdr via ``pane.resize``.
++    ///
++    /// Herdr resize is absolute cols/rows on a leaf; we convert the first
++    /// subtree's divider fraction into that leaf's assigned cell span and
++    /// resize the first leaf of the first child.
++    @discardableResult
++    func syncChangedDividerPositions(sendWithoutBaseline: Bool = false) -> Bool {
++        guard let containerSizePt, containerSizePt.width > 0, containerSizePt.height > 0 else {
++            return false
++        }
++        guard let layout = renderedLayout else { return false }
++        return syncChangedDividerPositions(
++            treeNode: bonsplitController.treeSnapshot(),
++            layoutNode: layout,
++            parentSize: containerSizePt,
++            sendWithoutBaseline: sendWithoutBaseline
++        )
++    }
++
++    private func syncChangedDividerPositions(
++        treeNode: ExternalTreeNode,
++        layoutNode: RemoteHerdrLayoutNode,
++        parentSize: CGSize,
++        sendWithoutBaseline: Bool
++    ) -> Bool {
++        guard case .split(let split) = treeNode,
++              let splitID = UUID(uuidString: split.id),
++              let children = layoutNode.children, children.count >= 2
++        else { return false }
++
++        let isHorizontal = layoutNode.isHorizontal
++        let expectedOrientation = isHorizontal ? "horizontal" : "vertical"
++        guard split.orientation == expectedOrientation else { return false }
++
++        let position = CGFloat(split.dividerPosition)
++        var sentResize = false
++
++        if split.imposedFirstExtent != nil {
++            lastDividerPositions[splitID] = position
++        } else if let previous = lastDividerPositions[splitID],
++                  abs(position - previous) > 0.005 {
++            lastDividerPositions[splitID] = position
++            sentResize = requestResizeForDividerPosition(
++                position,
++                parentSize: parentSize,
++                firstChild: children[0],
++                isHorizontal: isHorizontal
++            )
++        } else if lastDividerPositions[splitID] == nil {
++            lastDividerPositions[splitID] = position
++            if sendWithoutBaseline {
++                sentResize = requestResizeForDividerPosition(
++                    position,
++                    parentSize: parentSize,
++                    firstChild: children[0],
++                    isHorizontal: isHorizontal
++                )
++            }
++        }
++
++        let parentExtent = isHorizontal ? parentSize.width : parentSize.height
++        let firstExtent = parentExtent * position
++        let secondExtent = parentExtent - firstExtent
++        let firstSize: CGSize
++        let secondSize: CGSize
++        if isHorizontal {
++            firstSize = CGSize(width: firstExtent, height: parentSize.height)
++            secondSize = CGSize(width: secondExtent, height: parentSize.height)
++        } else {
++            firstSize = CGSize(width: parentSize.width, height: firstExtent)
++            secondSize = CGSize(width: parentSize.width, height: secondExtent)
++        }
++
++        let rest = Array(children.dropFirst())
++        let secondLayout: RemoteHerdrLayoutNode
++        if rest.count == 1 {
++            secondLayout = rest[0]
++        } else if isHorizontal {
++            secondLayout = RemoteHerdrLayoutNode(
++                width: rest.map(\.width).reduce(0, +),
++                height: rest.map(\.height).max() ?? rest[0].height,
++                x: rest[0].x,
++                y: rest[0].y,
++                content: .horizontal(rest)
++            )
++        } else {
++            secondLayout = RemoteHerdrLayoutNode(
++                width: rest.map(\.width).max() ?? rest[0].width,
++                height: rest.map(\.height).reduce(0, +),
++                x: rest[0].x,
++                y: rest[0].y,
++                content: .vertical(rest)
++            )
++        }
++
++        let sentInFirst = syncChangedDividerPositions(
++            treeNode: split.first,
++            layoutNode: children[0],
++            parentSize: firstSize,
++            sendWithoutBaseline: sendWithoutBaseline
++        )
++        let sentInSecond = syncChangedDividerPositions(
++            treeNode: split.second,
++            layoutNode: secondLayout,
++            parentSize: secondSize,
++            sendWithoutBaseline: sendWithoutBaseline
++        )
++        return sentResize || sentInFirst || sentInSecond
++    }
++
++    @discardableResult
++    private func requestResizeForDividerPosition(
++        _ position: CGFloat,
++        parentSize: CGSize,
++        firstChild: RemoteHerdrLayoutNode,
++        isHorizontal: Bool
++    ) -> Bool {
++        let parentExtent = isHorizontal ? parentSize.width : parentSize.height
++        let totalCells = isHorizontal ? firstChild.width + siblingSpan(after: firstChild, horizontal: true)
++            : firstChild.height + siblingSpan(after: firstChild, horizontal: false)
++        // Use the first child's current assigned span as the sibling total
++        // baseline from the rendered layout root axis.
++        let axisTotal = isHorizontal
++            ? (renderedLayout?.width ?? totalCells)
++            : (renderedLayout?.height ?? totalCells)
++        let draggedExtent = Double(parentExtent * position)
++        let cells = sizing.resizeCells(
++            draggedExtent: draggedExtent,
++            axisSpan: Double(parentExtent),
++            totalCells: max(2, axisTotal)
++        )
++        guard let leafID = firstChild.paneIDsInOrder.first else { return false }
++        let leaf = firstChild.firstLeaf(withPaneID: leafID) ?? firstChild
++        let cols: Int
++        let rows: Int
++        if isHorizontal {
++            cols = cells
++            rows = max(1, leaf.height)
++        } else {
++            cols = max(1, leaf.width)
++            rows = cells
++        }
++        // Skip no-ops that would not change the assigned leaf grid.
++        if leaf.width == cols, leaf.height == rows { return false }
++        onResizePaneRequest?(leafID, cols, rows)
++        dividerResizeSentSinceDragBegan = true
++        return true
++    }
++
++    private func siblingSpan(after first: RemoteHerdrLayoutNode, horizontal: Bool) -> Int {
++        // Best-effort; the axis total from renderedLayout is preferred above.
++        horizontal ? max(1, first.width) : max(1, first.height)
++    }
++}
+diff --git a/Sources/RemoteHerdrWindowMirrorHost+FocusNavigation.swift b/Sources/RemoteHerdrWindowMirrorHost+FocusNavigation.swift
+new file mode 100644
+index 0000000000..a318fc8778
+--- /dev/null
++++ b/Sources/RemoteHerdrWindowMirrorHost+FocusNavigation.swift
+@@ -0,0 +1,66 @@
++import Bonsplit
++import Foundation
++
++@MainActor
++extension RemoteHerdrWindowMirrorHost {
++    /// Whether nested focus moved, reached a valid boundary, or could not
++    /// resolve authoritative pane ownership.
++    enum FocusNavigationResult {
++        /// Focus moved to a mapped pane inside the mirror.
++        case moved
++        /// The mapped focused pane has no neighbor in the requested direction.
++        case edge
++        /// Current or destination pane ownership could not be resolved.
++        case invalid
++    }
++
++    /// Moves user focus inside this window's nested pane tree and establishes
++    /// first responder on the destination surface. Remote active-pane events use
++    /// ``focusBonsplitPane(forHerdrPane:)`` instead and therefore never steal key
++    /// focus from the user.
++    @discardableResult
++    func navigateFocus(direction: NavigationDirection) -> FocusNavigationResult {
++        guard let focusedPane = bonsplitController.focusedPaneId,
++              let focusedHerdrPaneId = paneIdByBonsplitPane[focusedPane],
++              panel(forPane: focusedHerdrPaneId) != nil else { return .invalid }
++        guard let destinationPane = bonsplitController.adjacentPane(
++            to: focusedPane,
++            direction: direction
++        ) else { return .edge }
++        guard let herdrPaneId = paneIdByBonsplitPane[destinationPane],
++              let panel = panel(forPane: herdrPaneId) else { return .invalid }
++
++        bonsplitController.focusPane(destinationPane)
++        guard bonsplitController.focusedPaneId == destinationPane else { return .invalid }
++        if activePaneID != herdrPaneId {
++            setActivePane(herdrPaneId, fromProvider: false)
++        }
++        panel.hostedView.moveFocus()
++        return .moved
++    }
++
++    /// Layout-tree neighbor via package ``RemoteHerdrControl.adjacentPane``.
++    func adjacentHerdrPane(direction: String) -> String? {
++        guard let layout = renderedLayout, let activePaneID else { return nil }
++        return RemoteHerdrControl.adjacentPane(layout, paneID: activePaneID, direction: direction)
++    }
++
++    func seedActivePaneIfNeeded() {
++        let live = renderedLayout?.paneIDsInOrder ?? Array(panelsByPaneId.keys)
++        if let activePaneID, live.contains(activePaneID) {
++            projectActivePane(activePaneID)
++        } else if let seed = live.first {
++            projectActivePane(seed)
++        }
++    }
++
++    func focusBonsplitPane(forHerdrPane paneId: String) {
++        // Reconciles reassert the active pane on every layout echo. Skip an
++        // unchanged focus so remote truth cannot disturb the first responder.
++        guard let bonsplitPane = paneIdByPaneId[paneId],
++              bonsplitController.focusedPaneId != bonsplitPane else { return }
++        isApplyingFocus = true
++        bonsplitController.focusPane(bonsplitPane)
++        isApplyingFocus = false
++    }
++}
+diff --git a/Sources/RemoteHerdrWindowMirrorHost+Sizing.swift b/Sources/RemoteHerdrWindowMirrorHost+Sizing.swift
+new file mode 100644
+index 0000000000..38c8395c28
+--- /dev/null
++++ b/Sources/RemoteHerdrWindowMirrorHost+Sizing.swift
+@@ -0,0 +1,81 @@
++import AppKit
++import CmuxNestedTopology
++import Foundation
++
++@MainActor
++extension RemoteHerdrWindowMirrorHost {
++    /// Feed-forward container size ingest (tmux ``noteContainerSize``).
++    func noteContainerSize(pointSize: CGSize, scale: CGFloat) {
++        guard !isTornDown else { return }
++        guard pointSize.width > 0, pointSize.height > 0 else { return }
++        containerSizePt = pointSize
++        containerScale = max(1, scale)
++        renderFrameSize = pointSize
++        setNeedsSizingPass()
++    }
++
++    func setNeedsSizingPass() {
++        guard !sizingPassScheduled, !isTornDown else { return }
++        sizingPassScheduled = true
++        DispatchQueue.main.async { [weak self] in
++            guard let self else { return }
++            self.sizingPassScheduled = false
++            self.performSizingPassNow()
++        }
++    }
++
++    func setNeedsSizingPassIgnoringInputs() {
++        setNeedsSizingPass()
++    }
++
++    /// Claims a client grid from Herdr when the visible tab's container changes.
++    func performSizingPassNow() {
++        guard !isTornDown, isVisibleForSizing else { return }
++        guard let containerSizePt,
++              containerSizePt.width > 0,
++              containerSizePt.height > 0
++        else { return }
++
++        // Cell metrics: prefer a live surface sample, else 8×16 defaults.
++        var cellWidth: Double = 8
++        var cellHeight: Double = 16
++        if let panel = panelsByPaneId.values.first,
++           let sample = panel.surface.rawSizingSample(),
++           sample.cellWidthPx > 0,
++           sample.cellHeightPx > 0 {
++            let scale = Double(max(1, sample.backingScale ?? containerScale))
++            cellWidth = Double(sample.cellWidthPx) / scale
++            cellHeight = Double(sample.cellHeightPx) / scale
++        }
++
++        guard let grid = sizing.clientGrid(
++            contentWidth: Double(containerSizePt.width),
++            contentHeight: Double(containerSizePt.height),
++            cellWidth: cellWidth,
++            cellHeight: cellHeight
++        ) else { return }
++
++        if let last = lastClaimedClientGrid,
++           last.cols == grid.cols,
++           last.rows == grid.rows {
++            return
++        }
++        lastClaimedClientGrid = grid
++
++        // Claim against the active (or first) pane — Herdr owns the grid and
++        // redistributes via layout events, matching tmux refresh-client -C.
++        let claimPane = activePaneID
++            ?? renderedLayout?.paneIDsInOrder.first
++            ?? panelsByPaneId.keys.sorted().first
++        guard let claimPane else { return }
++        onResizePaneRequest?(claimPane, grid.cols, grid.rows)
++    }
++
++    func visibleHostingWindow() -> NSWindow? {
++        if let hostProbeView, let window = hostProbeView.window { return window }
++        for panel in panelsByPaneId.values {
++            if let window = panel.hostedView.window { return window }
++        }
++        return nil
++    }
++}
+diff --git a/Sources/RemoteHerdrWindowMirrorHost.swift b/Sources/RemoteHerdrWindowMirrorHost.swift
+index 9475f406d2..c869a1927d 100644
+--- a/Sources/RemoteHerdrWindowMirrorHost.swift
++++ b/Sources/RemoteHerdrWindowMirrorHost.swift
+@@ -20,7 +20,7 @@ final class RemoteHerdrWindowMirrorHost {
+     var bonsplitController: BonsplitController
+ 
+     @ObservationIgnored let makePanel: (_ paneID: String) -> TerminalPanel?
+-    @ObservationIgnored private let paneIO: any RemoteHerdrPaneIO
++    @ObservationIgnored let paneIO: any RemoteHerdrPaneIO
+     @ObservationIgnored weak var workspaceBonsplitController: BonsplitController?
+ 
+     private(set) var layout: RemoteHerdrLayoutNode?
+@@ -45,6 +45,24 @@ final class RemoteHerdrWindowMirrorHost {
+ 
+     @ObservationIgnored var onTerminalPanelAdded: ((TerminalPanel) -> Void)?
+     @ObservationIgnored var onTerminalPanelRemoved: ((TerminalPanel) -> Void)?
++    /// User chrome close → ``pane.close`` (session host owns the RPC).
++    @ObservationIgnored var onClosePaneRequest: ((String) -> Void)?
++    /// User focus → ``pane.focus`` (session host owns the RPC).
++    @ObservationIgnored var onFocusPaneRequest: ((String) -> Void)?
++    /// User split → ``pane.split`` (session host owns the RPC).
++    @ObservationIgnored var onSplitPaneRequest: ((_ paneID: String, _ vertical: Bool) -> Void)?
++    /// Divider / client size claim → ``pane.resize`` (session host owns the RPC).
++    @ObservationIgnored var onResizePaneRequest: ((_ paneID: String, _ cols: Int, _ rows: Int) -> Void)?
++
++    /// Container size for feed-forward client claims (points).
++    @ObservationIgnored var containerSizePt: CGSize?
++    @ObservationIgnored var containerScale: CGFloat = 2
++    @ObservationIgnored var renderFrameSize: CGSize?
++    @ObservationIgnored var hostProbeView: NSView?
++    @ObservationIgnored var sizingPassScheduled = false
++    @ObservationIgnored var lastClaimedClientGrid: (cols: Int, rows: Int)?
++    @ObservationIgnored var dividerResizeSentSinceDragBegan = false
++    @ObservationIgnored private let sizing = RemoteHerdrSizing()
+ 
+     var surfaceIDsInLayoutOrder: [UUID] {
+         let order = (visibleLayout ?? layout)?.paneIDsInOrder ?? Array(panelsByPaneId.keys)
+@@ -207,28 +225,40 @@ final class RemoteHerdrWindowMirrorHost {
+     }
+ 
+     func noteRemoteActivePane(_ paneID: String) {
++        guard panelsByPaneId[paneID] != nil else { return }
++        projectActivePane(paneID)
++    }
++
++    func projectActivePane(_ paneID: String) {
+         guard panelsByPaneId[paneID] != nil else { return }
+         isApplyingFocus = true
+         defer { isApplyingFocus = false }
+-        activePaneID = paneID
+-        if let bonsplitPane = paneIdByPaneId[paneID],
+-           bonsplitController.focusedPaneId != bonsplitPane {
+-            bonsplitController.focusPane(bonsplitPane)
+-        }
++        if activePaneID != paneID { activePaneID = paneID }
++        focusBonsplitPane(forHerdrPane: paneID)
+     }
+ 
++    /// Records the user-focused pane and asks Herdr to make it active.
+     func setActivePane(_ paneID: String, fromProvider: Bool) {
+         guard panelsByPaneId[paneID] != nil, !isApplyingFocus else { return }
+-        activePaneID = paneID
+-        if let bonsplitPane = paneIdByPaneId[paneID],
+-           bonsplitController.focusedPaneId != bonsplitPane {
+-            bonsplitController.focusPane(bonsplitPane)
++        projectActivePane(paneID)
++        if !fromProvider {
++            onFocusPaneRequest?(paneID)
+         }
+-        _ = fromProvider
++    }
++
++    /// Records the user-focused pane and asks Herdr to make it active.
++    func focus(pane paneID: String) {
++        setActivePane(paneID, fromProvider: false)
+     }
+ 
+     func teardown() {
+         isTornDown = true
++        isVisibleForSizing = false
++        sizingPassScheduled = false
++        containerSizePt = nil
++        renderFrameSize = nil
++        lastClaimedClientGrid = nil
++        hostProbeView = nil
+         for panel in panelsByPaneId.values {
+             onTerminalPanelRemoved?(panel)
+             GhosttyApp.terminalSurfaceRegistry.unregister(panel.surface)
+diff --git a/Sources/RemoteHerdrWindowMirrorSplitView.swift b/Sources/RemoteHerdrWindowMirrorSplitView.swift
+index bb3ceaa147..47c2ffbc05 100644
+--- a/Sources/RemoteHerdrWindowMirrorSplitView.swift
++++ b/Sources/RemoteHerdrWindowMirrorSplitView.swift
+@@ -10,6 +10,7 @@ struct RemoteHerdrWindowMirrorSplitView: View {
+     let portalPriority: Int
+     let onOuterFocus: () -> Void
+     var unreadSurfaceIDs: Set<UUID> = []
++    @Environment(\.displayScale) private var displayScale
+     @State private var containerSize: CGSize = .zero
+ 
+     var body: some View {
+@@ -17,22 +18,25 @@ struct RemoteHerdrWindowMirrorSplitView: View {
+             .overlay(alignment: .topLeading) {
+                 splitTree
+             }
++            .background(HerdrMirrorHostProbe(mirror: mirror))
+             .onGeometryChange(for: CGSize.self) { proxy in
+                 proxy.size
+             } action: { newSize in
+                 containerSize = newSize
+-                mirror.isVisibleForSizing = isVisibleInUI
++                pushClientSize(pointSize: newSize)
+             }
+             .onAppear {
+                 mirror.isVisibleForSizing = isVisibleInUI
+                 mirror.bonsplitController.isInteractive = isVisibleInUI
++                if isVisibleInUI { becameVisible() }
+             }
+             .onChange(of: isVisibleInUI) { _, visible in
+                 mirror.isVisibleForSizing = visible
+                 mirror.bonsplitController.isInteractive = visible
++                if visible { becameVisible() }
+             }
+             .onChange(of: mirror.layoutStructureVersion) { _, _ in
+-                mirror.isVisibleForSizing = isVisibleInUI
++                pushClientSize(pointSize: containerSize)
+             }
+     }
+ 
+@@ -76,9 +80,59 @@ struct RemoteHerdrWindowMirrorSplitView: View {
+         }
+         .internalOnlyTabDrag()
+         .frame(
+-            maxWidth: .infinity,
+-            maxHeight: .infinity,
++            width: mirror.renderFrameSize?.width,
++            height: mirror.renderFrameSize?.height,
+             alignment: .topLeading
+         )
+     }
++
++    private func pushClientSize(pointSize: CGSize) {
++        mirror.isVisibleForSizing = isVisibleInUI
++        guard pointSize.width > 0, pointSize.height > 0 else { return }
++        mirror.noteContainerSize(pointSize: pointSize, scale: displayScale)
++    }
++
++    private func becameVisible() {
++        pushClientSize(pointSize: containerSize)
++        mirror.setNeedsSizingPassIgnoringInputs()
++        mirror.seedActivePaneIfNeeded()
++    }
++}
++
++/// Zero-cost NSView planted inside the Herdr mirror subtree so the mirror has a
++/// window handle that survives portal churn (tmux ``MirrorHostProbe`` analogue).
++final class HerdrMirrorHostProbeView: NSView {
++    weak var mirror: RemoteHerdrWindowMirrorHost?
++
++    override func hitTest(_ point: NSPoint) -> NSView? { nil }
++
++    override func viewDidEndLiveResize() {
++        super.viewDidEndLiveResize()
++        mirror?.setNeedsSizingPass()
++    }
++
++    override func viewDidMoveToWindow() {
++        super.viewDidMoveToWindow()
++        guard window != nil else {
++            if mirror?.hostProbeView === self { mirror?.hostProbeView = nil }
++            return
++        }
++        mirror?.hostProbeView = self
++    }
++}
++
++private struct HerdrMirrorHostProbe: NSViewRepresentable {
++    let mirror: RemoteHerdrWindowMirrorHost
++
++    func makeNSView(context: Context) -> HerdrMirrorHostProbeView {
++        let view = HerdrMirrorHostProbeView()
++        view.mirror = mirror
++        mirror.hostProbeView = view
++        return view
++    }
++
++    func updateNSView(_ nsView: HerdrMirrorHostProbeView, context: Context) {
++        nsView.mirror = mirror
++        mirror.hostProbeView = nsView
++    }
+ }
+diff --git a/Sources/Workspace+SurfaceNavigation.swift b/Sources/Workspace+SurfaceNavigation.swift
+index da8e765116..5dbb61b6f4 100644
+--- a/Sources/Workspace+SurfaceNavigation.swift
++++ b/Sources/Workspace+SurfaceNavigation.swift
+@@ -13,8 +13,9 @@ extension Workspace {
+     }
+ 
+     /// Moves keyboard focus through the rendered pane hierarchy. A selected
+-    /// remote-tmux window owns a nested split tree, so it gets first refusal;
+-    /// an edge with no inner neighbor falls through to the workspace tree.
++    /// remote-tmux / remote-Herdr window owns a nested split tree, so it gets
++    /// first refusal; an edge with no inner neighbor falls through to the
++    /// workspace tree.
+     func moveFocus(direction: NavigationDirection) {
+         if layoutMode == .canvas {
+             moveCanvasFocus(direction: direction)
+@@ -29,6 +30,15 @@ extension Workspace {
+                 break
+             }
+         }
++        if let focusedPanelId,
++           let mirror = remoteHerdrWindowMirror(forPanelId: focusedPanelId) {
++            switch mirror.navigateFocus(direction: direction) {
++            case .moved, .invalid:
++                return
++            case .edge:
++                break
++            }
++        }
+ 
+         let previousFocusedPanelId = focusedPanelId
+         if let previousFocusedPanelId, let previous = panels[previousFocusedPanelId] {
+@@ -67,6 +77,7 @@ extension Workspace {
+     ) -> Bool {
+         guard layoutMode != .canvas,
+               !isRemoteTmuxMirror,
++              !isRemoteHerdrMirror,
+               panels[panelId] != nil,
+               let sourcePaneId = paneId(forPanelId: panelId) else {
+             return false
+diff --git a/cmux.xcodeproj/project.pbxproj b/cmux.xcodeproj/project.pbxproj
+index cee7e4431b..c2a367dc50 100644
+--- a/cmux.xcodeproj/project.pbxproj
++++ b/cmux.xcodeproj/project.pbxproj
+@@ -1795,6 +1795,11 @@ C0DE71B10000000000000001 /* AppDelegate+AgentChatNotifications.swift in Sources
+ 		RH10000400000000000000002 /* RemoteHerdrWindowMirrorHost+Bonsplit.swift in Sources */ = {isa = PBXBuildFile; fileRef = RH10000400000000000000001 /* RemoteHerdrWindowMirrorHost+Bonsplit.swift */; };
+ 		RH10000500000000000000002 /* RemoteHerdrWindowMirrorSplitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = RH10000500000000000000001 /* RemoteHerdrWindowMirrorSplitView.swift */; };
+ 		RH10000600000000000000002 /* TerminalController+RemoteHerdr.swift in Sources */ = {isa = PBXBuildFile; fileRef = RH10000600000000000000001 /* TerminalController+RemoteHerdr.swift */; };
++		RH10000700000000000000002 /* RemoteHerdrWindowMirrorHost+FocusNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = RH10000700000000000000001 /* RemoteHerdrWindowMirrorHost+FocusNavigation.swift */; };
++		RH10000800000000000000002 /* RemoteHerdrWindowMirrorHost+DividerSizing.swift in Sources */ = {isa = PBXBuildFile; fileRef = RH10000800000000000000001 /* RemoteHerdrWindowMirrorHost+DividerSizing.swift */; };
++		RH10000900000000000000002 /* RemoteHerdrWindowMirrorHost+ControlMutations.swift in Sources */ = {isa = PBXBuildFile; fileRef = RH10000900000000000000001 /* RemoteHerdrWindowMirrorHost+ControlMutations.swift */; };
++		RH10000A00000000000000002 /* RemoteHerdrWindowMirrorHost+Sizing.swift in Sources */ = {isa = PBXBuildFile; fileRef = RH10000A00000000000000001 /* RemoteHerdrWindowMirrorHost+Sizing.swift */; };
++		RH10000B00000000000000002 /* RemoteHerdrWindowMirrorHost+Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = RH10000B00000000000000001 /* RemoteHerdrWindowMirrorHost+Configuration.swift */; };
+ 		0F17C0DE0F17C0DE0F17C002 /* RemoteTmuxWindowRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F17C0DE0F17C0DE0F17C001 /* RemoteTmuxWindowRegistry.swift */; };
+ 		FA00C0DE0001BEEF0001CAFE /* RemoteTmuxWindowRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00C0DE0002BEEF0002CAFE /* RemoteTmuxWindowRegistryTests.swift */; };
+ 		A7C9D1E3F5B7A9C1D3E5F702 /* RemoteTmuxWindowReorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7C9D1E3F5B7A9C1D3E5F701 /* RemoteTmuxWindowReorderTests.swift */; };
+@@ -4586,6 +4591,11 @@ C0DE71B10000000000000002 /* AppDelegate+AgentChatNotifications.swift */ = {isa =
+ 		RH10000400000000000000001 /* RemoteHerdrWindowMirrorHost+Bonsplit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteHerdrWindowMirrorHost+Bonsplit.swift; sourceTree = "<group>"; };
+ 		RH10000500000000000000001 /* RemoteHerdrWindowMirrorSplitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteHerdrWindowMirrorSplitView.swift; sourceTree = "<group>"; };
+ 		RH10000600000000000000001 /* TerminalController+RemoteHerdr.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalController+RemoteHerdr.swift; sourceTree = "<group>"; };
++		RH10000700000000000000001 /* RemoteHerdrWindowMirrorHost+FocusNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RemoteHerdrWindowMirrorHost+FocusNavigation.swift"; sourceTree = "<group>"; };
++		RH10000800000000000000001 /* RemoteHerdrWindowMirrorHost+DividerSizing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RemoteHerdrWindowMirrorHost+DividerSizing.swift"; sourceTree = "<group>"; };
++		RH10000900000000000000001 /* RemoteHerdrWindowMirrorHost+ControlMutations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RemoteHerdrWindowMirrorHost+ControlMutations.swift"; sourceTree = "<group>"; };
++		RH10000A00000000000000001 /* RemoteHerdrWindowMirrorHost+Sizing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RemoteHerdrWindowMirrorHost+Sizing.swift"; sourceTree = "<group>"; };
++		RH10000B00000000000000001 /* RemoteHerdrWindowMirrorHost+Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RemoteHerdrWindowMirrorHost+Configuration.swift"; sourceTree = "<group>"; };
+ 		0F17C0DE0F17C0DE0F17C001 /* RemoteTmuxWindowRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTmuxWindowRegistry.swift; sourceTree = "<group>"; };
+ 		FA00C0DE0002BEEF0002CAFE /* RemoteTmuxWindowRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTmuxWindowRegistryTests.swift; sourceTree = "<group>"; };
+ 		A7C9D1E3F5B7A9C1D3E5F701 /* RemoteTmuxWindowReorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTmuxWindowReorderTests.swift; sourceTree = "<group>"; };
+@@ -7384,6 +7394,11 @@ C0DE71B10000000000000002 /* AppDelegate+AgentChatNotifications.swift */ = {isa =
+ 					RH10000200000000000000001 /* RemoteHerdrSessionHost.swift */,
+ 					RH10000300000000000000001 /* RemoteHerdrWindowMirrorHost.swift */,
+ 					RH10000400000000000000001 /* RemoteHerdrWindowMirrorHost+Bonsplit.swift */,
++					RH10000700000000000000001 /* RemoteHerdrWindowMirrorHost+FocusNavigation.swift */,
++					RH10000800000000000000001 /* RemoteHerdrWindowMirrorHost+DividerSizing.swift */,
++					RH10000900000000000000001 /* RemoteHerdrWindowMirrorHost+ControlMutations.swift */,
++					RH10000A00000000000000001 /* RemoteHerdrWindowMirrorHost+Sizing.swift */,
++					RH10000B00000000000000001 /* RemoteHerdrWindowMirrorHost+Configuration.swift */,
+ 					RH10000500000000000000001 /* RemoteHerdrWindowMirrorSplitView.swift */,
+ 					RH10000600000000000000001 /* TerminalController+RemoteHerdr.swift */,
+ 					F2A6C8E40D5B17293C8F6A42 /* TerminalPanelCreationOutcome.swift */,
+@@ -10071,6 +10086,11 @@ C0DE71B10000000000000002 /* AppDelegate+AgentChatNotifications.swift */ = {isa =
+ 				RH10000200000000000000002 /* RemoteHerdrSessionHost.swift in Sources */,
+ 				RH10000300000000000000002 /* RemoteHerdrWindowMirrorHost.swift in Sources */,
+ 				RH10000400000000000000002 /* RemoteHerdrWindowMirrorHost+Bonsplit.swift in Sources */,
++				RH10000700000000000000002 /* RemoteHerdrWindowMirrorHost+FocusNavigation.swift in Sources */,
++				RH10000800000000000000002 /* RemoteHerdrWindowMirrorHost+DividerSizing.swift in Sources */,
++				RH10000900000000000000002 /* RemoteHerdrWindowMirrorHost+ControlMutations.swift in Sources */,
++				RH10000A00000000000000002 /* RemoteHerdrWindowMirrorHost+Sizing.swift in Sources */,
++				RH10000B00000000000000002 /* RemoteHerdrWindowMirrorHost+Configuration.swift in Sources */,
+ 				RH10000500000000000000002 /* RemoteHerdrWindowMirrorSplitView.swift in Sources */,
+ 				RH10000600000000000000002 /* TerminalController+RemoteHerdr.swift in Sources */,
+ 				0F17C0DE0F17C0DE0F17C002 /* RemoteTmuxWindowRegistry.swift in Sources */,
+-- 
+2.43.0
+

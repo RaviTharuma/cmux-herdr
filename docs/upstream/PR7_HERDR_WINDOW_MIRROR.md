@@ -15,7 +15,9 @@ The **pure reconcile engine** lives in `Packages/macOS/CmuxNestedTopology` on fo
 - `session.snapshot` now decodes `layouts` (map or `[{tab_id, layout}]`)
 - Tests: `RemoteHerdrWindowMirrorTests.swift`
 
-Still host-side (cmux app, not this package): Bonsplit impose, Ghostty `TerminalPanel`, divider-drag session, plugin single-writer suppression UI. The package is the ssh-tmux contract; AppKit wiring is the remaining native slice.
+Still host-side polish (continuing on this PR / fork PR17): closer
+feed-forward parity with every `RemoteTmuxWindowMirror+*` helper, restore
+reattach dogfood, and CodeRabbit/CI green on macOS.
 
 ## Summary
 
