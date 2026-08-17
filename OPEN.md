@@ -26,8 +26,8 @@ Cross-links: PR and issue reference each other; both point back here as the fall
   `--tmux-parity` for the ssh-tmux contract) with `attach-pane` followers.
 - Mirror Herdr agent state into cmux workspace **status pills** (`herdr:<pane_id>`) and progress.
 - CLI for topology and control: `status`, `doctor`, `tree`, `agents`, `sync`, `watch`,
-  `mirror`, `attach-pane`, `clear`, focus helpers, `read-pane` / `read-agent`, `split`,
-  `json-dump`.
+  `mirror`, `attach-pane`, `send-key`, `observe`, `attach`, `detach`, `restore`,
+  `clear`, focus helpers, `read-pane` / `read-agent`, `split`, `json-dump`.
 - Persist per-host-fingerprint Herdr-parent → cmux-workspace bindings so outer focus
   changes do not thrash status writes and multi-window hosts do not collide.
 - Skip ordinary shell panes (no agent) so they are not mirrored as agents.
@@ -110,6 +110,9 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       delta). Remaining plugin gap is PTY theft / divider-drag (native PR7).
 - [x] **tmux-parity plugin:** `mirror --tmux-parity` / `watch --tmux-parity` —
       layout tree, ratios, tab order, focus, prune, attach cbreak/SIGWINCH/ANSI.
+      `watch --tmux-parity` attaches on start and detaches on stop.
+- [x] CLI `attach` / `detach` / `restore` / `send-key` / `observe` for the
+      live apply host. Detach never calls `server.stop`.
 - [x] Single-writer guard when native attachment is live (`CMUX_HERDR_NATIVE_LIVE` /
       `native-live-<fingerprint>` marker; `CMUX_HERDR_FORCE_PLUGIN` escape hatch).
 - [x] Native-title lock + diff-before-write (`lock-title` / `unlock-title`,

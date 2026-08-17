@@ -63,6 +63,9 @@ elif command == ["pane", "get"]:
 elif command == ["pane", "zoom"]:
     print("zoom should not be used as focus", file=sys.stderr)
     raise SystemExit(9)
+elif command == ["pane", "send"] or command == ["pane", "send-keys"]:
+    print(json.dumps({"result": {"sent": True}}))
+    raise SystemExit(0)
 else:
     print("unexpected command: " + " ".join(argv), file=sys.stderr)
     raise SystemExit(9)
@@ -106,6 +109,9 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("attach-pane", result.stdout)
         self.assertIn("send-key", result.stdout)
         self.assertIn("observe", result.stdout)
+        self.assertIn("attach", result.stdout)
+        self.assertIn("detach", result.stdout)
+        self.assertIn("restore", result.stdout)
         self.assertIn("lock-title", result.stdout)
         self.assertIn("unlock-title", result.stdout)
 
@@ -401,6 +407,83 @@ raise SystemExit(9)
         self.assertTrue(payload["sync_focus"])
         self.assertTrue(payload["sync_order"])
         self.assertTrue(payload["sync_ratios"])
+
+    def _lifecycle_env(self, tmp: str, fake_bin: Path) -> tuple[str, dict]:
+        sock = Path(tmp) / "herdr.sock"
+        sock.write_text("", encoding="utf-8")
+        env = {
+            "HOME": tmp,
+            "XDG_STATE_HOME": str(Path(tmp) / "state"),
+            "HERDR_ENV": "1",
+            "HERDR_SOCKET_PATH": str(sock),
+            "HERDR_TAB_ID": "t1",
+            "HERDR_WORKSPACE_ID": "w1",
+            "CMUX_SURFACE_ID": "surface-cli",
+        }
+        return f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}", env
+
+    def test_send_key_named_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            path, env = self._lifecycle_env(tmp, fake_bin)
+            result = self.run_cli("send-key", "p1", "C-Up", path=path, env_extra=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("C-Up", result.stdout)
+        self.assertIn("p1", result.stdout)
+
+    def test_send_key_unknown_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            path, env = self._lifecycle_env(tmp, fake_bin)
+            result = self.run_cli("send-key", "p1", "NotAKey", path=path, env_extra=env)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("unknown key name", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_attach_observe_detach_never_stops_server(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            path, env = self._lifecycle_env(tmp, fake_bin)
+            attached = self.run_cli("attach", "--json", path=path, env_extra=env)
+            observed = self.run_cli(
+                "observe",
+                "--method",
+                "pane_surfaces",
+                "--json",
+                path=path,
+                env_extra=env,
+            )
+            detached = self.run_cli("detach", "--json", path=path, env_extra=env)
+        self.assertEqual(attached.returncode, 0, attached.stderr + attached.stdout)
+        attach_payload = json.loads(attached.stdout)
+        self.assertTrue(attach_payload["ok"])
+        self.assertFalse(attach_payload["server_stopped"])
+        self.assertTrue(attach_payload.get("restore_path"))
+        self.assertEqual(observed.returncode, 0, observed.stderr + observed.stdout)
+        observe_payload = json.loads(observed.stdout)
+        self.assertTrue(observe_payload["ok"])
+        self.assertEqual(detached.returncode, 0, detached.stderr + detached.stdout)
+        detach_payload = json.loads(detached.stdout)
+        self.assertTrue(detach_payload["ok"])
+        self.assertFalse(detach_payload["server_stopped"])
+
+    def test_restore_without_persist_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            path, env = self._lifecycle_env(tmp, fake_bin)
+            result = self.run_cli("restore", "--json", path=path, env_extra=env)
+        self.assertEqual(result.returncode, 2, result.stderr + result.stdout)
+        payload = json.loads(result.stdout)
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["outcome"], "no_persist")
 
 
 if __name__ == "__main__":

@@ -9,6 +9,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **CLI attach / detach / restore** for the live apply host
+  (`cmux-herdr attach`, `detach`, `restore`). `watch --tmux-parity`
+  attaches on start and detaches on stop; host close never stops
+  Herdr. Restore reattaches from a persist file and never replays a
+  stale tree. `observe` uses `HERDR_SOCKET_PATH` instead of a hardcoded
+  `/tmp/herdr.sock`.
+
 - **Active-pane cwd → tab folder** on the live apply host: background
   `cd` is cached and ignored; only the focused pane may set `tab_cwd`
   (tmux `updateRemotePanelDirectory`). Focus changes promote a cached
