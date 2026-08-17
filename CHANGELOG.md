@@ -9,6 +9,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- `AGENTS.md` for Cursor Cloud (stdlib-only test/run notes; fake herdr/cmux on Linux).
+- Community poll [cmux#10106](https://github.com/manaflow-ai/cmux/discussions/10106) on README / OPEN / upstream banners. Native window-mirror engine [RaviTharuma/cmux#8](https://github.com/RaviTharuma/cmux/pull/8) is merged.
+
 - **Persistent Herdr socket + window-mirror engine:** `bridge/cmux_herdr_socket.py`
   holds one protocol-17 NDJSON `events.subscribe` session for
   `watch --tmux-parity` (no reconnect-every-tick). `bridge/cmux_herdr_engine.py`

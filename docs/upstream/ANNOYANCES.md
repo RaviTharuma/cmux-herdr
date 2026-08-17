@@ -1,6 +1,8 @@
 > **Canonical source of truth is GitHub**, not this draft.
 >
+> - Community poll: https://github.com/manaflow-ai/cmux/discussions/10106
 > - Full nested topology: https://github.com/manaflow-ai/cmux/issues/8737
+> - Nested topology v1: https://github.com/manaflow-ai/cmux/pull/10045
 > - Hidden compat MVP: https://github.com/manaflow-ai/cmux/pull/8736
 > - Update GitHub first when trackers move; then sync this file if still useful.
 >
@@ -659,8 +661,11 @@ Use this as a regression list.
 
 | Artifact | Role | Status |
 |---|---|---|
+| [cmux#10106](https://github.com/manaflow-ai/cmux/discussions/10106) | Community poll: native Herdr as tmux counterpart | Open |
 | [cmux#8736](https://github.com/manaflow-ai/cmux/pull/8736) | Hidden Herdr compat dispatcher (shim) | Open |
 | [cmux#8737](https://github.com/manaflow-ai/cmux/issues/8737) | Full native nested topology design | Open |
+| [cmux#10045](https://github.com/manaflow-ai/cmux/pull/10045) | Nested topology providers (Herdr v1) | Open |
+| [RaviTharuma/cmux#8](https://github.com/RaviTharuma/cmux/pull/8) | RemoteHerdrWindowMirror engine | Merged |
 | [RaviTharuma/cmux-herdr](https://github.com/RaviTharuma/cmux-herdr) | User-space plugin/stopgap + docs | Implemented (local uncommitted association refinements may exist) |
 | [pi-subagents#16](https://github.com/edxeth/pi-subagents/pull/16) | Same-tab / placement fixes for Herdr subagents | Open (local right-stack follow-on may be ahead of remote) |
 | `docs/upstream/ISSUE.md` | Canonical long-form native issue text | Repo |
