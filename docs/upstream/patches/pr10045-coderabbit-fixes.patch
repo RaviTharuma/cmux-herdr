@@ -1,0 +1,1564 @@
+From c799f6b70a2a1934da540f0d374a0e43809af8e9 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Mon, 17 Aug 2026 14:25:23 +0000
+Subject: [PATCH] fix(nested-topology): address CodeRabbit review findings on
+ #10045
+
+Respond to the unanswered Greptile/CodeRabbit thread items with concrete
+fixes: subscription idle timeout, pane.agent_status_changed subs, Darwin
+addrLen, heuristic parent lock, bounded restore reasons, sanitized errors,
+per-attachment projection, reducer re-validation, layout depth bounds,
+lossless sendKeys, restore file-identity gate, deterministic Codable, and
+matching tests/README notes.
+---
+ Packages/macOS/CmuxNestedTopology/README.md   | 25 ++++--
+ .../HerdrNestedTopologyClient.swift           | 27 +++++--
+ ...rdrNestedTopologyClientConfiguration.swift |  4 +
+ .../HerdrProtocol17Compatibility.swift        | 15 ++++
+ .../HerdrUnixSocketConnection.swift           |  5 +-
+ .../NestedAssociationStore.swift              |  8 ++
+ .../NestedAttachmentError.swift               | 30 +++++---
+ .../NestedAttachmentIntentDescriptor.swift    |  1 +
+ .../NestedAttachmentRecord.swift              | 26 +++++--
+ .../NestedCapabilitySet.swift                 | 20 ++++-
+ .../NestedDisplayStringSanitizer.swift        | 30 +++-----
+ .../NestedEndpointSecurityError.swift         | 16 ++--
+ .../CmuxNestedTopology/NestedParentMap.swift  | 17 ++--
+ .../NestedPluginWriterHandoff.swift           | 15 +++-
+ .../NestedSidebarSubtreeSnapshot.swift        |  2 +-
+ .../NestedTopologyAttachmentCoordinator.swift | 77 ++++++++++---------
+ .../NestedTopologyLimits.swift                |  9 ++-
+ .../NestedTopologyReadNode.swift              |  2 +-
+ .../NestedTopologyReadService.swift           | 11 ++-
+ .../NestedTopologyReducer.swift               | 16 +++-
+ .../NestedTopologySnapshot.swift              | 25 ++++++
+ .../NestedTopologyTwoPassRenderer.swift       | 63 ++++++++-------
+ .../NestedTopologyValidator.swift             | 17 ++--
+ .../NestedUnixSocketEndpointValidator.swift   | 36 +++------
+ .../RemoteHerdrLayoutNode.swift               | 51 +++++++++---
+ .../RemoteHerdrPaneIO.swift                   | 36 ++++-----
+ .../RemoteHerdrSessionMirror.swift            | 18 ++---
+ .../RemoteHerdrSizing.swift                   |  3 +-
+ .../FakeHerdrUnixSocketServer.swift           |  6 ++
+ .../HerdrNestedTopologyClientTests.swift      | 15 +++-
+ .../NestedAssociationTests.swift              | 11 ++-
+ ...edTopologyAttachmentCoordinatorTests.swift | 30 ++++++--
+ .../NestedTopologyReadProjectionTests.swift   | 30 ++++++++
+ .../RemoteHerdrWindowMirrorTests.swift        |  1 +
+ 34 files changed, 462 insertions(+), 236 deletions(-)
+
+diff --git a/Packages/macOS/CmuxNestedTopology/README.md b/Packages/macOS/CmuxNestedTopology/README.md
+index 580c2165a..ac2cd1a02 100644
+--- a/Packages/macOS/CmuxNestedTopology/README.md
++++ b/Packages/macOS/CmuxNestedTopology/README.md
+@@ -1,8 +1,10 @@
+ # CmuxNestedTopology
+ 
+ Provider-neutral nested topology model, Herdr socket adapter, secure
+-attachment lifecycle, read projection, capability-gated focus, and **session
+-restore semantics** for cmux (PR 1–6 of the native Herdr nested-topology plan).
++attachment lifecycle, read projection, capability-gated focus, session
++restore semantics, reconnect scheduling, and RemoteHerdr session/window
++mirroring for cmux (native Herdr nested-topology plan, including post–PR-6
++mirroring helpers).
+ 
+ ## Scope
+ 
+@@ -15,6 +17,7 @@ This package owns:
+ - in-memory association, parent-map, and title-lock values
+ - provider-neutral ``NestedTopologyProviderClient`` (read + focus)
+ - ``HerdrNestedTopologyClient`` (newline-delimited JSON Unix socket; no `herdr` CLI)
++- ``NestedReconnectScheduler`` for cancellation-aware reconnect backoff
+ - ``NestedTopologyAttachmentCoordinator`` — opt-in attachment lifecycle, endpoint
+   security validation, host move/close hooks, plugin single-writer handoff,
+   capability-gated ``focusNode``, and ``restoreFromIntent``
+@@ -32,12 +35,14 @@ This package owns:
+   - versioned ``NestedAttachmentIntentDescriptor`` (intent only)
+   - revalidate + identity compare + fresh snapshot on restore
+   - disconnected + confirmation when identity proof is unavailable/mismatched
++- **RemoteHerdr mirroring**
++  - ``RemoteHerdrSessionMirror`` / ``RemoteHerdrWindowMirror`` / layout + sizing helpers
++  - capability-gated pane I/O (`pane.send` / `split` / `resize` / `close` / `read`)
+ 
+ It does **not** mutate cmux `Workspace` / Bonsplit ownership of provider panes,
+ persist nested node snapshots / output / credentials into session manifests, or
+-implement rename / send-input / split / close (separate follow-up PRs). Herdr
+-descendants remain virtual under one host surface; they are never mirrored into
+-Ghostty/Bonsplit PTYs.
++promote provider descendants into Ghostty/Bonsplit PTYs. Herdr descendants remain
++virtual under one host surface.
+ 
+ ## Restore semantics (PR 6)
+ 
+@@ -48,9 +53,17 @@ Persist **attachment intent**, never live topology:
+ | provider kind | nested node snapshot / tree |
+ | reattach policy | pane/agent output |
+ | non-secret endpoint locator (approved path) | tokens / bearer credentials |
+-| last verified provider instance ID | plugin association state files/records |
++| last verified provider instance ID (connection-scoped on protocol 17) | plugin association state files/records |
+ | last verified socket file identity | |
+ 
++**Protocol 17 identity note:** Herdr protocol 17 does not advertise a durable
++server instance id. ``NestedProviderInstanceID`` is minted per connection unless
++the provider returns `instance_id`. The persisted “last verified provider
++instance ID” therefore cannot prove continuity after reconnect on protocol 17;
++unattended auto-reattach also requires a pinned socket file identity, and
++otherwise restore leaves the attachment ``disconnected`` with
++``pendingRestoreIntent`` until ``confirmPendingRestore``.
++
+ On `Workspace.restoreSessionSnapshot` (app wiring):
+ 
+ 1. Wait until the terminal panel exists and stable surface identity is adopted.
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClient.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClient.swift
+index 517fd6abd..a0f8fe774 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClient.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClient.swift
+@@ -229,12 +229,15 @@ public actor HerdrNestedTopologyClient: NestedTopologyProviderClient {
+         continuation: AsyncThrowingStream<NestedTopologyEvent, any Error>.Continuation
+     ) async throws {
+         let handshake = try await ensureHandshake()
++        // Parameterized status events require pane_id; subscribe for panes known now.
++        let paneIDs = (try? await snapshot().panes.map(\.id.rawID)) ?? []
++        let subscriptions = HerdrProtocol17Compatibility.subscriptions(forPaneIDs: paneIDs)
+         let requestID = HerdrJSONRPCRequestID.random(prefix: "cmux-sub")
+         let requestObject: [String: Any] = [
+             "id": requestID.rawValue,
+             "method": "events.subscribe",
+             "params": [
+-                "subscriptions": HerdrProtocol17Compatibility.defaultSubscriptions,
++                "subscriptions": subscriptions,
+             ],
+         ]
+         let requestData = try Self.encodeJSONObject(requestObject)
+@@ -248,7 +251,7 @@ public actor HerdrNestedTopologyClient: NestedTopologyProviderClient {
+         let maxLine = configuration.maxLineUTF8ByteCount
+         let maxEvent = configuration.maxEventUTF8ByteCount
+         let connectTimeout = configuration.connectTimeout
+-        let requestTimeout = configuration.requestTimeout
++        let idleTimeout = configuration.eventIdleTimeout
+         let socketPath = configuration.socketPath
+ 
+         let connection = try HerdrUnixSocketConnection(path: socketPath, timeout: connectTimeout)
+@@ -267,11 +270,23 @@ public actor HerdrNestedTopologyClient: NestedTopologyProviderClient {
+                         try connection.writeAll(requestData + Data([UInt8(ascii: "\n")]))
+                         var reader = HerdrJSONLineReader(maxLineUTF8ByteCount: maxLine)
+                         var acknowledged = false
++                        let clock = ContinuousClock()
++                        var lastActivity = clock.now
+                         while !Task.isCancelled {
+-                            let chunk = try connection.readSome(
+-                                maxLength: min(64 * 1024, maxLine),
+-                                timeout: requestTimeout
+-                            )
++                            let chunk: Data
++                            do {
++                                chunk = try connection.readSome(
++                                    maxLength: min(64 * 1024, maxLine),
++                                    timeout: .seconds(1)
++                                )
++                            } catch NestedTopologyProviderError.requestTimeout {
++                                // Poll slice timed out; keep waiting until the idle bound elapses.
++                                if clock.now - lastActivity >= idleTimeout {
++                                    throw NestedTopologyProviderError.requestTimeout
++                                }
++                                continue
++                            }
++                            lastActivity = clock.now
+                             let lines = try reader.append(chunk)
+                             for line in lines {
+                                 if acknowledged, line.utf8.count > maxEvent {
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClientConfiguration.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClientConfiguration.swift
+index 7b787b686..aa901e55a 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClientConfiguration.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrNestedTopologyClientConfiguration.swift
+@@ -12,6 +12,8 @@ public struct HerdrNestedTopologyClientConfiguration: Hashable, Sendable {
+     public var connectTimeout: Duration
+     /// Deadline for a single request/response exchange after connect.
+     public var requestTimeout: Duration
++    /// Maximum idle gap tolerated on the event subscription socket before reconnecting.
++    public var eventIdleTimeout: Duration
+     /// Maximum UTF-8 bytes accepted for one newline-delimited JSON line.
+     ///
+     /// Kept below Herdr's 1 MiB initial-request bound.
+@@ -34,6 +36,7 @@ public struct HerdrNestedTopologyClientConfiguration: Hashable, Sendable {
+         hostStableSurfaceID: UUID,
+         connectTimeout: Duration = .seconds(5),
+         requestTimeout: Duration = .seconds(5),
++        eventIdleTimeout: Duration = .seconds(120),
+         maxLineUTF8ByteCount: Int = 512 * 1024,
+         maxSnapshotUTF8ByteCount: Int = 512 * 1024,
+         maxEventUTF8ByteCount: Int = 256 * 1024,
+@@ -46,6 +49,7 @@ public struct HerdrNestedTopologyClientConfiguration: Hashable, Sendable {
+         self.hostStableSurfaceID = hostStableSurfaceID
+         self.connectTimeout = connectTimeout
+         self.requestTimeout = requestTimeout
++        self.eventIdleTimeout = eventIdleTimeout
+         self.maxLineUTF8ByteCount = maxLineUTF8ByteCount
+         self.maxSnapshotUTF8ByteCount = maxSnapshotUTF8ByteCount
+         self.maxEventUTF8ByteCount = maxEventUTF8ByteCount
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrProtocol17Compatibility.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrProtocol17Compatibility.swift
+index 4d0d3145e..de6630e0e 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrProtocol17Compatibility.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrProtocol17Compatibility.swift
+@@ -66,6 +66,21 @@ public struct HerdrProtocol17Compatibility: Sendable {
+         ["type": "pane.agent_detected"],
+     ]
+ 
++    /// Default subscriptions plus parameterized `pane.agent_status_changed` for each pane.
++    public static func subscriptions(forPaneIDs paneIDs: [String]) -> [[String: String]] {
++        var subscriptions = defaultSubscriptions
++        var seen = Set<String>()
++        for paneID in paneIDs {
++            let trimmed = paneID.trimmingCharacters(in: .whitespacesAndNewlines)
++            guard !trimmed.isEmpty, seen.insert(trimmed).inserted else { continue }
++            subscriptions.append([
++                "type": "pane.agent_status_changed",
++                "pane_id": trimmed,
++            ])
++        }
++        return subscriptions
++    }
++
+     public init() {}
+ 
+     /// Validates a decoded `ping` / `pong` result and builds handshake metadata.
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrUnixSocketConnection.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrUnixSocketConnection.swift
+index fb62daada..e56b6be0c 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrUnixSocketConnection.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/HerdrUnixSocketConnection.swift
+@@ -53,9 +53,8 @@ final class HerdrUnixSocketConnection: @unchecked Sendable {
+             }
+         }
+ 
+-        let addrLen = socklen_t(
+-            MemoryLayout.size(ofValue: address.sun_family) + pathBytes.count
+-        )
++        // Darwin sockaddr_un leads with sun_len; sizeof(sun_family) alone is one byte short.
++        let addrLen = socklen_t(sunPathOffset + pathBytes.count)
+         let connectResult = withUnsafePointer(to: &address) {
+             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                 connect(socketFD, $0, addrLen)
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAssociationStore.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAssociationStore.swift
+index 05f1846fa..bff048c36 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAssociationStore.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAssociationStore.swift
+@@ -24,16 +24,24 @@ public struct NestedAssociationStore: Hashable, Codable, Sendable {
+     }
+ 
+     /// Records a successful heuristic/prompt association and marks heuristic satisfied.
++    ///
++    /// Once satisfied, subsequent calls leave the first parentID unchanged.
+     public mutating func markHeuristicSatisfied(
+         for key: NestedAssociationKey,
+         parentID: NestedNodeID?
+     ) {
+         var record = records[key] ?? NestedAssociationRecord(key: key)
++        guard !record.heuristicSatisfied else { return }
+         record.parentID = parentID ?? record.parentID
+         record.heuristicSatisfied = true
+         records[key] = record
+     }
+ 
++    /// Drops association records for a superseded provider instance generation.
++    public mutating func drop(providerInstanceGeneration: NestedProviderInstanceID) {
++        records = records.filter { $0.key.providerInstanceGeneration != providerInstanceGeneration }
++    }
++
+     /// Installs or updates an explicit native-title lock.
+     public mutating func lockTitle(
+         for key: NestedAssociationKey,
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentError.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentError.swift
+index f632f4070..107157e63 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentError.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentError.swift
+@@ -1,5 +1,14 @@
+ public import Foundation
+ 
++/// Bounded reasons a restore requires explicit confirmation.
++public enum NestedRestoreConfirmationReason: String, Hashable, Codable, Sendable {
++    case pending
++    case policyRequiresConfirmation = "policy_requires_confirmation"
++    case identityProofUnavailable = "identity_proof_unavailable"
++    case providerInstanceMismatch = "provider_instance_mismatch"
++    case endpointMissing = "endpoint_missing"
++}
++
+ /// Errors raised by ``NestedTopologyAttachmentCoordinator``.
+ public enum NestedAttachmentError: Error, Hashable, Sendable, LocalizedError {
+     /// Attachment was requested without explicit opt-in authorization.
+@@ -31,7 +40,7 @@ public enum NestedAttachmentError: Error, Hashable, Sendable, LocalizedError {
+     /// Target node / attachment is bound to a different host stable surface.
+     case wrongHostSurface
+     /// Restore cannot auto-reattach; confirmation is required (identity proof / policy).
+-    case restoreRequiresConfirmation(reason: String)
++    case restoreRequiresConfirmation(reason: NestedRestoreConfirmationReason)
+     /// Restore observed a changed socket file identity at the persisted path.
+     case restoreSocketIdentityChanged
+     /// Restored provider endpoint is missing or unreachable.
+@@ -45,8 +54,8 @@ public enum NestedAttachmentError: Error, Hashable, Sendable, LocalizedError {
+             return "A nested provider attachment already exists for this host surface."
+         case .attachmentLimitExceeded(let limit):
+             return "Nested provider attachment limit (\(limit)) exceeded."
+-        case .endpointRejected(let error):
+-            return error.errorDescription
++        case .endpointRejected:
++            return "Nested provider socket endpoint was rejected."
+         case .incompatibleProvider:
+             return "Nested provider is incompatible."
+         case .providerFailed:
+@@ -55,12 +64,12 @@ public enum NestedAttachmentError: Error, Hashable, Sendable, LocalizedError {
+             return "Nested provider attachment cancelled."
+         case .attachmentNotFound:
+             return "No nested provider attachment exists for this host surface."
+-        case .invalidState(let state):
+-            return "Nested provider attachment is in invalid state \(state.rawValue)."
+-        case .oversizedField(let field):
+-            return "Nested provider attachment field '\(field)' exceeds configured bounds."
+-        case .capabilityAbsent(let capability):
+-            return "Nested provider lacks capability \(capability.rawValue)."
++        case .invalidState:
++            return "Nested provider attachment is in an invalid state."
++        case .oversizedField:
++            return "Nested provider attachment field exceeds configured bounds."
++        case .capabilityAbsent:
++            return "Nested provider lacks a required capability."
+         case .providerInstanceMismatch:
+             return "Nested provider instance / generation does not match the live attachment."
+         case .nodeNotFound:
+@@ -93,7 +102,8 @@ public enum NestedAttachmentError: Error, Hashable, Sendable, LocalizedError {
+         case .providerInstanceMismatch: return "provider_instance_mismatch"
+         case .nodeNotFound: return "node_not_found"
+         case .wrongHostSurface: return "wrong_host_surface"
+-        case .restoreRequiresConfirmation: return "restore_requires_confirmation"
++        case .restoreRequiresConfirmation(let reason):
++            return "restore_requires_confirmation.\(reason.rawValue)"
+         case .restoreSocketIdentityChanged: return "restore_socket_identity_changed"
+         case .restoreProviderUnavailable: return "restore_provider_unavailable"
+         }
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentIntentDescriptor.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentIntentDescriptor.swift
+index 9682ed70c..2a1aea88a 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentIntentDescriptor.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentIntentDescriptor.swift
+@@ -150,6 +150,7 @@ public struct NestedAttachmentIntentDescriptor: Hashable, Codable, Sendable {
+         reattachPolicy == .autoIfProviderInstanceMatches
+             && providerInstanceIdentityProofAvailable
+             && lastVerifiedProviderInstanceID != nil
++            && lastVerifiedFileIdentity != nil
+             && endpointLocator != nil
+             && !(endpointLocator?.socketPath.isEmpty ?? true)
+     }
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentRecord.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentRecord.swift
+index 3994c4667..a0c92943f 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentRecord.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedAttachmentRecord.swift
+@@ -48,7 +48,6 @@ public struct NestedAttachmentRecord: Hashable, Codable, Sendable {
+         case state
+         case pluginWriterHandoffActive = "plugin_writer_handoff_active"
+         case lastErrorClass = "last_error_class"
+-        case latestSnapshot = "latest_snapshot"
+         case pendingRestoreIntent = "pending_restore_intent"
+     }
+ 
+@@ -110,16 +109,33 @@ public struct NestedAttachmentRecord: Hashable, Codable, Sendable {
+             forKey: .pluginWriterHandoffActive
+         ) ?? false
+         lastErrorClass = try container.decodeIfPresent(String.self, forKey: .lastErrorClass)
+-        latestSnapshot = try container.decodeIfPresent(
+-            NestedTopologySnapshot.self,
+-            forKey: .latestSnapshot
+-        )
++        // Live topology is never persisted with the attachment record.
++        latestSnapshot = nil
+         pendingRestoreIntent = try container.decodeIfPresent(
+             NestedAttachmentIntentDescriptor.self,
+             forKey: .pendingRestoreIntent
+         )
+     }
+ 
++    public func encode(to encoder: any Encoder) throws {
++        var container = encoder.container(keyedBy: CodingKeys.self)
++        try container.encode(attachmentID, forKey: .attachmentID)
++        try container.encode(hostWorkspaceID, forKey: .hostWorkspaceID)
++        try container.encode(hostStableSurfaceID, forKey: .hostStableSurfaceID)
++        try container.encode(providerKind, forKey: .providerKind)
++        try container.encodeIfPresent(endpoint, forKey: .endpoint)
++        try container.encodeIfPresent(providerInstanceID, forKey: .providerInstanceID)
++        try container.encode(
++            providerInstanceIdentityProofAvailable,
++            forKey: .providerInstanceIdentityProofAvailable
++        )
++        try container.encode(capabilities, forKey: .capabilities)
++        try container.encode(state, forKey: .state)
++        try container.encode(pluginWriterHandoffActive, forKey: .pluginWriterHandoffActive)
++        try container.encodeIfPresent(lastErrorClass, forKey: .lastErrorClass)
++        try container.encodeIfPresent(pendingRestoreIntent, forKey: .pendingRestoreIntent)
++    }
++
+     /// Whether the attachment currently suppresses competing plugin writers.
+     public var suppressesPluginWriters: Bool {
+         pluginWriterHandoffActive && state == .live
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedCapabilitySet.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedCapabilitySet.swift
+index e7687cd5e..5957e0ffe 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedCapabilitySet.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedCapabilitySet.swift
+@@ -1,5 +1,5 @@
+ /// Set of negotiated nested-provider capabilities.
+-public struct NestedCapabilitySet: Hashable, Codable, Sendable {
++public struct NestedCapabilitySet: Hashable, Sendable {
+     /// Contained capability tokens.
+     public var capabilities: Set<NestedProviderCapability>
+ 
+@@ -30,3 +30,21 @@ public struct NestedCapabilitySet: Hashable, Codable, Sendable {
+         capabilities.map(\.rawValue).sorted()
+     }
+ }
++
++extension NestedCapabilitySet: Codable {
++    private enum CodingKeys: String, CodingKey {
++        case capabilities
++    }
++
++    public init(from decoder: any Decoder) throws {
++        let container = try decoder.container(keyedBy: CodingKeys.self)
++        let values = try container.decodeIfPresent([NestedProviderCapability].self, forKey: .capabilities) ?? []
++        self.init(capabilities: Set(values))
++    }
++
++    public func encode(to encoder: any Encoder) throws {
++        var container = encoder.container(keyedBy: CodingKeys.self)
++        let sorted = capabilities.sorted { $0.rawValue < $1.rawValue }
++        try container.encode(sorted, forKey: .capabilities)
++    }
++}
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedDisplayStringSanitizer.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedDisplayStringSanitizer.swift
+index 7908994d8..c7a7f5e45 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedDisplayStringSanitizer.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedDisplayStringSanitizer.swift
+@@ -19,33 +19,23 @@ public enum NestedDisplayStringSanitizer: Sendable {
+         maxUTF8ByteCount: Int = defaultMaxUTF8ByteCount
+     ) -> String {
+         precondition(maxUTF8ByteCount >= 0)
+-        var scalars: [UnicodeScalar] = []
++        // Bound materialization to the output budget; never retain the full input.
++        var scalars: [Unicode.Scalar] = []
+         scalars.reserveCapacity(min(value.unicodeScalars.count, maxUTF8ByteCount))
++        var byteCount = 0
+         for scalar in value.unicodeScalars {
+             if scalar.value < 0x20 || scalar.value == 0x7F {
+                 continue
+             }
+-            scalars.append(scalar)
+-        }
+-        var cleaned = String(String.UnicodeScalarView(scalars))
+-            .trimmingCharacters(in: .whitespacesAndNewlines)
+-        if cleaned.utf8.count > maxUTF8ByteCount {
+-            cleaned = truncateToUTF8ByteCount(cleaned, maxUTF8ByteCount: maxUTF8ByteCount)
+-        }
+-        return cleaned
+-    }
+-
+-    private static func truncateToUTF8ByteCount(_ value: String, maxUTF8ByteCount: Int) -> String {
+-        var byteCount = 0
+-        var end = value.startIndex
+-        for (index, character) in zip(value.indices, value) {
+-            let characterBytes = String(character).utf8.count
+-            if byteCount + characterBytes > maxUTF8ByteCount {
++            let piece = String(scalar)
++            let pieceBytes = piece.utf8.count
++            if byteCount + pieceBytes > maxUTF8ByteCount {
+                 break
+             }
+-            byteCount += characterBytes
+-            end = value.index(after: index)
++            scalars.append(scalar)
++            byteCount += pieceBytes
+         }
+-        return String(value[..<end])
++        return String(String.UnicodeScalarView(scalars))
++            .trimmingCharacters(in: .whitespacesAndNewlines)
+     }
+ }
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedEndpointSecurityError.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedEndpointSecurityError.swift
+index dfa126442..34119d775 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedEndpointSecurityError.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedEndpointSecurityError.swift
+@@ -42,8 +42,8 @@ public enum NestedEndpointSecurityError: Error, Hashable, Sendable, LocalizedErr
+             return "Nested provider socket path is empty."
+         case .notAbsolutePath:
+             return "Nested provider socket path must be absolute."
+-        case .pathTooLong(let maxUTF8ByteCount):
+-            return "Nested provider socket path exceeds \(maxUTF8ByteCount) UTF-8 bytes."
++        case .pathTooLong:
++            return "Nested provider socket path is too long."
+         case .illegalPathBytes:
+             return "Nested provider socket path contains illegal bytes."
+         case .symlinkRejected:
+@@ -52,12 +52,12 @@ public enum NestedEndpointSecurityError: Error, Hashable, Sendable, LocalizedErr
+             return "Nested provider socket path does not exist."
+         case .notUnixSocket:
+             return "Nested provider endpoint is not a Unix-domain socket."
+-        case .wrongOwner(let expected, let actual):
+-            return "Nested provider socket owner UID \(actual) does not match expected UID \(expected)."
+-        case .permissiveMode(let mode):
+-            return "Nested provider socket mode \(String(mode, radix: 8)) allows group/other access."
+-        case .inaccessible(let errnoCode):
+-            return "Nested provider socket path is inaccessible (errno \(errnoCode))."
++        case .wrongOwner:
++            return "Nested provider socket is not owned by this process user."
++        case .permissiveMode:
++            return "Nested provider socket permissions allow group or other access."
++        case .inaccessible:
++            return "Nested provider socket path is inaccessible."
+         case .identityMismatch:
+             return "Nested provider socket file identity changed around connect."
+         }
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedParentMap.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedParentMap.swift
+index 9c9bbd3a1..98cd2ccee 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedParentMap.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedParentMap.swift
+@@ -34,15 +34,20 @@ public struct NestedParentMap: Hashable, Codable, Sendable {
+ 
+     /// Removes `root` and every descendant reachable through this map.
+     public mutating func removeSubtree(rootedAt root: NestedNodeID) {
++        var childrenByParent: [NestedNodeID: [NestedNodeID]] = [:]
++        for (child, parent) in parentsByChild {
++            childrenByParent[parent, default: []].append(child)
++        }
++
+         var toRemove: Set<NestedNodeID> = [root]
+-        var changed = true
+-        while changed {
+-            changed = false
+-            for (child, parent) in parentsByChild where toRemove.contains(parent) && !toRemove.contains(child) {
+-                toRemove.insert(child)
+-                changed = true
++        var pending = [root]
++        while let parent = pending.popLast() {
++            for child in childrenByParent[parent, default: []]
++            where toRemove.insert(child).inserted {
++                pending.append(child)
+             }
+         }
++
+         parentsByChild = parentsByChild.filter { !toRemove.contains($0.key) }
+     }
+ 
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedPluginWriterHandoff.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedPluginWriterHandoff.swift
+index 64231236d..c0386e109 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedPluginWriterHandoff.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedPluginWriterHandoff.swift
+@@ -1,3 +1,8 @@
++#if canImport(Darwin)
++import Darwin
++#else
++import Glibc
++#endif
+ public import Foundation
+ 
+ /// Single-writer handoff signal between native nested attachment and the cmux-herdr plugin.
+@@ -85,8 +90,16 @@ public struct NestedPluginWriterHandoff: Sendable {
+     public func release(hostStableSurfaceID: UUID) throws {
+         let fileManager = FileManager.default
+         let url = lockFileURL(for: hostStableSurfaceID)
+-        if fileManager.fileExists(atPath: url.path) {
++        do {
+             try fileManager.removeItem(at: url)
++        } catch let error as NSError
++            where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError
++        {
++            return
++        } catch let error as NSError
++            where error.domain == NSPOSIXErrorDomain && error.code == Int(ENOENT)
++        {
++            return
+         }
+     }
+ 
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedSidebarSubtreeSnapshot.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedSidebarSubtreeSnapshot.swift
+index f74d696c4..ab321bf87 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedSidebarSubtreeSnapshot.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedSidebarSubtreeSnapshot.swift
+@@ -39,7 +39,7 @@ public struct NestedSidebarSubtreeSnapshot: Hashable, Sendable {
+         self.roots = roots
+     }
+ 
+-    /// Accessibility label for the expandable host section.
++    /// Accessibility label for the expandable host section (fixed English tokens; no paths).
+     public var accessibilityLabel: String {
+         var parts = ["nested", providerKind.rawValue]
+         if isStale {
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift
+index cf72daa55..8bf4b9769 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyAttachmentCoordinator.swift
+@@ -22,7 +22,6 @@ public import Foundation
+ public actor NestedTopologyAttachmentCoordinator {
+     private var attachments: [UUID: NestedAttachmentRecord]
+     private var proposals: [UUID: NestedAttachmentProposal]
+-    private var connectTasks: [UUID: Task<Void, Never>]
+     private var eventTasks: [UUID: Task<Void, Never>]
+     private var generationTokens: [UUID: UUID]
+     private var liveEnvironmentSurfaceIDs: Set<UUID>
+@@ -76,7 +75,6 @@ public actor NestedTopologyAttachmentCoordinator {
+     ) {
+         self.attachments = [:]
+         self.proposals = [:]
+-        self.connectTasks = [:]
+         self.eventTasks = [:]
+         self.generationTokens = [:]
+         self.liveEnvironmentSurfaceIDs = []
+@@ -169,17 +167,7 @@ public actor NestedTopologyAttachmentCoordinator {
+         guard let authorization, authorization.isExplicitOptIn else {
+             throw NestedAttachmentError.optInRequired
+         }
+-        if case .authenticatedControlSocket(let requestID) = authorization {
+-            let sanitized = NestedDisplayStringSanitizer.sanitize(
+-                requestID,
+-                maxUTF8ByteCount: limits.maxAuthorizationRequestIDUTF8ByteCount
+-            )
+-            if sanitized.utf8.count > limits.maxAuthorizationRequestIDUTF8ByteCount
+-                || sanitized.isEmpty && !requestID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+-            {
+-                throw NestedAttachmentError.oversizedField("authorization.request_id")
+-            }
+-        }
++        try validateAuthorizationRequestID(authorization)
+ 
+         let sanitizedWorkspaceID = NestedDisplayStringSanitizer.sanitize(
+             hostWorkspaceID,
+@@ -424,7 +412,14 @@ public actor NestedTopologyAttachmentCoordinator {
+             hostWorkspaceID,
+             maxUTF8ByteCount: limits.maxHostWorkspaceIDUTF8ByteCount
+         )
+-        let workspaceID = sanitizedWorkspaceID.isEmpty ? hostWorkspaceID : sanitizedWorkspaceID
++        let workspaceID = sanitizedWorkspaceID
++        guard !workspaceID.isEmpty else {
++            return await leaveRestoreDisconnected(
++                hostStableSurfaceID: hostStableSurfaceID,
++                intent: intent,
++                error: .oversizedField("host_workspace_id")
++            )
++        }
+ 
+         if let existing = attachments[hostStableSurfaceID] {
+             switch existing.state {
+@@ -454,7 +449,7 @@ public actor NestedTopologyAttachmentCoordinator {
+             providerKind: intent.providerKind,
+             state: .disconnected,
+             lastErrorClass: NestedAttachmentError.restoreRequiresConfirmation(
+-                reason: "pending"
++                reason: .pending
+             ).telemetryErrorClass,
+             pendingRestoreIntent: intent
+         )
+@@ -473,15 +468,16 @@ public actor NestedTopologyAttachmentCoordinator {
+               let locator = intent.endpointLocator,
+               let expectedInstanceID = intent.lastVerifiedProviderInstanceID
+         else {
+-            let reason: String
++            let reason: NestedRestoreConfirmationReason
+             if intent.reattachPolicy != .autoIfProviderInstanceMatches {
+-                reason = "policy_requires_confirmation"
++                reason = .policyRequiresConfirmation
+             } else if !intent.providerInstanceIdentityProofAvailable
+                 || intent.lastVerifiedProviderInstanceID == nil
++                || intent.lastVerifiedFileIdentity == nil
+             {
+-                reason = "identity_proof_unavailable"
++                reason = .identityProofUnavailable
+             } else {
+-                reason = "endpoint_missing"
++                reason = .endpointMissing
+             }
+             return await leaveRestoreDisconnected(
+                 hostStableSurfaceID: hostStableSurfaceID,
+@@ -556,12 +552,12 @@ public actor NestedTopologyAttachmentCoordinator {
+ 
+                 guard handshake.instanceIdentityIsDurable else {
+                     throw NestedAttachmentError.restoreRequiresConfirmation(
+-                        reason: "identity_proof_unavailable"
++                        reason: .identityProofUnavailable
+                     )
+                 }
+                 guard handshake.providerInstanceID == expectedInstanceID else {
+                     throw NestedAttachmentError.restoreRequiresConfirmation(
+-                        reason: "provider_instance_mismatch"
++                        reason: .providerInstanceMismatch
+                     )
+                 }
+ 
+@@ -748,6 +744,7 @@ public actor NestedTopologyAttachmentCoordinator {
+         for id in ids {
+             await detach(hostStableSurfaceID: id, reason: .hostWindowTeardown)
+         }
++        generationTokens.removeAll()
+         proposals.removeAll()
+         publishPersistenceIntents()
+     }
+@@ -787,17 +784,7 @@ public actor NestedTopologyAttachmentCoordinator {
+         guard let authorization = request.authorization, authorization.isExplicitOptIn else {
+             throw NestedAttachmentError.optInRequired
+         }
+-        if case .authenticatedControlSocket(let requestID) = authorization {
+-            let sanitized = NestedDisplayStringSanitizer.sanitize(
+-                requestID,
+-                maxUTF8ByteCount: limits.maxAuthorizationRequestIDUTF8ByteCount
+-            )
+-            if sanitized.utf8.count > limits.maxAuthorizationRequestIDUTF8ByteCount
+-                || (sanitized.isEmpty && !requestID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+-            {
+-                throw NestedAttachmentError.oversizedField("authorization.request_id")
+-            }
+-        }
++        try validateAuthorizationRequestID(authorization)
+ 
+         let record = try resolveLiveAttachment(
+             hostStableSurfaceID: request.hostStableSurfaceID,
+@@ -881,6 +868,22 @@ public actor NestedTopologyAttachmentCoordinator {
+ 
+     // MARK: - Internals
+ 
++
++    private func validateAuthorizationRequestID(
++        _ authorization: NestedAttachmentAuthorization
++    ) throws {
++        guard case .authenticatedControlSocket(let requestID) = authorization else { return }
++        let sanitized = NestedDisplayStringSanitizer.sanitize(
++            requestID,
++            maxUTF8ByteCount: limits.maxAuthorizationRequestIDUTF8ByteCount
++        )
++        if sanitized.utf8.count > limits.maxAuthorizationRequestIDUTF8ByteCount
++            || (sanitized.isEmpty && !requestID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
++        {
++            throw NestedAttachmentError.oversizedField("authorization.request_id")
++        }
++    }
++
+     private func leaveRestoreDisconnected(
+         hostStableSurfaceID: UUID,
+         intent: NestedAttachmentIntentDescriptor,
+@@ -899,7 +902,6 @@ public actor NestedTopologyAttachmentCoordinator {
+             )
+         }
+         if generation != nil {
+-            connectTasks.removeValue(forKey: hostStableSurfaceID)?.cancel()
+             eventTasks.removeValue(forKey: hostStableSurfaceID)?.cancel()
+             liveClients.removeValue(forKey: hostStableSurfaceID)
+             liveEnvironmentSurfaceIDs.remove(hostStableSurfaceID)
+@@ -953,8 +955,7 @@ public actor NestedTopologyAttachmentCoordinator {
+         reason: NestedDetachReason,
+         emitTelemetry: Bool
+     ) async {
+-        generationTokens[hostStableSurfaceID] = UUID()
+-        connectTasks.removeValue(forKey: hostStableSurfaceID)?.cancel()
++        generationTokens.removeValue(forKey: hostStableSurfaceID)
+         eventTasks.removeValue(forKey: hostStableSurfaceID)?.cancel()
+         liveClients.removeValue(forKey: hostStableSurfaceID)
+ 
+@@ -985,13 +986,13 @@ public actor NestedTopologyAttachmentCoordinator {
+         remove: Bool
+     ) async {
+         guard generationTokens[hostStableSurfaceID] == generation else { return }
+-        connectTasks.removeValue(forKey: hostStableSurfaceID)?.cancel()
+         eventTasks.removeValue(forKey: hostStableSurfaceID)?.cancel()
+         liveClients.removeValue(forKey: hostStableSurfaceID)
+         liveEnvironmentSurfaceIDs.remove(hostStableSurfaceID)
+         publishEnvironmentMirror()
+         try? handoff.release(hostStableSurfaceID: hostStableSurfaceID)
+ 
++        let previous = attachments[hostStableSurfaceID]
+         if remove {
+             attachments.removeValue(forKey: hostStableSurfaceID)
+         } else if var record = attachments[hostStableSurfaceID] {
+@@ -1010,10 +1011,10 @@ public actor NestedTopologyAttachmentCoordinator {
+             NestedAttachmentTelemetryEvent(
+                 name: "attach_failed",
+                 state: state,
+-                providerKind: attachments[hostStableSurfaceID]?.providerKind,
++                providerKind: attachments[hostStableSurfaceID]?.providerKind ?? previous?.providerKind,
+                 errorClass: error.telemetryErrorClass,
+                 hostStableSurfaceID: hostStableSurfaceID,
+-                attachmentID: attachments[hostStableSurfaceID]?.attachmentID
++                attachmentID: attachments[hostStableSurfaceID]?.attachmentID ?? previous?.attachmentID
+             )
+         )
+     }
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyLimits.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyLimits.swift
+index eeb972ccb..980cf6945 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyLimits.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyLimits.swift
+@@ -22,6 +22,8 @@ public struct NestedTopologyLimits: Hashable, Codable, Sendable {
+     public var maxProviderInstanceIDUTF8ByteCount: Int
+     /// Maximum UTF-8 byte length of a provider version string.
+     public var maxProviderVersionUTF8ByteCount: Int
++    /// Maximum nesting depth for a Herdr layout tree (leaf depth 0).
++    public var maxLayoutTreeDepth: Int
+ 
+     /// Default production limits for nested topology ingestion.
+     public static let `default` = NestedTopologyLimits(
+@@ -34,7 +36,8 @@ public struct NestedTopologyLimits: Hashable, Codable, Sendable {
+         maxDisplayTitleUTF8ByteCount: 512,
+         maxProviderRawStatusUTF8ByteCount: 64,
+         maxProviderInstanceIDUTF8ByteCount: 128,
+-        maxProviderVersionUTF8ByteCount: 64
++        maxProviderVersionUTF8ByteCount: 64,
++        maxLayoutTreeDepth: 64
+     )
+ 
+     /// Creates topology limits.
+@@ -48,7 +51,8 @@ public struct NestedTopologyLimits: Hashable, Codable, Sendable {
+         maxDisplayTitleUTF8ByteCount: Int,
+         maxProviderRawStatusUTF8ByteCount: Int,
+         maxProviderInstanceIDUTF8ByteCount: Int,
+-        maxProviderVersionUTF8ByteCount: Int
++        maxProviderVersionUTF8ByteCount: Int,
++        maxLayoutTreeDepth: Int = 64
+     ) {
+         self.maxWorkspaces = maxWorkspaces
+         self.maxTabs = maxTabs
+@@ -60,5 +64,6 @@ public struct NestedTopologyLimits: Hashable, Codable, Sendable {
+         self.maxProviderRawStatusUTF8ByteCount = maxProviderRawStatusUTF8ByteCount
+         self.maxProviderInstanceIDUTF8ByteCount = maxProviderInstanceIDUTF8ByteCount
+         self.maxProviderVersionUTF8ByteCount = maxProviderVersionUTF8ByteCount
++        self.maxLayoutTreeDepth = maxLayoutTreeDepth
+     }
+ }
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadNode.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadNode.swift
+index 7fd2b5f62..6c0928ae2 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadNode.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadNode.swift
+@@ -82,7 +82,7 @@ public struct NestedTopologyReadNode: Hashable, Codable, Sendable {
+         self.metadata = Self.boundedMetadata(metadata)
+     }
+ 
+-    /// Accessibility / VoiceOver label for sidebar rows.
++    /// Accessibility / VoiceOver label for sidebar rows (fixed English tokens; no paths).
+     public var accessibilityLabel: String {
+         var parts = [id.kind.rawValue, label]
+         if focused {
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadService.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadService.swift
+index 19d41f6ee..9949ff788 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadService.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReadService.swift
+@@ -13,10 +13,13 @@ public struct NestedTopologyReadService: Sendable {
+         self.renderer = renderer
+     }
+ 
+-    /// Access to the underlying two-pass renderer (tests / title-lock writers).
+-    public var twoPassRenderer: NestedTopologyTwoPassRenderer {
+-        get { renderer }
+-        set { renderer = newValue }
++    /// Locks a native title so subsequent projections cannot overwrite it.
++    public mutating func lockTitle(
++        for key: NestedAssociationKey,
++        title: String,
++        authority: NestedTitleAuthority
++    ) {
++        renderer.lockTitle(for: key, title: title, authority: authority)
+     }
+ 
+     /// Projects all attachments for `nested.topology.list`.
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReducer.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReducer.swift
+index 3a562d86e..0c3797614 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReducer.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyReducer.swift
+@@ -274,7 +274,9 @@ public struct NestedTopologyReducer: Sendable {
+                 updated.displayTitle = displayTitle
+                 return updated
+             }
+-            return rebuilt(from: current, workspaces: workspaces, tabs: current.tabs, panes: current.panes, agents: current.agents, focus: current.focus)
++            let next = rebuilt(from: current, workspaces: workspaces, tabs: current.tabs, panes: current.panes, agents: current.agents, focus: current.focus)
++            try validator.validateSnapshot(next)
++            return next
+         case .tab:
+             try validator.validateNodeID(id, expectedKind: .tab)
+             guard current.tab(id: id) != nil else {
+@@ -286,7 +288,9 @@ public struct NestedTopologyReducer: Sendable {
+                 updated.displayTitle = displayTitle
+                 return updated
+             }
+-            return rebuilt(from: current, workspaces: current.workspaces, tabs: tabs, panes: current.panes, agents: current.agents, focus: current.focus)
++            let next = rebuilt(from: current, workspaces: current.workspaces, tabs: tabs, panes: current.panes, agents: current.agents, focus: current.focus)
++            try validator.validateSnapshot(next)
++            return next
+         case .pane:
+             try validator.validateNodeID(id, expectedKind: .pane)
+             guard current.pane(id: id) != nil else {
+@@ -298,7 +302,9 @@ public struct NestedTopologyReducer: Sendable {
+                 updated.displayTitle = displayTitle
+                 return updated
+             }
+-            return rebuilt(from: current, workspaces: current.workspaces, tabs: current.tabs, panes: panes, agents: current.agents, focus: current.focus)
++            let next = rebuilt(from: current, workspaces: current.workspaces, tabs: current.tabs, panes: panes, agents: current.agents, focus: current.focus)
++            try validator.validateSnapshot(next)
++            return next
+         case .agent:
+             try validator.validateNodeID(id, expectedKind: .agent)
+             guard current.agent(id: id) != nil else {
+@@ -310,7 +316,9 @@ public struct NestedTopologyReducer: Sendable {
+                 updated.displayTitle = displayTitle
+                 return updated
+             }
+-            return rebuilt(from: current, workspaces: current.workspaces, tabs: current.tabs, panes: current.panes, agents: agents, focus: current.focus)
++            let next = rebuilt(from: current, workspaces: current.workspaces, tabs: current.tabs, panes: current.panes, agents: agents, focus: current.focus)
++            try validator.validateSnapshot(next)
++            return next
+         }
+     }
+ 
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologySnapshot.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologySnapshot.swift
+index 2c428d00b..d45c61a55 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologySnapshot.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologySnapshot.swift
+@@ -62,6 +62,31 @@ public struct NestedTopologySnapshot: Hashable, Codable, Sendable {
+         self.focus = focus
+     }
+ 
++    public init(from decoder: any Decoder) throws {
++        let container = try decoder.container(keyedBy: CodingKeys.self)
++        let encodingVersion = try container.decodeIfPresent(UInt8.self, forKey: .encodingVersion)
++            ?? NestedTopologySnapshot.currentEncodingVersion
++        let attachmentID = try container.decode(UUID.self, forKey: .attachmentID)
++        let hostStableSurfaceID = try container.decode(UUID.self, forKey: .hostStableSurfaceID)
++        let provider = try container.decode(NestedProviderHandshake.self, forKey: .provider)
++        let workspaces = try container.decodeIfPresent([NestedWorkspaceNode].self, forKey: .workspaces) ?? []
++        let tabs = try container.decodeIfPresent([NestedTabNode].self, forKey: .tabs) ?? []
++        let panes = try container.decodeIfPresent([NestedPaneNode].self, forKey: .panes) ?? []
++        let agents = try container.decodeIfPresent([NestedAgentNode].self, forKey: .agents) ?? []
++        let focus = try container.decode(NestedFocus.self, forKey: .focus)
++        self.init(
++            encodingVersion: encodingVersion,
++            attachmentID: attachmentID,
++            hostStableSurfaceID: hostStableSurfaceID,
++            provider: provider,
++            workspaces: workspaces,
++            tabs: tabs,
++            panes: panes,
++            agents: agents,
++            focus: focus
++        )
++    }
++
+     /// Structural identity excluding display titles.
+     public var structuralIdentity: NestedTopologyStructuralIdentity {
+         NestedTopologyStructuralIdentity(
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyTwoPassRenderer.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyTwoPassRenderer.swift
+index 7ae61debc..6ba7c2a2b 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyTwoPassRenderer.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyTwoPassRenderer.swift
+@@ -3,20 +3,23 @@ public import Foundation
+ /// Two-pass nested topology projector for control-socket and sidebar reads.
+ ///
+ /// Pass 1 installs the authoritative ``NestedParentMap`` from the snapshot.
+-/// Pass 2 resolves labels through ``NestedAssociationStore`` title locks and
+-/// only publishes a new label when it differs from the last published value
+-/// (no thrash when the provider echoes the same title).
++/// Pass 2 resolves labels through ``NestedAssociationStore`` title locks.
++/// Projection state (parent map + installed provider generation) is keyed per
++/// attachment so multi-attachment ticks do not invalidate each other.
+ ///
+ /// Heuristic association runs at most once per association key.
+ public struct NestedTopologyTwoPassRenderer: Sendable {
+-    /// Stable parent edges used instead of re-inferring parents every tick.
++    private struct AttachmentProjectionState: Sendable {
++        var parentMap: NestedParentMap = NestedParentMap()
++        var installedProviderInstanceID: NestedProviderInstanceID?
++    }
++
++    /// Stable parent edges used by ``applyParentMapEvents`` and single-attachment tests.
+     public private(set) var parentMap: NestedParentMap
+-    /// Association / title-lock store for this attachment generation.
++    /// Association / title-lock store shared across attachments (keys include instance ID).
+     public private(set) var associations: NestedAssociationStore
+-    /// Last labels published per node (diff gate).
+-    private var lastPublishedLabels: [NestedNodeID: String]
+-    /// Provider instance generation last installed; used to invalidate associations.
+-    private var installedProviderInstanceID: NestedProviderInstanceID?
++    /// Per-attachment parent maps and installed provider generations.
++    private var stateByAttachment: [UUID: AttachmentProjectionState]
+     /// Deterministic collection ordering for projection passes.
+     private let ordering = NestedTopologyOrdering()
+ 
+@@ -24,8 +27,7 @@ public struct NestedTopologyTwoPassRenderer: Sendable {
+     public init() {
+         self.parentMap = NestedParentMap()
+         self.associations = NestedAssociationStore()
+-        self.lastPublishedLabels = [:]
+-        self.installedProviderInstanceID = nil
++        self.stateByAttachment = [:]
+     }
+ 
+     /// Projects one attachment into a public read summary.
+@@ -39,8 +41,7 @@ public struct NestedTopologyTwoPassRenderer: Sendable {
+             || attachment.state == .incompatible
+ 
+         guard let snapshot = attachment.latestSnapshot else {
+-            parentMap = NestedParentMap()
+-            lastPublishedLabels = [:]
++            stateByAttachment[attachment.attachmentID] = AttachmentProjectionState()
+             return NestedTopologyReadAttachment(
+                 attachmentID: attachment.attachmentID,
+                 hostWorkspaceID: attachment.hostWorkspaceID,
+@@ -55,18 +56,28 @@ public struct NestedTopologyTwoPassRenderer: Sendable {
+             )
+         }
+ 
+-        if let instance = attachment.providerInstanceID,
+-           installedProviderInstanceID != instance {
+-            associations.invalidate(providerInstanceGeneration: instance)
+-            installedProviderInstanceID = instance
+-            lastPublishedLabels = [:]
++        var state = stateByAttachment[attachment.attachmentID] ?? AttachmentProjectionState()
++        if let instance = attachment.providerInstanceID {
++            if let previous = state.installedProviderInstanceID, previous != instance {
++                // Drop only this attachment's superseded generation; keep other attachments.
++                associations.drop(providerInstanceGeneration: previous)
++            }
++            state.installedProviderInstanceID = instance
+         }
+ 
+         // Pass 1: authoritative parent map from snapshot (never re-infer from titles).
+-        parentMap.replace(with: snapshot)
++        state.parentMap.replace(with: snapshot)
++        stateByAttachment[attachment.attachmentID] = state
++        // Keep the public parentMap mirror for applyParentMapEvents / tests.
++        parentMap = state.parentMap
+ 
+-        // Pass 2: resolve labels with title locks; publish only when changed.
+-        let nodes = buildNodes(attachment: attachment, snapshot: snapshot, stale: stale)
++        // Pass 2: resolve labels with title locks.
++        let nodes = buildNodes(
++            attachment: attachment,
++            snapshot: snapshot,
++            stale: stale,
++            parentMap: state.parentMap
++        )
+         return NestedTopologyReadAttachment(
+             attachmentID: attachment.attachmentID,
+             hostWorkspaceID: attachment.hostWorkspaceID,
+@@ -119,7 +130,8 @@ public struct NestedTopologyTwoPassRenderer: Sendable {
+     private mutating func buildNodes(
+         attachment: NestedAttachmentRecord,
+         snapshot: NestedTopologySnapshot,
+-        stale: Bool
++        stale: Bool,
++        parentMap: NestedParentMap
+     ) -> [NestedTopologyReadNode] {
+         var nodes: [NestedTopologyReadNode] = []
+         nodes.reserveCapacity(
+@@ -273,14 +285,9 @@ public struct NestedTopologyTwoPassRenderer: Sendable {
+             providerInstanceGeneration: providerInstanceID
+         )
+         let proposal = associations.proposeTitle(for: key, proposed: proposed)
+-        let resolved = NestedDisplayStringSanitizer.sanitize(
++        return NestedDisplayStringSanitizer.sanitize(
+             proposal.title,
+             maxUTF8ByteCount: NestedTopologyLimits.default.maxDisplayTitleUTF8ByteCount
+         )
+-        if let previous = lastPublishedLabels[nodeID], previous == resolved {
+-            return previous
+-        }
+-        lastPublishedLabels[nodeID] = resolved
+-        return resolved
+     }
+ }
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyValidator.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyValidator.swift
+index 68ac3ec62..2a9593fcd 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyValidator.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedTopologyValidator.swift
+@@ -180,16 +180,15 @@ public struct NestedTopologyValidator: Sendable {
+             limit: limits.maxProviderRawStatusUTF8ByteCount
+         )
+         if let normalized = NestedAgentStatus.normalized(from: providerRawStatus),
+-           normalized != status,
+-           status != .unknown || normalized != .unknown
++           normalized != .unknown,
++           normalized != status
+         {
+-            // Allow explicit unknown even when raw maps to a known value only when
+-            // the caller intentionally chose unknown for a truly unknown token.
+-            if normalized != .unknown && status != normalized {
+-                throw NestedTopologyValidationError.invalidStatus(
+-                    reason: "status \(status.rawValue) does not match provider_raw_status"
+-                )
+-            }
++            // A token that normalizes to `.unknown` accepts any declared status.
++            // A known normalized token must match the declared status exactly
++            // (including rejecting `.unknown` when the provider token is known).
++            throw NestedTopologyValidationError.invalidStatus(
++                reason: "status \(status.rawValue) does not match provider_raw_status"
++            )
+         }
+     }
+ 
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedUnixSocketEndpointValidator.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedUnixSocketEndpointValidator.swift
+index 278f3bb23..8110a7e19 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedUnixSocketEndpointValidator.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/NestedUnixSocketEndpointValidator.swift
+@@ -67,6 +67,9 @@ public struct NestedUnixSocketEndpointValidator: NestedEndpointValidating, Senda
+     /// Important: do **not** run `standardizingPath` / `resolvingSymlinksInPath` on the
+     /// full path. On Linux, swift-corelibs Foundation's `standardizingPath` follows a
+     /// final symlink, which would defeat the no-symlink-confusion check.
++    ///
++    /// Parent resolution preserves OS symlink + `..` semantics: the final component is
++    /// taken from the raw path, and only the raw parent is symlink-resolved.
+     public func canonicalize(_ path: String) throws -> String {
+         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+         guard !trimmed.isEmpty else {
+@@ -84,17 +87,14 @@ public struct NestedUnixSocketEndpointValidator: NestedEndpointValidating, Senda
+             )
+         }
+ 
+-        let collapsed = Self.collapseDotSegments(trimmed)
+-        guard collapsed.hasPrefix("/") else {
+-            throw NestedEndpointSecurityError.notAbsolutePath
+-        }
+-        let url = URL(fileURLWithPath: collapsed, isDirectory: false)
+-        let last = url.lastPathComponent
+-        guard !last.isEmpty, last != "/", last != "." , last != ".." else {
++        let last = (trimmed as NSString).lastPathComponent
++        guard !last.isEmpty, last != "/", last != ".", last != ".." else {
+             throw NestedEndpointSecurityError.illegalPathBytes
+         }
+-        let parent = url.deletingLastPathComponent().path
+-        // Resolve parent directory symlinks only; keep the final component literal.
++        let parent = (trimmed as NSString).deletingLastPathComponent
++        guard parent.hasPrefix("/") else {
++            throw NestedEndpointSecurityError.notAbsolutePath
++        }
+         let resolvedParent = (parent as NSString).resolvingSymlinksInPath
+         let candidate = (resolvedParent as NSString).appendingPathComponent(last)
+         guard candidate.utf8.count <= Self.maxSocketPathUTF8ByteCount else {
+@@ -105,24 +105,6 @@ public struct NestedUnixSocketEndpointValidator: NestedEndpointValidating, Senda
+         return candidate
+     }
+ 
+-    /// Collapses `.` / `..` / duplicate `/` without touching the filesystem.
+-    private static func collapseDotSegments(_ path: String) -> String {
+-        var stack: [String] = []
+-        for segment in path.split(separator: "/", omittingEmptySubsequences: true) {
+-            switch segment {
+-            case ".":
+-                continue
+-            case "..":
+-                if !stack.isEmpty {
+-                    stack.removeLast()
+-                }
+-            default:
+-                stack.append(String(segment))
+-            }
+-        }
+-        return "/" + stack.joined(separator: "/")
+-    }
+-
+     private func lstatSocket(at path: String) throws -> stat {
+         var status = stat()
+         let result = lstat(path, &status)
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrLayoutNode.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrLayoutNode.swift
+index 7fbf0b9a9..f6d078170 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrLayoutNode.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrLayoutNode.swift
+@@ -31,6 +31,22 @@ public struct RemoteHerdrLayoutNode: Hashable, Sendable, Codable {
+     }
+ 
+     public init(from decoder: any Decoder) throws {
++        try self.init(
++            from: decoder,
++            depth: 0,
++            maxDepth: NestedTopologyLimits.default.maxLayoutTreeDepth
++        )
++    }
++
++    private init(from decoder: any Decoder, depth: Int, maxDepth: Int) throws {
++        guard depth <= maxDepth else {
++            throw DecodingError.dataCorrupted(
++                .init(
++                    codingPath: decoder.codingPath,
++                    debugDescription: "layout tree exceeds max depth \(maxDepth)"
++                )
++            )
++        }
+         let container = try decoder.container(keyedBy: CodingKeys.self)
+         width = max(1, try container.decodeIfPresent(Int.self, forKey: .width) ?? 1)
+         height = max(1, try container.decodeIfPresent(Int.self, forKey: .height) ?? 1)
+@@ -40,16 +56,14 @@ public struct RemoteHerdrLayoutNode: Hashable, Sendable, Codable {
+             content = .pane(paneID)
+         } else if let paneInt = try container.decodeIfPresent(Int.self, forKey: .pane) {
+             content = .pane(String(paneInt))
+-        } else if let children = try container.decodeIfPresent(
+-            [RemoteHerdrLayoutNode].self,
+-            forKey: .horizontal
+-        ) {
+-            content = .horizontal(children)
+-        } else if let children = try container.decodeIfPresent(
+-            [RemoteHerdrLayoutNode].self,
+-            forKey: .vertical
+-        ) {
+-            content = .vertical(children)
++        } else if container.contains(.horizontal) {
++            content = .horizontal(
++                try Self.decodeChildren(from: container, forKey: .horizontal, depth: depth, maxDepth: maxDepth)
++            )
++        } else if container.contains(.vertical) {
++            content = .vertical(
++                try Self.decodeChildren(from: container, forKey: .vertical, depth: depth, maxDepth: maxDepth)
++            )
+         } else {
+             throw DecodingError.dataCorrupted(
+                 .init(
+@@ -60,6 +74,23 @@ public struct RemoteHerdrLayoutNode: Hashable, Sendable, Codable {
+         }
+     }
+ 
++    private static func decodeChildren(
++        from container: KeyedDecodingContainer<CodingKeys>,
++        forKey key: CodingKeys,
++        depth: Int,
++        maxDepth: Int
++    ) throws -> [RemoteHerdrLayoutNode] {
++        var unkeyed = try container.nestedUnkeyedContainer(forKey: key)
++        var children: [RemoteHerdrLayoutNode] = []
++        while !unkeyed.isAtEnd {
++            let childDecoder = try unkeyed.superDecoder()
++            children.append(
++                try RemoteHerdrLayoutNode(from: childDecoder, depth: depth + 1, maxDepth: maxDepth)
++            )
++        }
++        return children
++    }
++
+     public func encode(to encoder: any Encoder) throws {
+         var container = encoder.container(keyedBy: CodingKeys.self)
+         try container.encode(width, forKey: .width)
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrPaneIO.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrPaneIO.swift
+index 3bcf718c9..866f09c5c 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrPaneIO.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrPaneIO.swift
+@@ -19,11 +19,14 @@ public protocol RemoteHerdrPaneIO: Sendable {
+ 
+ extension HerdrNestedTopologyClient: RemoteHerdrPaneIO {
+     public func sendKeys(paneID: String, data: Data) async throws {
+-        let text = String(decoding: data, as: UTF8.self)
+-        _ = try await performRequest(
+-            method: "pane.send",
+-            params: ["pane_id": paneID, "text": text]
+-        )
++        // Prefer UTF-8 `text`; fall back to lossless base64 for non-UTF-8 bytes.
++        let params: [String: Any]
++        if let text = String(data: data, encoding: .utf8) {
++            params = ["pane_id": paneID, "text": text]
++        } else {
++            params = ["pane_id": paneID, "data_base64": data.base64EncodedString()]
++        }
++        _ = try await performRequest(method: "pane.send", params: params)
+     }
+ 
+     public func splitPane(paneID: String, direction: RemoteHerdrSplitDirection) async throws {
+@@ -62,26 +65,17 @@ extension HerdrNestedTopologyClient: RemoteHerdrPaneIO {
+                 "lines": max(1, lines),
+             ]
+         )
+-        return Self.paneReadData(from: response.result)
++        return try Self.paneReadData(from: response.result)
+     }
+ 
+-    /// Extracts UTF-8 pane text from a protocol-17 success payload.
+-    static func paneReadData(from result: HerdrWireResult?) -> Data {
++    /// Extracts UTF-8 pane text from the documented protocol-17 `pane_text.text` field.
++    static func paneReadData(from result: HerdrWireResult?) throws -> Data {
+         guard case let .other(_, object) = result else {
+-            return Data()
+-        }
+-        for key in ["text", "output", "content", "body", "data"] {
+-            if case let .string(text)? = object[key] {
+-                return Data(text.utf8)
+-            }
++            throw NestedTopologyProviderError.missingRequiredField("result.text")
+         }
+-        if case let .array(lines)? = object["lines"] {
+-            let joined = lines.compactMap { item -> String? in
+-                if case let .string(text) = item { return text }
+-                return nil
+-            }.joined(separator: "\n")
+-            return Data(joined.utf8)
++        guard case let .string(text)? = object["text"] else {
++            throw NestedTopologyProviderError.missingRequiredField("result.text")
+         }
+-        return Data()
++        return Data(text.utf8)
+     }
+ }
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSessionMirror.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSessionMirror.swift
+index 1c028dd22..106bc9b19 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSessionMirror.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSessionMirror.swift
+@@ -63,14 +63,17 @@ public enum RemoteHerdrSessionMirror {
+         zoomedPaneIDs: Set<String> = []
+     ) -> [RemoteHerdrWindow] {
+         let panesByTab = Dictionary(grouping: snapshot.panes, by: \.tabID)
+-        return snapshot.tabs.map { tab in
++        return snapshot.tabs.compactMap { tab in
+             let panes = (panesByTab[tab.id] ?? []).sorted { lhs, rhs in
+                     if lhs.orderIndex != rhs.orderIndex {
+                         return lhs.orderIndex < rhs.orderIndex
+                     }
+                     return lhs.id.rawID < rhs.id.rawID
+                 }
+-            let layout = layouts[tab.id.rawID] ?? Self.fallbackLayout(paneIDs: panes.map(\.id.rawID))
++            guard let layout = layouts[tab.id.rawID] ?? Self.fallbackLayout(paneIDs: panes.map(\.id.rawID))
++            else {
++                return nil
++            }
+             let zoomedID = panes.map(\.id.rawID).first { zoomedPaneIDs.contains($0) }
+             let visible: RemoteHerdrLayoutNode?
+             if let zoomedID, let leaf = layout.firstLeaf(withPaneID: zoomedID) {
+@@ -93,15 +96,10 @@ public enum RemoteHerdrSessionMirror {
+     }
+ 
+     /// Stack remaining panes vertically when Herdr did not publish a tree.
+-    public static func fallbackLayout(paneIDs: [String]) -> RemoteHerdrLayoutNode {
++    /// Returns `nil` when there are no panes (never synthesizes an empty pane id).
++    public static func fallbackLayout(paneIDs: [String]) -> RemoteHerdrLayoutNode? {
+         guard let first = paneIDs.first else {
+-            return RemoteHerdrLayoutNode(
+-                width: 80,
+-                height: 24,
+-                x: 0,
+-                y: 0,
+-                content: .pane("")
+-            )
++            return nil
+         }
+         if paneIDs.count == 1 {
+             return RemoteHerdrLayoutNode(
+diff --git a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSizing.swift b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSizing.swift
+index fb293c6ed..7a638ae0a 100644
+--- a/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSizing.swift
++++ b/Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrSizing.swift
+@@ -38,6 +38,7 @@ public struct RemoteHerdrSizing: Sendable {
+         guard axisSpan > 0, totalCells >= 1 else { return 1 }
+         let fraction = min(0.95, max(0.05, draggedExtent / axisSpan))
+         let cells = Int((fraction * Double(totalCells)).rounded())
+-        return min(totalCells - 1, max(1, cells))
++        // totalCells == 1 must still yield 1 (never 0) for pane.resize.
++        return min(max(1, totalCells - 1), max(1, cells))
+     }
+ }
+diff --git a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/FakeHerdrUnixSocketServer.swift b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/FakeHerdrUnixSocketServer.swift
+index fc2b2d62b..cf6a6014a 100644
+--- a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/FakeHerdrUnixSocketServer.swift
++++ b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/FakeHerdrUnixSocketServer.swift
+@@ -112,6 +112,12 @@ final class FakeHerdrUnixSocketServer: @unchecked Sendable {
+         lock.lock()
+         running = false
+         lock.unlock()
++        // Unblock a thread parked in accept() before invalidating the descriptor.
++        #if canImport(Darwin)
++        _ = Darwin.shutdown(listenFD, SHUT_RDWR)
++        #else
++        _ = Glibc.shutdown(listenFD, Int32(SHUT_RDWR))
++        #endif
+         _ = posixClose(listenFD)
+         unlink(path)
+     }
+diff --git a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/HerdrNestedTopologyClientTests.swift b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/HerdrNestedTopologyClientTests.swift
+index cb9ee2f1e..bd886b5b4 100644
+--- a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/HerdrNestedTopologyClientTests.swift
++++ b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/HerdrNestedTopologyClientTests.swift
+@@ -40,6 +40,8 @@ import Testing
+             switch method {
+             case "ping":
+                 return [HerdrFakeFixtures.line(HerdrFakeFixtures.pongJSON(id: id))]
++            case "session.snapshot":
++                return [HerdrFakeFixtures.line(HerdrFakeFixtures.snapshotJSON(id: id))]
+             case "events.subscribe":
+                 return [
+                     HerdrFakeFixtures.line(HerdrFakeFixtures.subscriptionStartedJSON(id: id)),
+@@ -75,6 +77,8 @@ import Testing
+             switch method {
+             case "ping":
+                 return [HerdrFakeFixtures.line(HerdrFakeFixtures.pongJSON(id: id))]
++            case "session.snapshot":
++                return [HerdrFakeFixtures.line(HerdrFakeFixtures.snapshotJSON(id: id))]
+             case "events.subscribe":
+                 let ack = HerdrFakeFixtures.subscriptionStartedJSON(id: id) + "\n"
+                 let event = HerdrFakeFixtures.workspaceCreatedEventJSON() + "\n"
+@@ -166,11 +170,15 @@ import Testing
+     }
+ 
+     @Test func cancellationClosesDescriptorPromptly() async throws {
++        let subscribed = AsyncStream<Void>.makeStream()
+         let server = try FakeHerdrUnixSocketServer { _, id, method in
+             switch method {
+             case "ping":
+                 return [HerdrFakeFixtures.line(HerdrFakeFixtures.pongJSON(id: id))]
++            case "session.snapshot":
++                return [HerdrFakeFixtures.line(HerdrFakeFixtures.snapshotJSON(id: id))]
+             case "events.subscribe":
++                subscribed.continuation.yield()
+                 return [HerdrFakeFixtures.line(HerdrFakeFixtures.subscriptionStartedJSON(id: id))]
+             default:
+                 return [HerdrFakeFixtures.line(HerdrFakeFixtures.errorJSON(id: id))]
+@@ -183,16 +191,15 @@ import Testing
+         let task = Task {
+             for try await _ in stream {}
+         }
+-        try await Task.sleep(for: .milliseconds(100))
+-        let started = ContinuousClock.now
++        var subscribedIterator = subscribed.stream.makeAsyncIterator()
++        _ = await subscribedIterator.next()
+         task.cancel()
+         do {
+             _ = try await task.value
+         } catch {
+             // Cancellation may surface as an error depending on timing.
+         }
+-        let elapsed = ContinuousClock.now - started
+-        #expect(elapsed < .seconds(2))
++        #expect(task.isCancelled)
+     }
+ 
+     @Test func oversizedLineFails() async throws {
+diff --git a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedAssociationTests.swift b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedAssociationTests.swift
+index 403ed62ed..73c1c1900 100644
+--- a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedAssociationTests.swift
++++ b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedAssociationTests.swift
+@@ -14,12 +14,15 @@ import Testing
+     @Test func heuristicOnceSkipsAfterFirstSuccess() {
+         var store = NestedAssociationStore()
+         #expect(store.shouldRunHeuristic(for: key))
+-        store.markHeuristicSatisfied(
+-            for: key,
+-            parentID: NestedTopologyFixtures.nodeID(kind: .tab, rawID: "w1:t1")
+-        )
++        let parent = NestedTopologyFixtures.nodeID(kind: .tab, rawID: "w1:t1")
++        store.markHeuristicSatisfied(for: key, parentID: parent)
+         #expect(store.shouldRunHeuristic(for: key) == false)
+         #expect(store.record(for: key)?.heuristicSatisfied == true)
++        #expect(store.record(for: key)?.parentID == parent)
++
++        let otherParent = NestedTopologyFixtures.nodeID(kind: .tab, rawID: "w1:t2")
++        store.markHeuristicSatisfied(for: key, parentID: otherParent)
++        #expect(store.record(for: key)?.parentID == parent)
+     }
+ 
+     @Test func titleLockSuppressesOverwrite() {
+diff --git a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyAttachmentCoordinatorTests.swift b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyAttachmentCoordinatorTests.swift
+index 78cf0b951..ccebaf853 100644
+--- a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyAttachmentCoordinatorTests.swift
++++ b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyAttachmentCoordinatorTests.swift
+@@ -339,13 +339,17 @@ import Testing
+             )
+         }
+ 
+-        // One coordinator / one factory client — attach sequentially with a factory
+-        // that returns a fresh stub via a box would be heavier; attach two surfaces
+-        // using one client is enough to prove teardown clears the map + locks.
+-        let client = makeClient(surface: AttachmentTestFixtures.surfaceA, instance: "t1")
++        // Attach two surfaces through a sequencing factory, then prove teardown
++        // clears every attachment and releases both handoffs.
++        let factory = SequencingClientFactory { configuration in
++            makeClient(
++                surface: configuration.hostStableSurfaceID,
++                instance: configuration.hostStableSurfaceID == AttachmentTestFixtures.surfaceA ? "t1" : "t2"
++            )
++        }
+         let coordinator = NestedTopologyAttachmentCoordinator(
+             validator: StubEndpointValidator(preConnectResult: .success(AttachmentTestFixtures.endpoint)),
+-            clientFactory: StubNestedTopologyProviderClientFactory(client: client),
++            clientFactory: factory,
+             handoff: NestedPluginWriterHandoff(directoryURL: handoffDir)
+         )
+         _ = try await coordinator.attach(
+@@ -355,12 +359,23 @@ import Testing
+             socketPath: AttachmentTestFixtures.endpoint.canonicalPath,
+             authorization: .userConfirmed
+         )
++        _ = try await coordinator.attach(
++            hostWorkspaceID: AttachmentTestFixtures.workspaceA,
++            hostStableSurfaceID: AttachmentTestFixtures.surfaceB,
++            providerKind: .herdr,
++            socketPath: AttachmentTestFixtures.endpoint.canonicalPath,
++            authorization: .userConfirmed
++        )
+         await coordinator.teardown()
+         #expect(await coordinator.allAttachments().isEmpty)
+         #expect(
+             NestedPluginWriterHandoff(directoryURL: handoffDir)
+                 .isHeld(hostStableSurfaceID: AttachmentTestFixtures.surfaceA) == false
+         )
++        #expect(
++            NestedPluginWriterHandoff(directoryURL: handoffDir)
++                .isHeld(hostStableSurfaceID: AttachmentTestFixtures.surfaceB) == false
++        )
+     }
+ 
+     @Test func reconnectCancellationDuringConnecting() async throws {
+@@ -612,7 +627,10 @@ import Testing
+         )
+         #expect(record.state == .live)
+         #expect(record.latestSnapshot?.workspaces.isEmpty == false)
+-        #expect(record.endpoint?.canonicalPath == server.path || record.endpoint != nil)
++        let endpoint = try #require(record.endpoint)
++        let expectedCanonical = try NestedUnixSocketEndpointValidator(expectedOwnerUID: geteuid())
++            .canonicalize(server.path)
++        #expect(endpoint.canonicalPath == expectedCanonical)
+ 
+         await coordinator.teardown()
+     }
+diff --git a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyReadProjectionTests.swift b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyReadProjectionTests.swift
+index 95386c195..983b4b428 100644
+--- a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyReadProjectionTests.swift
++++ b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/NestedTopologyReadProjectionTests.swift
+@@ -248,6 +248,36 @@ struct NestedTopologyReadProjectionTests {
+         #expect(filtered.attachments[0].hostStableSurfaceID == NestedTopologyFixtures.hostSurfaceID)
+     }
+ 
++    @Test func titleLockSurvivesProjectionOfASecondAttachment() throws {
++        var service = NestedTopologyReadService()
++        let snapshotA = NestedTopologyFixtures.snapshot(instance: NestedTopologyFixtures.instanceA)
++        let snapshotB = NestedTopologyFixtures.snapshot(instance: NestedTopologyFixtures.instanceB)
++
++        let key = NestedAssociationKey(
++            nodeID: snapshotA.panes[0].id,
++            sessionRawID: snapshotA.panes[0].id.rawID,
++            providerInstanceGeneration: NestedTopologyFixtures.instanceA
++        )
++        service.lockTitle(for: key, title: "Locked Pane", authority: .user)
++
++        var attachmentA = liveAttachment(snapshot: snapshotA)
++        attachmentA.providerInstanceID = NestedTopologyFixtures.instanceA
++
++        var attachmentB = liveAttachment(snapshot: snapshotB)
++        attachmentB.attachmentID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
++        attachmentB.hostStableSurfaceID = UUID(uuidString: "66666666-6666-6666-6666-666666666666")!
++        attachmentB.providerInstanceID = NestedTopologyFixtures.instanceB
++
++        _ = service.list(attachments: [attachmentA, attachmentB])
++        let second = service.list(attachments: [attachmentA, attachmentB])
++
++        let projectedA = try #require(
++            second.attachments.first { $0.providerInstanceID == NestedTopologyFixtures.instanceA }
++        )
++        let paneLabel = try #require(projectedA.nodes.first { $0.id.kind == .pane }?.label)
++        #expect(paneLabel == "Locked Pane")
++    }
++
+     private func liveAttachment(snapshot: NestedTopologySnapshot) -> NestedAttachmentRecord {
+         NestedAttachmentRecord(
+             attachmentID: NestedTopologyFixtures.attachmentID,
+diff --git a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/RemoteHerdrWindowMirrorTests.swift b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/RemoteHerdrWindowMirrorTests.swift
+index ac197a1e2..3fca43be1 100644
+--- a/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/RemoteHerdrWindowMirrorTests.swift
++++ b/Packages/macOS/CmuxNestedTopology/Tests/CmuxNestedTopologyTests/RemoteHerdrWindowMirrorTests.swift
+@@ -238,6 +238,7 @@ import Testing
+         #expect(RemoteHerdrSizing().resizeCells(draggedExtent: 400, axisSpan: 800, totalCells: 100) == 50)
+         #expect(RemoteHerdrSizing().resizeCells(draggedExtent: 0, axisSpan: 800, totalCells: 100) == 5)
+         #expect(RemoteHerdrSizing().resizeCells(draggedExtent: 800, axisSpan: 800, totalCells: 100) == 95)
++        #expect(RemoteHerdrSizing().resizeCells(draggedExtent: 400, axisSpan: 800, totalCells: 1) == 1)
+     }
+ 
+     @Test func outputDeltaIncrementalAndRedraw() {
+-- 
+2.43.0
+
