@@ -496,7 +496,10 @@ class HerdrApi:
         if not path:
             raise ApiError("Herdr socket not available")
         client = HerdrSocketClient(path, timeout=self.timeout)
-        client.connect()
+        try:
+            client.connect()
+        except HerdrSocketError as exc:
+            raise ApiError(str(exc)) from exc
         self.client = client
         self._owned_client = True
 

@@ -38,6 +38,7 @@ from bridge.cmux_herdr_bridge import (
     writer_status,
     _load_association_map,
     _pane_from_raw,
+    _snapshot_from_session_payload,
     _parent_key,
     _prior_for_pane,
 )
@@ -58,6 +59,37 @@ class MapStatusTests(unittest.TestCase):
     def test_case_insensitive(self):
         self.assertEqual(map_status_to_style("WORKING")[0], "hammer")
         self.assertEqual(map_status_to_style("Done")[0], "checkmark.circle")
+
+
+class SessionSnapshotParseTests(unittest.TestCase):
+    def test_nested_snapshot_payload_parses_panes(self) -> None:
+        snap = _snapshot_from_session_payload(
+            {
+                "snapshot": {
+                    "panes": [
+                        {
+                            "pane_id": "w2:p1",
+                            "tab_id": "w2:t1",
+                            "workspace_id": "w2",
+                            "agent": "codex",
+                            "agent_status": "idle",
+                        }
+                    ],
+                    "tabs": [{"tab_id": "w2:t1", "workspace_id": "w2", "label": "A"}],
+                    "workspaces": [{"workspace_id": "w2", "label": "Demo"}],
+                    "layouts": {},
+                }
+            }
+        )
+        self.assertIsNotNone(snap)
+        assert snap is not None
+        self.assertEqual(snap.panes[0].pane_id, "w2:p1")
+        self.assertEqual(snap.tabs[0].tab_id, "w2:t1")
+        self.assertEqual(snap.workspaces[0].workspace_id, "w2")
+
+    def test_unusable_payloads_are_rejected(self) -> None:
+        self.assertIsNone(_snapshot_from_session_payload("nope"))
+        self.assertIsNone(_snapshot_from_session_payload({"panes": "bad"}))
 
 
 class PaneTests(unittest.TestCase):

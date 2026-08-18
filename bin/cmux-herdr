@@ -75,7 +75,7 @@ from bridge.cmux_herdr_mirror import (  # noqa: E402
     send_pane_named_key,
     wait_herdr_event,
 )
-from bridge.cmux_herdr_pump import ApiTransport, LivePump  # noqa: E402
+from bridge.cmux_herdr_pump import ApiTransport, LivePump, watch_followup  # noqa: E402
 from bridge.cmux_herdr_socket import HerdrEventSession  # noqa: E402
 
 __version__ = "0.1.0"
@@ -289,6 +289,8 @@ def cmd_watch(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
     initial = True
+    last_resync = 0.0
+    periodic_resync = max(15.0, interval * 10)
     try:
         while not stop["flag"]:
             try:
@@ -303,8 +305,10 @@ def cmd_watch(args: argparse.Namespace) -> int:
                         pump.poll(live_host)
                     _watch_project(args)
                     initial = False
+                    last_resync = time.time()
                 elif want_events:
                     event = _watch_next_event(event_session, interval)
+                    event_gap = False
                     if event_session is not None and event is None:
                         # Subscribe socket died (not a clean timeout).
                         if not event_session.alive():
@@ -312,7 +316,23 @@ def cmd_watch(args: argparse.Namespace) -> int:
                             event_session = HerdrEventSession.try_open(
                                 timeout=interval
                             )
-                    _watch_apply_event(args, live_host, pump, event)
+                            event_gap = True
+                    if (
+                        not event_gap
+                        and live_host is not None
+                        and pump is not None
+                        and (time.time() - last_resync) >= periodic_resync
+                    ):
+                        event_gap = True
+                    _watch_apply_event(
+                        args,
+                        live_host,
+                        pump,
+                        event,
+                        event_gap=event_gap,
+                    )
+                    if event_gap:
+                        last_resync = time.time()
                 else:
                     _watch_project(args)
             except BridgeError as exc:
@@ -449,21 +469,32 @@ def _watch_sync_pills(args: argparse.Namespace) -> None:
     print(summary["summary"])
 
 
-def _watch_apply_event(args, live_host, pump, event) -> None:
-    """Feed one event (or a timeout) into the apply host, then project."""
+def _watch_apply_event(
+    args, live_host, pump, event, *, event_gap: bool = False
+) -> None:
+    """Feed one event (or a timeout) into the apply host, then maybe project.
+
+    Native SessionHost: subscribe gap → snapshot resync; timeout → paint
+    only; topology → remirror; agent_status → pills. Never rebuild chrome
+    on every poll tick.
+    """
     if live_host is not None and pump is not None:
+        if event_gap:
+            pump.resync(live_host, log="event_gap")
+            _watch_project(args)
+            return
         if event is not None:
             pumped = pump.handle_event(event, live_host)
-            if pumped.resync:
+            follow = watch_followup(pumped, had_event=True)
+            if follow == "project":
                 _watch_project(args)
-            elif pumped.status_updated:
+            elif follow == "pills":
                 _watch_sync_pills(args)
             return
         pump.poll(live_host)
-        _watch_project(args)
         return
     # Native owns the host, or this is status-only ``--events``.
-    if event is None or getattr(args, "tmux_parity", False):
+    if event_gap or event is None or getattr(args, "tmux_parity", False):
         _watch_project(args)
     else:
         _watch_sync_pills(args)
