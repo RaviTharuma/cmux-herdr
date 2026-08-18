@@ -27,7 +27,8 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - Mirror Herdr agent state into cmux workspace **status pills** (`herdr:<pane_id>`) and progress.
 - CLI for topology and control: `status`, `doctor`, `tree`, `agents`, `sync`, `watch`,
   `mirror`, `attach-pane`, `send-key`, `observe`, `attach`, `detach`, `restore`,
-  `clear`, focus helpers, `read-pane` / `read-agent`, `split`, `json-dump`.
+  `api` / tab-pane-workspace-agent verbs, `clear`, focus helpers, `read-pane` /
+  `read-agent`, `split`, `json-dump`.
 - Persist per-host-fingerprint Herdr-parent → cmux-workspace bindings so outer focus
   changes do not thrash status writes and multi-window hosts do not collide.
 - Skip ordinary shell panes (no agent) so they are not mirrored as agents.
@@ -51,9 +52,10 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 
 2. **Event-driven watch, poll fallback.**
    `watch --tmux-parity` holds one Herdr Unix-socket `events.subscribe` session
-   when `HERDR_SOCKET_PATH` is live, then resyncs; otherwise it polls. Native
-   PR7 feeds `%output`-style bytes into Ghostty; the plugin still polls
-   `pane.read` and applies an incremental delta.
+   when `HERDR_SOCKET_PATH` is live, then pumps events into `LiveApplyHost`
+   (topology → resync, `pane.updated` → `pane.read` delta, focus, agent_status)
+   and remirrors cmux viewers on topology or interval. Native PR7 feeds
+   `%output`-style bytes into Ghostty; the plugin still polls `pane.read`.
 
 3. **Live apply runs in the plugin; Ghostty panels are still native.**
    `bridge/cmux_herdr_live.py` is the ssh-tmux apply machine
@@ -120,6 +122,13 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       heartbeat is stale (plugin may resume). `attach` / `observe` /
       `restore` / `watch` yield when native owns; they do not start a
       competing in-memory host. Host close still never `server.stop`.
+- [x] **Herdr control-surface parity** (`bridge/cmux_herdr_api.py`):
+      socket-first allowlisted RPC + CLI verbs for tabs/panes/workspaces/
+      agents/layout. Never `server.stop`. Control still works when native
+      owns the display lease.
+- [x] **Live SessionHost pump** (`bridge/cmux_herdr_pump.py`):
+      `watch --tmux-parity` routes `pane.read`, focus, and `agent_status`
+      into `LiveApplyHost`. Isolated per pane. Not Ghostty PTY theft.
 - [x] Native-title lock + diff-before-write (`lock-title` / `unlock-title`,
       `CMUX_HERDR_LOCK_TITLES`).
 - [x] Heuristic-once parent map (`parent_tab_id` + `heuristic_satisfied`; session

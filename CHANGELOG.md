@@ -9,6 +9,22 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **Herdr control-surface parity** (`bridge/cmux_herdr_api.py`):
+  socket-first allowlisted RPC for the published protocol-17 methods
+  (tabs, panes, workspaces, agents, layout). CLI fallback when the
+  socket is down. Refuses `server.stop`, `pane.graphics.*`, and
+  `plugin.*`. Control talks to Herdr even when native owns the cmux
+  projection. CLI: `api`, `new-tab`, `close-tab`, `rename-tab`,
+  `new-workspace`, `close-workspace`, `rename-workspace`, `close-pane`
+  (busy panes need `--force`), `zoom-pane`, `resize-pane`, `swap-pane`,
+  `send`, `neighbor`, `layout`, `agent-prompt`, `agent-wait`.
+
+- **Live SessionHost pump** (`bridge/cmux_herdr_pump.py`):
+  `watch --tmux-parity` feeds `pane.read` / focus / `agent_status` into
+  `LiveApplyHost` the way native SessionHost drives Ghostty. Topology
+  events resync; output stays isolated per pane; provider focus does
+  not steal first responder. Still in-memory surfaces — not PTY theft.
+
 - **Plugin ↔ native handoff** (`bridge/cmux_herdr_handoff.py`): one
   writer lease (JSON `owner` / `pid` / `heartbeat_ms`) and one shared
   restore file (`mode: reattach` only). Native live → plugin

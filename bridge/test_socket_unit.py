@@ -158,6 +158,9 @@ class HerdrSocketClientTests(unittest.TestCase):
                 return [{"id": req_id, "error": {"code": "nope", "message": "unexpected"}}]
             params = request.get("params") or {}
             self.assertIn("subscriptions", params)
+            kinds = {item.get("type") for item in params.get("subscriptions") or []}
+            self.assertIn("pane.agent_status_changed", kinds)
+            self.assertIn("workspace.metadata_updated", kinds)
             return [
                 {"id": req_id, "result": {"type": "subscription_started"}},
                 {

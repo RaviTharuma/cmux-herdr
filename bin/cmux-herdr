@@ -20,6 +20,12 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from bridge.cmux_herdr_api import (  # noqa: E402
+    ALLOWED_METHODS,
+    ApiError,
+    HerdrApi,
+    extract_agent_status,
+)
 from bridge.cmux_herdr_bridge import (  # noqa: E402
     BridgeError,
     _load_association_map,
@@ -44,6 +50,7 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
     split_pane,
     sync_to_cmux,
 )
+from bridge.cmux_herdr_control import close_intent  # noqa: E402
 from bridge.cmux_herdr_handoff import (  # noqa: E402
     heartbeat_plugin_writer,
     release_plugin_writer,
@@ -68,6 +75,7 @@ from bridge.cmux_herdr_mirror import (  # noqa: E402
     send_pane_named_key,
     wait_herdr_event,
 )
+from bridge.cmux_herdr_pump import ApiTransport, LivePump  # noqa: E402
 from bridge.cmux_herdr_socket import HerdrEventSession  # noqa: E402
 
 __version__ = "0.1.0"
@@ -252,9 +260,13 @@ def cmd_watch(args: argparse.Namespace) -> int:
         f"(workspace={args.workspace or 'auto'}); Ctrl-C to stop",
         file=sys.stderr,
     )
+    want_events = bool(
+        getattr(args, "tmux_parity", False) or getattr(args, "events", False)
+    )
     event_session = None
     live_host = None
-    if getattr(args, "tmux_parity", False) or getattr(args, "events", False):
+    pump = None
+    if want_events:
         event_session = HerdrEventSession.try_open(timeout=interval)
         if event_session is not None:
             print(
@@ -264,41 +276,48 @@ def cmd_watch(args: argparse.Namespace) -> int:
     watch_note = {"text": ""}
     if getattr(args, "tmux_parity", False):
         live_host = _watch_reconcile_host(args, live_host, watch_note)
+        if live_host is not None:
+            pump = _make_watch_pump()
+            print(
+                "cmux-herdr watch: pumping pane.read / focus / agent_status "
+                "into the live apply host",
+                file=sys.stderr,
+            )
+    initial = True
     try:
         while not stop["flag"]:
             try:
                 if getattr(args, "tmux_parity", False):
                     live_host = _watch_reconcile_host(args, live_host, watch_note)
-                if getattr(args, "mirror", False) or getattr(args, "tmux_parity", False):
-                    result = mirror_to_cmux(
-                        **_mirror_kwargs(args),
-                        dry_run=False,
-                        log=False,
-                    )
-                    print(format_mirror_plan(result).splitlines()[0])
+                    if live_host is not None and pump is None:
+                        pump = _make_watch_pump()
+                    if live_host is None:
+                        pump = None
+                if initial:
+                    if live_host is not None and pump is not None:
+                        pump.poll(live_host)
+                    _watch_project(args)
+                    initial = False
+                elif want_events:
+                    event = _watch_next_event(event_session, interval)
+                    if event_session is not None and event is None:
+                        # Subscribe socket died (not a clean timeout).
+                        if not event_session.alive():
+                            event_session.close()
+                            event_session = HerdrEventSession.try_open(
+                                timeout=interval
+                            )
+                    _watch_apply_event(args, live_host, pump, event)
                 else:
-                    summary = sync_to_cmux(
-                        workspace=args.workspace,
-                        clear_stale=not args.no_clear_stale,
-                        set_progress=not args.no_progress,
-                        log=False,  # avoid log spam
-                    )
-                    print(summary["summary"])
+                    _watch_project(args)
             except BridgeError as exc:
                 print(f"cmux-herdr: {exc}", file=sys.stderr)
+                initial = False
             except Exception as exc:  # noqa: BLE001
                 print(f"cmux-herdr: unexpected: {exc}", file=sys.stderr)
-            if getattr(args, "tmux_parity", False) or getattr(args, "events", False):
-                if event_session is not None:
-                    got = event_session.wait(timeout=interval)
-                    if not got:
-                        # Socket dropped — reopen once rather than spinning reconnects.
-                        event_session.close()
-                        event_session = HerdrEventSession.try_open(timeout=interval)
-                else:
-                    wait_herdr_event(timeout=interval)
+                initial = False
+            if want_events:
                 continue
-            # Sleep in small slices so SIGINT is responsive
             end = time.time() + interval
             while not stop["flag"] and time.time() < end:
                 time.sleep(min(0.25, end - time.time()))
@@ -369,6 +388,73 @@ def _watch_reconcile_host(args: argparse.Namespace, live_host, note: dict):
         "Ctrl-C detaches and leaves Herdr running",
     )
     return host
+
+
+def _windows_from_live_snapshot():
+    """Build ``HerdrWindow`` rows from the current Herdr snapshot."""
+    snap = fetch_snapshot()
+    desired = desired_mirrors(snap, scope="all", use_layout=True)
+    return build_herdr_windows(snap, desired)
+
+
+def _make_watch_pump() -> LivePump:
+    """SessionHost-style pump: socket-first reads into the apply host."""
+    return LivePump(
+        transport=ApiTransport(HerdrApi()),
+        windows_builder=_windows_from_live_snapshot,
+    )
+
+
+def _watch_next_event(event_session, interval: float):
+    """Wait for one Herdr event, or ``None`` on timeout / missing socket."""
+    if event_session is not None:
+        return event_session.wait(timeout=interval)
+    wait_herdr_event(timeout=interval)
+    return None
+
+
+def _watch_project(args: argparse.Namespace) -> None:
+    """One cmux projection pass (mirror viewers or status pills)."""
+    if getattr(args, "mirror", False) or getattr(args, "tmux_parity", False):
+        result = mirror_to_cmux(
+            **_mirror_kwargs(args),
+            dry_run=False,
+            log=False,
+        )
+        print(format_mirror_plan(result).splitlines()[0])
+        return
+    _watch_sync_pills(args)
+
+
+def _watch_sync_pills(args: argparse.Namespace) -> None:
+    """Refresh ``herdr:*`` status pills without rebuilding cmux viewers."""
+    summary = sync_to_cmux(
+        workspace=args.workspace,
+        clear_stale=not args.no_clear_stale,
+        set_progress=not args.no_progress,
+        log=False,
+    )
+    print(summary["summary"])
+
+
+def _watch_apply_event(args, live_host, pump, event) -> None:
+    """Feed one event (or a timeout) into the apply host, then project."""
+    if live_host is not None and pump is not None:
+        if event is not None:
+            pumped = pump.handle_event(event, live_host)
+            if pumped.resync:
+                _watch_project(args)
+            elif pumped.status_updated:
+                _watch_sync_pills(args)
+            return
+        pump.poll(live_host)
+        _watch_project(args)
+        return
+    # Native owns the host, or this is status-only ``--events``.
+    if event is None or getattr(args, "tmux_parity", False):
+        _watch_project(args)
+    else:
+        _watch_sync_pills(args)
 
 
 def _mirror_scope(args: argparse.Namespace) -> str:
@@ -785,6 +871,223 @@ def cmd_json_dump(args: argparse.Namespace) -> int:
     return 0
 
 
+def _api() -> HerdrApi:
+    """Fresh socket-first caller. Control talks to Herdr even if native owns chrome."""
+    return HerdrApi()
+
+
+def _print_api(result, args: argparse.Namespace, *, line: Optional[str] = None) -> int:
+    """Print a short line and/or the JSON RPC payload."""
+    if line and not getattr(args, "json", False):
+        print(line)
+    if getattr(args, "json", False) or not line:
+        print(json.dumps(result.to_dict(), indent=2, default=str))
+    return 0 if result.ok else 2
+
+
+def _run_api(
+    args: argparse.Namespace,
+    method: str,
+    params: Optional[dict] = None,
+    *,
+    line: Optional[str] = None,
+) -> int:
+    """Call an allowlisted Herdr method and print the result."""
+    try:
+        result = _api().call(method, params or {})
+    except (ApiError, BridgeError) as exc:
+        _die(str(exc))
+    return _print_api(result, args, line=line)
+
+
+def cmd_api(args: argparse.Namespace) -> int:
+    """Generic allowlisted RPC. Refuses ``server.stop`` before any I/O."""
+    if getattr(args, "list", False):
+        for name in sorted(ALLOWED_METHODS):
+            print(name)
+        return 0
+    method = getattr(args, "method", None)
+    if not method:
+        _die("api: pass a method or --list")
+    params = {}
+    raw = getattr(args, "params", None)
+    if raw:
+        try:
+            loaded = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            _die(f"invalid --params JSON: {exc}")
+        if loaded is None:
+            params = {}
+        elif not isinstance(loaded, dict):
+            _die("--params must be a JSON object")
+        else:
+            params = loaded
+    return _run_api(args, method, params)
+
+
+def cmd_new_tab(args: argparse.Namespace) -> int:
+    """Create a Herdr tab (socket ``tab.create``)."""
+    params = {}
+    if args.label:
+        params["label"] = args.label
+    if args.workspace:
+        params["workspace_id"] = args.workspace
+    return _run_api(args, "tab.create", params, line="created tab")
+
+
+def cmd_close_tab(args: argparse.Namespace) -> int:
+    """Close a Herdr tab. Does not stop the server."""
+    return _run_api(
+        args, "tab.close", {"tab_id": args.tab_id}, line=f"closed tab {args.tab_id}"
+    )
+
+
+def cmd_rename_tab(args: argparse.Namespace) -> int:
+    """Rename a Herdr tab."""
+    return _run_api(
+        args,
+        "tab.rename",
+        {"tab_id": args.tab_id, "label": args.label},
+        line=f"renamed tab {args.tab_id}",
+    )
+
+
+def cmd_new_workspace(args: argparse.Namespace) -> int:
+    """Create a Herdr workspace."""
+    params = {}
+    if args.label:
+        params["label"] = args.label
+    if args.cwd:
+        params["cwd"] = args.cwd
+    return _run_api(args, "workspace.create", params, line="created workspace")
+
+
+def cmd_close_workspace(args: argparse.Namespace) -> int:
+    """Close a Herdr workspace. Does not call ``server.stop``."""
+    return _run_api(
+        args,
+        "workspace.close",
+        {"workspace_id": args.workspace_id},
+        line=f"closed workspace {args.workspace_id}",
+    )
+
+
+def cmd_rename_workspace(args: argparse.Namespace) -> int:
+    """Rename a Herdr workspace."""
+    return _run_api(
+        args,
+        "workspace.rename",
+        {"workspace_id": args.workspace_id, "label": args.label},
+        line=f"renamed workspace {args.workspace_id}",
+    )
+
+
+def cmd_close_pane(args: argparse.Namespace) -> int:
+    """Close a Herdr pane. Busy panes need ``--force`` (tmux busy-close)."""
+    _ensure_herdr()
+    try:
+        if not args.force:
+            info = _api().call("pane.get", {"pane_id": args.pane_id})
+            status = extract_agent_status(info.result)
+            intent = close_intent(
+                "user_pane", pane_id=args.pane_id, agent_status=status
+            )
+            if intent.action == "confirm_then_close_pane":
+                _die(
+                    f"pane {args.pane_id} is busy (agent_status={status}); "
+                    "pass --force to close"
+                )
+        return _run_api(
+            args,
+            "pane.close",
+            {"pane_id": args.pane_id, "force": bool(args.force)},
+            line=f"closed pane {args.pane_id}",
+        )
+    except (ApiError, BridgeError) as exc:
+        _die(str(exc))
+    return 1
+
+
+def cmd_zoom_pane(args: argparse.Namespace) -> int:
+    """Zoom or unzoom a pane (``pane.zoom``)."""
+    params = {"mode": args.mode}
+    if args.pane_id:
+        params["pane_id"] = args.pane_id
+    return _run_api(args, "pane.zoom", params, line=f"zoom {args.mode}")
+
+
+def cmd_resize_pane(args: argparse.Namespace) -> int:
+    """Resize a pane (``pane.resize``)."""
+    params = {"direction": args.direction, "amount": args.amount}
+    if args.pane_id:
+        params["pane_id"] = args.pane_id
+    return _run_api(args, "pane.resize", params, line="resized pane")
+
+
+def cmd_swap_pane(args: argparse.Namespace) -> int:
+    """Swap two panes in the same tab."""
+    params = {}
+    if args.pane_id:
+        params["pane_id"] = args.pane_id
+    if args.target:
+        params["source_pane_id"] = args.pane_id
+        params["target_pane_id"] = args.target
+    if args.direction:
+        params["direction"] = args.direction
+    return _run_api(args, "pane.swap", params, line="swapped pane")
+
+
+def cmd_send(args: argparse.Namespace) -> int:
+    """Send text to a pane (``pane.send_text``)."""
+    text = " ".join(args.text)
+    return _run_api(
+        args,
+        "pane.send_text",
+        {"pane_id": args.pane_id, "text": text},
+        line=f"sent text to {args.pane_id}",
+    )
+
+
+def cmd_neighbor(args: argparse.Namespace) -> int:
+    """Look up the neighboring pane (``pane.neighbor``)."""
+    params = {"direction": args.direction}
+    if args.pane_id:
+        params["pane_id"] = args.pane_id
+    return _run_api(args, "pane.neighbor", params)
+
+
+def cmd_layout(args: argparse.Namespace) -> int:
+    """Export a tab layout tree (``layout.export``)."""
+    params = {}
+    if args.tab:
+        params["tab_id"] = args.tab
+    if args.pane:
+        params["pane_id"] = args.pane
+    return _run_api(args, "layout.export", params)
+
+
+def cmd_agent_prompt(args: argparse.Namespace) -> int:
+    """Submit an agent prompt (optional wait in the same RPC)."""
+    params: dict = {"target": args.target, "prompt": " ".join(args.prompt)}
+    # Herdr also accepts pane_id; send both so CLI fallback can resolve.
+    params["pane_id"] = args.target
+    if args.until:
+        wait: dict = {"until": args.until}
+        if args.timeout_ms is not None:
+            wait["timeout_ms"] = args.timeout_ms
+        params["wait"] = wait
+        params["until"] = args.until
+    return _run_api(args, "agent.prompt", params, line=f"prompted {args.target}")
+
+
+def cmd_agent_wait(args: argparse.Namespace) -> int:
+    """Wait for semantic agent state (``agent.wait``)."""
+    params = {"target": args.target, "pane_id": args.target, "until": args.until}
+    if args.timeout_ms is not None:
+        params["timeout_ms"] = args.timeout_ms
+    return _run_api(args, "agent.wait", params, line=f"wait {args.until} {args.target}")
+
+
 def _add_read_flags(sp: argparse.ArgumentParser, *, include_raw: bool) -> None:
     """Shared flags for read-pane / read-agent (herdr pass-through)."""
     sp.add_argument(
@@ -1135,6 +1438,141 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_lifecycle_flags(s)
     s.set_defaults(func=cmd_restore)
+
+    s = sub.add_parser(
+        "api",
+        help="Allowlisted Herdr socket RPC (CLI fallback; never server.stop)",
+    )
+    s.add_argument("method", nargs="?", help="dot method, e.g. pane.close")
+    s.add_argument(
+        "--params",
+        help="JSON object of method params",
+    )
+    s.add_argument(
+        "--list",
+        action="store_true",
+        help="Print allowlisted methods and exit",
+    )
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_api)
+
+    s = sub.add_parser("new-tab", help="Create a Herdr tab (tab.create)")
+    s.add_argument("--label")
+    s.add_argument("--workspace", dest="workspace")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_new_tab)
+
+    s = sub.add_parser("close-tab", help="Close a Herdr tab (never stops Herdr)")
+    s.add_argument("tab_id")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_close_tab)
+
+    s = sub.add_parser("rename-tab", help="Rename a Herdr tab")
+    s.add_argument("tab_id")
+    s.add_argument("label")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_rename_tab)
+
+    s = sub.add_parser("new-workspace", help="Create a Herdr workspace")
+    s.add_argument("--label")
+    s.add_argument("--cwd")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_new_workspace)
+
+    s = sub.add_parser(
+        "close-workspace",
+        help="Close a Herdr workspace (never server.stop)",
+    )
+    s.add_argument("workspace_id")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_close_workspace)
+
+    s = sub.add_parser("rename-workspace", help="Rename a Herdr workspace")
+    s.add_argument("workspace_id")
+    s.add_argument("label")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_rename_workspace)
+
+    s = sub.add_parser(
+        "close-pane",
+        help="Close a Herdr pane (busy panes require --force)",
+    )
+    s.add_argument("pane_id")
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="Close even when agent_status is working/blocked",
+    )
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_close_pane)
+
+    s = sub.add_parser("zoom-pane", help="Zoom or unzoom a Herdr pane")
+    s.add_argument("pane_id", nargs="?")
+    s.add_argument(
+        "--mode",
+        choices=("toggle", "on", "off"),
+        default="toggle",
+    )
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_zoom_pane)
+
+    s = sub.add_parser("resize-pane", help="Resize a Herdr pane")
+    s.add_argument("pane_id", nargs="?")
+    s.add_argument(
+        "--direction",
+        choices=("right", "left", "up", "down"),
+        required=True,
+    )
+    s.add_argument("--amount", type=float, default=0.1)
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_resize_pane)
+
+    s = sub.add_parser("swap-pane", help="Swap panes in the same Herdr tab")
+    s.add_argument("pane_id", nargs="?")
+    s.add_argument("--direction", choices=("right", "left", "up", "down"))
+    s.add_argument("--target", help="explicit target pane id")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_swap_pane)
+
+    s = sub.add_parser("send", help="Send text to a Herdr pane (pane.send_text)")
+    s.add_argument("pane_id")
+    s.add_argument("text", nargs="+")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_send)
+
+    s = sub.add_parser("neighbor", help="Look up a neighboring Herdr pane")
+    s.add_argument("pane_id", nargs="?")
+    s.add_argument(
+        "--direction",
+        choices=("right", "left", "up", "down"),
+        default="right",
+    )
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_neighbor)
+
+    s = sub.add_parser("layout", help="Export a Herdr tab layout tree")
+    s.add_argument("--tab")
+    s.add_argument("--pane")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_layout)
+
+    s = sub.add_parser(
+        "agent-prompt",
+        help="Submit an agent prompt (optional --until wait)",
+    )
+    s.add_argument("target", help="pane id or agent label")
+    s.add_argument("prompt", nargs="+")
+    s.add_argument("--until", help="wait until this agent_status")
+    s.add_argument("--timeout-ms", type=int)
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_agent_prompt)
+
+    s = sub.add_parser("agent-wait", help="Wait for semantic agent state")
+    s.add_argument("target", help="pane id or agent label")
+    s.add_argument("--until", default="done")
+    s.add_argument("--timeout-ms", type=int)
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_agent_wait)
 
     return p
 

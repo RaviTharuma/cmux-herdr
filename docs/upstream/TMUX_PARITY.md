@@ -26,13 +26,13 @@ Legend: **Yes** in the plugin column is shipped userspace. **Yes** in the Native
 | Divider **ratio** from assigned cells | `cmux set-ratio` via `RemoteHerdrImpose` fractions (tmux +1 cell) | n/a | Yes — `RemoteHerdrImpose.plan` → host `imposeDividerPlan()` |
 | User **divider drag** → inner `resize-pane` | Session model only (`begin`/`resolve`/`end`); no Bonsplit owner | n/a | Yes — same drag-end → `pane.resize` round trip |
 | Feed-forward sizing (claim size, inner mux owns grid) | SIGWINCH → `herdr pane resize` | n/a | Yes — copy tmux `updateClientSize` / `refresh-client -C` |
-| Output stream into the surface | Poll `herdr pane read` + isolated `route_output` (never cross-pane; strip `ESC k` titles) | Read API later | Yes — `routeOutput(paneId, data)` into that Ghostty only |
+| Event-driven reconcile + snapshot resync | Persistent `events.subscribe` + SessionHost pump (`watch --tmux-parity`) | `events.subscribe` | Yes — events + snapshot after gaps |
+| Output stream into the surface | Pump `pane.read` → isolated `route_read_snapshot` (never cross-pane; strip `ESC k` titles) | Read API later | Yes — `routeOutput(paneId, data)` into that Ghostty only |
 | Typed input → inner pane | `herdr pane send` (cbreak) + `route_input` (bound pane only) | Guarded later | Yes — `pane.send_*` from Ghostty input for that pane only |
 | Focus: inner active pane ↔ cmux pane | `--focus` / `--tmux-parity` + `project_focus` (provider never echoes) | `nested.node.focus` | Yes — `noteRemoteActivePane` + `select-pane` analogue |
 | Tab **order** follows inner numbers | `--order` / `--tmux-parity` + `session_actions` (`create_tab` / `close_tab` / `reorder_tabs`) | Virtual row order | Yes — `TabManager` order = Herdr tab numbers |
 | **Prune** gone panes (close surfaces) | `--prune` (default on `--tmux-parity`) | Event close | Yes — teardown panel like tmux reconcile |
 | **Zoom** does not destroy hidden pane panels | Mapped viewers kept | n/a | Yes — base vs visible layout (copy tmux) |
-| Event-driven reconcile + snapshot resync | Persistent `events.subscribe` via `watch --tmux-parity` | `events.subscribe` | Yes — events + snapshot after gaps |
 | Idempotent reconcile (re-run is a no-op) | `herdr-mirror:<pane_id>` keys | Compound nested IDs | Yes — paneId → panel map |
 | Titles from inner window/tab, not pane-border noise | Tab label on tab-root | Provider labels | Yes — copy tmux `windowTitle` rule |
 | Single writer vs plugin | Shared lease: yield, resume on stale, same restore file | Plugin suppression | Same files (`RemoteHerdrHandoff`) |
@@ -115,8 +115,9 @@ SSH ControlMaster, `tmux -CC` parser, `%layout-change` wire format, control-mode
 - No Bonsplit divider-drag → `resize-pane` (CLI has no drag session).
 - `cmux split` / `set-ratio` / `move-tab` / `focus-surface` verbs differ across cmux CLI builds; the bridge tries fallbacks and records errors.
 - The live apply machine runs `make_panel` / output / drag / focus /
-  size / attach in-process. Surfaces are still in-memory Ghostty
-  analogues — the plugin cannot open a real `TerminalPanel`.
+  size / attach in-process. `watch --tmux-parity` now pumps `pane.read`
+  into those surfaces. They are still in-memory Ghostty analogues — the
+  plugin cannot open a real `TerminalPanel`.
 
 ### Native PR7 (must copy tmux, not invent a third model)
 
@@ -135,8 +136,10 @@ Sidebar nested topology (#10045) stays as the **session navigator** (workspaces/
 
 ```bash
 cmux-herdr mirror --tmux-parity          # full ssh-tmux contract
-cmux-herdr watch --tmux-parity           # attach, live reconcile, detach on stop
+cmux-herdr watch --tmux-parity           # attach, pump I/O, remirror, detach on stop
 cmux-herdr attach / detach / restore     # apply-host lifecycle (never server.stop)
+cmux-herdr api --list                    # published Herdr methods
+cmux-herdr new-tab / close-pane / send   # inner mux control (socket-first)
 cmux-herdr send-key <pane_id> C-Up       # named keys
 cmux-herdr observe --method pane_surfaces
 cmux-herdr attach-pane <pane_id>         # cbreak + SIGWINCH + ANSI read

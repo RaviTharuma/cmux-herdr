@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 DEFAULT_SUBSCRIPTIONS: List[Dict[str, str]] = [
     {"type": "workspace.created"},
     {"type": "workspace.updated"},
+    {"type": "workspace.metadata_updated"},
     {"type": "workspace.renamed"},
     {"type": "workspace.moved"},
     {"type": "workspace.reordered"},
@@ -38,6 +39,7 @@ DEFAULT_SUBSCRIPTIONS: List[Dict[str, str]] = [
     {"type": "pane.moved"},
     {"type": "pane.exited"},
     {"type": "pane.agent_detected"},
+    {"type": "pane.agent_status_changed"},
     {"type": "pane.resized"},
     {"type": "layout.updated"},
     {"type": "layout.changed"},
@@ -273,6 +275,10 @@ class HerdrEventSession:
         except HerdrSocketError:
             return None
         return event
+
+    def alive(self) -> bool:
+        """True while the subscribe socket is still open."""
+        return self.client._sock is not None
 
     def close(self) -> None:
         """Tear down the subscribe socket."""

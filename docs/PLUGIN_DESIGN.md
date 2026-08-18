@@ -40,10 +40,12 @@ This repo implements the plugin path only. It must not depend on unmerged cmux p
    - `map_status_to_style`
    - `resolve_cmux_workspace` (nested env is often wrong)
    - `sync_to_cmux`
-2. **`bin/cmux-herdr`** — user CLI (`status`, `tree`, `sync`, `watch`, focus helpers, …)
-3. **`sidebars/herdr.swift`** — best-effort custom sidebar (navigator + instructions; live agent rows come from status pills written by the bridge)
-4. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy
-5. **`scripts/install.sh` / `uninstall.sh`** — symlink CLI, install sidebar + skill
+2. **`bin/cmux-herdr`** — user CLI (`status`, `tree`, `sync`, `watch`, `api`, focus helpers, …)
+3. **`bridge/cmux_herdr_api.py`** — socket-first allowlisted Herdr RPC (never `server.stop`)
+4. **`bridge/cmux_herdr_pump.py`** — SessionHost-style event pump into `LiveApplyHost`
+5. **`sidebars/herdr.swift`** — best-effort custom sidebar (navigator + instructions; live agent rows come from status pills written by the bridge)
+6. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy
+7. **`scripts/install.sh` / `uninstall.sh`** — symlink CLI, install sidebar + skill
 
 ## Why status pills plus optional tab/pane mirror
 
