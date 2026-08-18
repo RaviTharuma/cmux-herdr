@@ -1,0 +1,55 @@
+name: apply-herdr-cr3-followup
+on:
+  push:
+    paths:
+      - .github/workflows/apply-herdr-cr3-followup.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cursor/nested-topology-herdr-v1-becf
+          fetch-depth: 0
+
+      - name: Apply follow-up bundle and restore files
+        env:
+          BUNDLE_URL: https://raw.githubusercontent.com/RaviTharuma/cmux-herdr/cursor/pr10045-coderabbit-replies-f1c1/docs/upstream/patches/herdr-cr3-followup.bundle
+          # Also fetch raw files as fallback if tip diverged after placeholder
+          BASE: https://raw.githubusercontent.com/RaviTharuma/cmux-herdr/cursor/pr10045-coderabbit-replies-f1c1/docs/upstream/patches/pr10045-cr3-followup
+        run: |
+          set -euo pipefail
+          git config user.name "Ravi Tharuma"
+          git config user.email "25951435+RaviTharuma@users.noreply.github.com"
+
+          # Reset placeholder tip if present
+          if grep -q PLACEHOLDER Packages/macOS/CmuxNestedTopology/Sources/CmuxNestedTopology/RemoteHerdrLayoutNode.swift 2>/dev/null; then
+            echo "Detected PLACEHOLDER tip — resetting to 6c03d406"
+            git reset --hard 6c03d406285f609a902ecd1bfb8ed2dfc7485327
+          fi
+
+          curl -fsSL "$BUNDLE_URL" -o /tmp/herdr-cr3-followup.bundle
+          git bundle verify /tmp/herdr-cr3-followup.bundle
+          git fetch /tmp/herdr-cr3-followup.bundle HEAD:refs/heads/cr3-followup
+          git merge --ff-only cr3-followup
+
+          git push origin HEAD:cursor/nested-topology-herdr-v1-becf
+
+      - name: Remove one-shot workflow
+        if: always()
+        run: |
+          set -euo pipefail
+          git fetch origin cursor/nested-topology-herdr-v1-becf
+          git checkout -B cursor/nested-topology-herdr-v1-becf origin/cursor/nested-topology-herdr-v1-becf
+          if [ -f .github/workflows/apply-herdr-cr3-followup.yml ]; then
+            git rm -f .github/workflows/apply-herdr-cr3-followup.yml
+            git config user.name "Ravi Tharuma"
+            git config user.email "25951435+RaviTharuma@users.noreply.github.com"
+            git commit -m "chore: remove one-shot apply-herdr-cr3-followup workflow" || true
+            git push origin HEAD:cursor/nested-topology-herdr-v1-becf || true
+          fi

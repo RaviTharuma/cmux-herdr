@@ -6,7 +6,7 @@
     "line": 48,
     "sev": "minor",
     "title": "**Rename the duplicated `## Scope` heading.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Rename the duplicated `## Scope` heading.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Rename the duplicated `## Scope` heading.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nbH",
@@ -15,7 +15,7 @@
     "line": 127,
     "sev": "minor",
     "title": "**Make `activeCommandName` deterministic.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Make `activeCommandName` deterministic.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Make `activeCommandName` deterministic.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nbV",
@@ -24,7 +24,7 @@
     "line": 273,
     "sev": "major",
     "title": "**Add real synchronization or remove `@unchecked Sendable`.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Add real synchronization or remove `@unchecked Sendable`.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Add real synchronization or remove `@unchecked Sendable`.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nbX",
@@ -33,7 +33,7 @@
     "line": 417,
     "sev": "minor",
     "title": "**Clear `kinds` and `targets` when a seed overflows.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Clear `kinds` and `targets` when a seed overflows.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Clear `kinds` and `targets` when a seed overflows.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nbd",
@@ -42,7 +42,7 @@
     "line": 90,
     "sev": "trivial",
     "title": "**`connectionAction` ignores its `started` parameter.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **`connectionAction` ignores its `started` parameter.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **`connectionAction` ignores its `started` parameter.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nbg",
@@ -51,7 +51,7 @@
     "line": 181,
     "sev": "minor",
     "title": "**Require a typed `String` for window identity; do not coerce with `String(describing:)`.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Require a typed `String` for window identity; do not coerce with `String(describing:)`.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Require a typed `String` for window identity; do not coerce with `String(describing:)`.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nbq",
@@ -60,7 +60,7 @@
     "line": 450,
     "sev": "major",
     "title": "**Remove the unreachable `postAttach` fallback.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Remove the unreachable `postAttach` fallback.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Remove the unreachable `postAttach` fallback.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nbz",
@@ -69,7 +69,7 @@
     "line": 73,
     "sev": "major",
     "title": "**`@unchecked Sendable` on mutable reference types with no isolation.** Both classes expose mutable stored properties an",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **`@unchecked Sendable` on mutable reference types with no isolation.** Both classes expose mutable stored properties and use no actor, no `@MainActor`, and no lock, so the annotat\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **`@unchecked Sendable` on mutable reference types with no isolation.** Both classes expose mutable stored properties and use no actor, no `@MainActor`, and no lock, so the annotat\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nb3",
@@ -78,7 +78,7 @@
     "line": 359,
     "sev": "minor",
     "title": "**`paneGrids()` reports `exact_cols` and `exact_rows` as always true.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **`paneGrids()` reports `exact_cols` and `exact_rows` as always true.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **`paneGrids()` reports `exact_cols` and `exact_rows` as always true.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nb4",
@@ -87,7 +87,7 @@
     "line": 396,
     "sev": "major",
     "title": "**`Dictionary(uniqueKeysWithValues:)` traps on a duplicate `tabID`.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **`Dictionary(uniqueKeysWithValues:)` traps on a duplicate `tabID`.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **`Dictionary(uniqueKeysWithValues:)` traps on a duplicate `tabID`.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ncB",
@@ -96,7 +96,7 @@
     "line": 442,
     "sev": "major",
     "title": "**Hardcoded `\"w1\"` window identity in production attach and restore paths.** Both methods pass a fixed live-window list ",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Hardcoded `\"w1\"` window identity in production attach and restore paths.** Both methods pass a fixed live-window list and active window id to the planner, so the plan never valid\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Hardcoded `\"w1\"` window identity in production attach and restore paths.** Both methods pass a fixed live-window list and active window id to the planner, so the plan never valid\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ncD",
@@ -105,7 +105,7 @@
     "line": 161,
     "sev": "minor",
     "title": "\ud83c\udfc1 Script executed:",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ncF",
@@ -114,7 +114,7 @@
     "line": 189,
     "sev": "minor",
     "title": "**Remove the surface buffer when a pane unbinds.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Remove the surface buffer when a pane unbinds.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Remove the surface buffer when a pane unbinds.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ncO",
@@ -123,7 +123,7 @@
     "line": 41,
     "sev": "minor",
     "title": "**Line 40 asserts a tautology.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Line 40 asserts a tautology.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Line 40 asserts a tautology.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ncT",
@@ -132,7 +132,7 @@
     "line": 134,
     "sev": "unknown",
     "title": "\ud83c\udfc1 Script executed:",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ncX",
@@ -141,7 +141,7 @@
     "line": 103,
     "sev": "major",
     "title": "**Align the persistence key with the sibling beta keys.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Align the persistence key with the sibling beta keys.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Align the persistence key with the sibling beta keys.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ncl",
@@ -150,7 +150,7 @@
     "line": 228,
     "sev": "minor",
     "title": "\ud83c\udfc1 Script executed:",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ncp",
@@ -159,7 +159,7 @@
     "line": 156,
     "sev": "major",
     "title": "**Herdr paste is reported as handled before the delivery result is known.** Both sites treat `isMirrorPaneSurface(...) =",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Herdr paste is reported as handled before the delivery result is known.** Both sites treat `isMirrorPaneSurface(...) == true` as proof that the paste reached the Herdr pane, supp\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Herdr paste is reported as handled before the delivery result is known.** Both sites treat `isMirrorPaneSurface(...) == true` as proof that the paste reached the Herdr pane, supp\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ncr",
@@ -168,7 +168,7 @@
     "line": 13,
     "sev": "trivial",
     "title": "\ud83c\udfc1 Script executed:",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nc0",
@@ -177,7 +177,7 @@
     "line": 140,
     "sev": "major",
     "title": "**`handleWorkspaceClosed` and `detachMirrorWorkspaceKeptOpenLocally` have identical bodies.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **`handleWorkspaceClosed` and `detachMirrorWorkspaceKeptOpenLocally` have identical bodies.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **`handleWorkspaceClosed` and `detachMirrorWorkspaceKeptOpenLocally` have identical bodies.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nc_",
@@ -186,7 +186,7 @@
     "line": 156,
     "sev": "trivial",
     "title": "**Filter by `containsSurface` before awaiting each host.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Filter by `containsSurface` before awaiting each host.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Filter by `containsSurface` before awaiting each host.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndC",
@@ -195,7 +195,7 @@
     "line": 251,
     "sev": "major",
     "title": "\ud83c\udfc1 Script executed:",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndH",
@@ -204,7 +204,7 @@
     "line": 289,
     "sev": "trivial",
     "title": "**Localize these error descriptions or document why they stay literal.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Localize these error descriptions or document why they stay literal.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Localize these error descriptions or document why they stay literal.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndM",
@@ -213,7 +213,7 @@
     "line": 127,
     "sev": "major",
     "title": "**Report the failed sessions instead of silently dropping them.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Report the failed sessions instead of silently dropping them.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Report the failed sessions instead of silently dropping them.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndP",
@@ -222,7 +222,7 @@
     "line": 219,
     "sev": "major",
     "title": "**Register the host only after the initial snapshot succeeds, and remove the workspace when it fails.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Register the host only after the initial snapshot succeeds, and remove the workspace when it fails.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Register the host only after the initial snapshot succeeds, and remove the workspace when it fails.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndS",
@@ -231,7 +231,7 @@
     "line": 116,
     "sev": "major",
     "title": "**Pane lookups scan every mirror and every pane.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Pane lookups scan every mirror and every pane.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Pane lookups scan every mirror and every pane.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndT",
@@ -240,7 +240,7 @@
     "line": 438,
     "sev": "major",
     "title": "**Unordered `pane.send` traffic in `Sources/RemoteHerdrSessionHost.swift` and `Sources/RemoteHerdrWindowMirrorHost+Contr",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Unordered `pane.send` traffic in `Sources/RemoteHerdrSessionHost.swift` and `Sources/RemoteHerdrWindowMirrorHost+ControlMutations.swift`.** Both files start an independent unstru\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Unordered `pane.send` traffic in `Sources/RemoteHerdrSessionHost.swift` and `Sources/RemoteHerdrWindowMirrorHost+ControlMutations.swift`.** Both files start an independent unstru\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndW",
@@ -249,7 +249,7 @@
     "line": 500,
     "sev": "major",
     "title": "**Unordered snapshot tasks can apply a stale topology.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Unordered snapshot tasks can apply a stale topology.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Unordered snapshot tasks can apply a stale topology.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndZ",
@@ -258,7 +258,7 @@
     "line": 539,
     "sev": "major",
     "title": "**Replace the fixed-interval polling loop with an event-driven read path.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Replace the fixed-interval polling loop with an event-driven read path.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Replace the fixed-interval polling loop with an event-driven read path.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndd",
@@ -267,7 +267,7 @@
     "line": 142,
     "sev": "major",
     "title": "**Panel creation is duplicated between the no-plan branch and `create_panel`.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Panel creation is duplicated between the no-plan branch and `create_panel`.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Panel creation is duplicated between the no-plan branch and `create_panel`.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndh",
@@ -276,7 +276,7 @@
     "line": 303,
     "sev": "minor",
     "title": "**`paneGridsPayload` reports fabricated grids as exact.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **`paneGridsPayload` reports fabricated grids as exact.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **`paneGridsPayload` reports fabricated grids as exact.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndq",
@@ -285,7 +285,7 @@
     "line": 190,
     "sev": "major",
     "title": "**Read `tabIdByPaneId` before you remove it.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Read `tabIdByPaneId` before you remove it.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Read `tabIdByPaneId` before you remove it.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4ndy",
@@ -294,7 +294,7 @@
     "line": 312,
     "sev": "major",
     "title": "**Replace the main-queue polling loop with an explicit completion signal.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Replace the main-queue polling loop with an explicit completion signal.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Replace the main-queue polling loop with an explicit completion signal.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nd2",
@@ -303,7 +303,7 @@
     "line": 172,
     "sev": "major",
     "title": "**Resize mixes a subtree point extent with the root cell total.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Resize mixes a subtree point extent with the root cell total.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Resize mixes a subtree point extent with the root cell total.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nd4",
@@ -312,7 +312,7 @@
     "line": 29,
     "sev": "minor",
     "title": "\ud83c\udfc1 Script executed:",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4nd7",
@@ -321,7 +321,7 @@
     "line": 49,
     "sev": "major",
     "title": "**The cell-metric sample comes from an arbitrary pane.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **The cell-metric sample comes from an arbitrary pane.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **The cell-metric sample comes from an arbitrary pane.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4neC",
@@ -330,7 +330,7 @@
     "line": 71,
     "sev": "major",
     "title": "**A skipped claim permanently suppresses that grid size.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **A skipped claim permanently suppresses that grid size.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **A skipped claim permanently suppresses that grid size.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4neJ",
@@ -339,7 +339,7 @@
     "line": 1529,
     "sev": "minor",
     "title": "\ud83c\udfc1 Script executed:",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: \ud83c\udfc1 Script executed:\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4neO",
@@ -348,7 +348,7 @@
     "line": 33,
     "sev": "trivial",
     "title": "**Extract the shared gate and parameter validation.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Extract the shared gate and parameter validation.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Extract the shared gate and parameter validation.**\n\nPlease re-check; resolving this thread."
   },
   {
     "thread_id": "PRRT_kwDORDHQWM6Z4neV",
@@ -357,6 +357,6 @@
     "line": 5733,
     "sev": "major",
     "title": "**Balance the mirror teardown with `terminalDidLeaveWorkspace`.**",
-    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`).\n\nAddressed: **Balance the mirror teardown with `terminalDidLeaveWorkspace`.**\n\nPlease re-check; resolving this thread."
+    "body": "Fixed in the latest push onto this PR head (`cursor/nested-topology-herdr-v1-becf`, including the CR3 follow-up commit).\n\nAddressed: **Balance the mirror teardown with `terminalDidLeaveWorkspace`.**\n\nPlease re-check; resolving this thread."
   }
 ]
