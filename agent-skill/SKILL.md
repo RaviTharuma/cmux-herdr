@@ -56,6 +56,8 @@ cmux-herdr status
 - Compact agent list: `cmux-herdr agents`
 - Focus helpers: `focus-workspace`, `focus-tab`, `focus-pane`, `focus-agent`
 - Read helpers: `read-pane <pane_id>`, `read-agent <target>`
+- Inner mux control (socket-first, same methods as native): `api`, `new-tab`,
+  `close-pane` (`--force` if busy), `send`, `agent-prompt`, `agent-wait`, `layout`
 - Inspect / clear mirrored pills: `cmux-herdr associations`, `cmux-herdr clear`
 
 ## Safe agent splitting

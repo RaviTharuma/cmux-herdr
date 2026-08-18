@@ -10,7 +10,7 @@ When Herdr runs nested inside a cmux terminal, cmux sees one terminal surface wh
 
 1. Mirrors Herdr **tabs and panes into real cmux tabs/splits** (`cmux-herdr mirror`) — userspace analogue of cmux `ssh-tmux`.
 2. Mirrors Herdr agent state into cmux sidebar **status pills** and progress (`sync` / `watch`).
-3. Provides a **`cmux-herdr` CLI** for topology, `attach-pane` followers, and control.
+3. Provides a **`cmux-herdr` CLI** for topology, `attach-pane` followers, and the published Herdr control surface (`api`, tabs/panes/workspaces/agents).
 4. Ships an optional **custom sidebar** and **agent skill** documenting the dual hierarchy.
 
 ## Two-path strategy
@@ -122,6 +122,12 @@ cmux-herdr observe --method pane_surfaces
 cmux-herdr attach         # live apply host (tmux attach analogue)
 cmux-herdr detach         # leaves the Herdr session running
 cmux-herdr restore        # reattach after restart; never replay a stale tree
+cmux-herdr api --list     # published Herdr methods (never server.stop)
+cmux-herdr api pane.close --params '{"pane_id":"w2:p34"}'
+cmux-herdr new-tab --label logs
+cmux-herdr close-pane w2:p34          # --force if the agent is busy
+cmux-herdr send w2:p34 echo hello
+cmux-herdr agent-prompt w2:p34 "run tests" --until done
 cmux-herdr clear          # remove herdr:* status pills
 ```
 
@@ -135,6 +141,9 @@ cmux-herdr focus-agent w2:p34
 cmux-herdr read-pane w2:p34 --source recent-unwrapped --lines 80
 cmux-herdr read-agent reviewer --source recent --lines 40
 cmux-herdr split --direction right
+cmux-herdr zoom-pane w2:p34 --mode on
+cmux-herdr resize-pane w2:p34 --direction right --amount 0.1
+cmux-herdr layout --tab w2:t1
 cmux-herdr json-dump
 ```
 
@@ -192,7 +201,7 @@ Status keys use `herdr:<pane_id>`. Every sync removes stale `herdr:*` keys while
 ## Layout
 
 ```text
-VERSION                     version source of truth (e.g. 0.2.0)
+VERSION                     version source of truth (e.g. 0.3.0)
 CHANGELOG.md                release notes
 RELEASE.md                  tag / gh release / install-from-tag steps
 OPEN.md                     stopgap inventory + open checklist
@@ -207,6 +216,9 @@ bridge/cmux_herdr_session.py session-tab verbs
 bridge/cmux_herdr_control.py named keys, focus rollback, seed, activity
 bridge/cmux_herdr_lifecycle.py attach / detach / restore / remote.herdr.*
 bridge/cmux_herdr_live.py   running apply host (in-memory Ghostty analogue)
+bridge/cmux_herdr_api.py    socket-first allowlisted Herdr RPC
+bridge/cmux_herdr_pump.py   SessionHost-style event pump into the apply host
+bridge/cmux_herdr_handoff.py plugin ↔ native writer lease
 tests/                      mocked CLI and behavior tests
 scripts/install.sh          idempotent user install
 scripts/uninstall.sh        scoped uninstall

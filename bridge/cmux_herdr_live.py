@@ -567,6 +567,41 @@ class LiveApplyHost:
                 return mirror.route_cwd(pane_id, path)
         return None
 
+    def route_read_snapshot(self, pane_id: str, text: str) -> bool:
+        """Poll ``pane.read`` into the window that owns ``pane_id``."""
+        for mirror in self.windows.values():
+            if pane_id in mirror.surfaces:
+                return mirror.route_read_snapshot(pane_id, text)
+        return False
+
+    def apply_provider_focus(self, pane_id: str) -> bool:
+        """Project provider focus without stealing first responder."""
+        for mirror in self.windows.values():
+            if pane_id in mirror.surfaces:
+                mirror._apply_provider_focus(pane_id)
+                return True
+        return False
+
+    def note_agent_status(
+        self, pane_id: str, status: str, name: Optional[str] = None
+    ) -> None:
+        """Record ``agent_status`` for tab activity / busy-close."""
+        if pane_id and status:
+            self.agent_statuses[pane_id] = status
+        if pane_id and name:
+            self.agent_names[pane_id] = name
+
+    def live_pane_ids(self) -> List[str]:
+        """Pane ids that currently have a live in-memory surface."""
+        ids: List[str] = []
+        for mirror in self.windows.values():
+            if mirror.is_torn_down:
+                continue
+            for pane_id, surface in mirror.surfaces.items():
+                if surface.live:
+                    ids.append(pane_id)
+        return ids
+
     def detach(self) -> Dict[str, object]:
         """Host close: teardown every mirror, never stop Herdr."""
         for mirror in self.windows.values():

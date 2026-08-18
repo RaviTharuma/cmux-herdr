@@ -66,6 +66,14 @@ elif command == ["pane", "zoom"]:
 elif command == ["pane", "send"] or command == ["pane", "send-keys"]:
     print(json.dumps({"result": {"sent": True}}))
     raise SystemExit(0)
+elif command == ["tab", "create"]:
+    result = {"tab_id": "t2", "label": "logs"}
+elif command == ["pane", "close"]:
+    result = {"closed": argv[2] if len(argv) > 2 else ""}
+elif command == ["agent", "prompt"]:
+    result = {"prompted": True}
+elif command == ["agent", "wait"]:
+    result = {"until": "done"}
 else:
     print("unexpected command: " + " ".join(argv), file=sys.stderr)
     raise SystemExit(9)
@@ -114,6 +122,14 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("restore", result.stdout)
         self.assertIn("lock-title", result.stdout)
         self.assertIn("unlock-title", result.stdout)
+        self.assertIn("api", result.stdout)
+        self.assertIn("new-tab", result.stdout)
+        self.assertIn("close-pane", result.stdout)
+        self.assertIn("zoom-pane", result.stdout)
+        self.assertIn("send", result.stdout)
+        self.assertIn("agent-prompt", result.stdout)
+        self.assertIn("agent-wait", result.stdout)
+        self.assertIn("layout", result.stdout)
 
     def test_unknown_command_is_argparse_error(self):
         result = self.run_cli("does-not-exist")
@@ -519,6 +535,67 @@ raise SystemExit(9)
         payload = json.loads(result.stdout)
         self.assertFalse(payload["ok"])
         self.assertEqual(payload["outcome"], "no_persist")
+
+    def test_api_lists_methods_and_refuses_server_stop(self):
+        listed = self.run_cli("api", "--list")
+        self.assertEqual(listed.returncode, 0, listed.stderr)
+        self.assertIn("pane.close", listed.stdout)
+        self.assertIn("agent.prompt", listed.stdout)
+        self.assertNotIn("server.stop", listed.stdout)
+        refused = self.run_cli("api", "server.stop")
+        self.assertEqual(refused.returncode, 1)
+        self.assertIn("server.stop", refused.stderr)
+        self.assertNotIn("Traceback", refused.stderr)
+        graphics = self.run_cli("api", "pane.graphics.set")
+        self.assertEqual(graphics.returncode, 1)
+        self.assertIn("pane.graphics.set", graphics.stderr)
+
+    def test_send_and_new_tab_fall_back_to_herdr_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
+            path, env = self._lifecycle_env(tmp, fake_bin)
+            sent = self.run_cli(
+                "send", "p1", "hello", "world", path=path, env_extra=env
+            )
+            created = self.run_cli(
+                "new-tab", "--label", "logs", "--json", path=path, env_extra=env
+            )
+        self.assertEqual(sent.returncode, 0, sent.stderr)
+        self.assertIn("p1", sent.stdout)
+        self.assertEqual(created.returncode, 0, created.stderr)
+        payload = json.loads(created.stdout)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["via"], "cli")
+        self.assertEqual(payload["method"], "tab.create")
+
+    def test_close_pane_requires_force_when_busy(self):
+        fake = r'''#!/usr/bin/env python3
+import json, sys
+argv = sys.argv[1:]
+command = argv[:2] if len(argv) >= 2 else argv
+if argv[:1] == ["status"]:
+    print(json.dumps({"status": "ok"}))
+    raise SystemExit(0)
+if command == ["pane", "get"]:
+    print(json.dumps({"result": {"pane_id": argv[2], "agent_status": "working"}}))
+    raise SystemExit(0)
+if command == ["pane", "close"]:
+    print("should not close busy pane without --force", file=sys.stderr)
+    raise SystemExit(9)
+print("unexpected " + " ".join(argv), file=sys.stderr)
+raise SystemExit(9)
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", fake)
+            path, env = self._lifecycle_env(tmp, fake_bin)
+            result = self.run_cli("close-pane", "w1:p1", path=path, env_extra=env)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("busy", result.stderr)
+        self.assertIn("--force", result.stderr)
 
 
 if __name__ == "__main__":
