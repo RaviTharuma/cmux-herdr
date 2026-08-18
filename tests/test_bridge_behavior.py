@@ -604,6 +604,19 @@ class AssociationSyncTests(unittest.TestCase):
 
 
 class FocusAndReadTests(unittest.TestCase):
+    def setUp(self):
+        bridge.reset_herdr_rpc()
+        self._env = mock.patch.dict(
+            os.environ,
+            {"HERDR_SOCKET_PATH": "/no/such/herdr.sock"},
+            clear=False,
+        )
+        self._env.start()
+
+    def tearDown(self):
+        self._env.stop()
+        bridge.reset_herdr_rpc()
+
     @mock.patch.object(bridge, "run_cmd")
     @mock.patch.object(bridge, "which", return_value="/mock/herdr")
     def test_focus_pane_does_not_use_zoom_fallback(self, _which, run_cmd):
@@ -623,9 +636,13 @@ class FocusAndReadTests(unittest.TestCase):
     def test_focus_workspace_and_agent(self, _which, run_cmd):
         run_cmd.return_value = completed(returncode=0)
         self.assertEqual(bridge.focus_workspace("w2"), "w2")
-        run_cmd.assert_called_with(["herdr", "workspace", "focus", "w2"])
+        run_cmd.assert_called_with(
+            ["herdr", "workspace", "focus", "w2"], timeout=8.0
+        )
         self.assertEqual(bridge.focus_agent("reviewer"), "reviewer")
-        run_cmd.assert_called_with(["herdr", "agent", "focus", "reviewer"])
+        run_cmd.assert_called_with(
+            ["herdr", "agent", "focus", "reviewer"], timeout=8.0
+        )
 
     @mock.patch.object(bridge, "run_cmd")
     @mock.patch.object(bridge, "which", return_value="/mock/herdr")

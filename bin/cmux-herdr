@@ -123,6 +123,11 @@ def cmd_status(_args: argparse.Namespace) -> int:
     print(f"  pane         : {h.get('pane_id')}")
     print(f"  socket       : {h.get('socket_path')} (exists={h.get('socket_exists')})")
     print(f"  server pid   : {h.get('server_pid') or '-'}")
+    api = h.get("api") or {}
+    if api.get("ok"):
+        print(f"  api          : ok via {api.get('via')}")
+    elif api.get("error"):
+        print(f"  api          : {api.get('error')}")
     if h.get("pane_count") is not None:
         print(
             f"  topology     : workspaces={h.get('workspace_count')} "
@@ -331,6 +336,8 @@ def cmd_watch(args: argparse.Namespace) -> int:
                 f"(server_stopped={closed.get('server_stopped')})",
                 file=sys.stderr,
             )
+        if pump is not None:
+            pump.close()
         if event_session is not None:
             event_session.close()
     return 0
@@ -398,9 +405,14 @@ def _windows_from_live_snapshot():
 
 
 def _make_watch_pump() -> LivePump:
-    """SessionHost-style pump: socket-first reads into the apply host."""
+    """SessionHost-style pump: one persistent RPC socket into the apply host."""
+    api = HerdrApi()
+    try:
+        api.open()
+    except Exception:
+        pass
     return LivePump(
-        transport=ApiTransport(HerdrApi()),
+        transport=ApiTransport(api),
         windows_builder=_windows_from_live_snapshot,
     )
 
@@ -871,9 +883,21 @@ def cmd_json_dump(args: argparse.Namespace) -> int:
     return 0
 
 
+_CLI_API: Optional[HerdrApi] = None
+
+
 def _api() -> HerdrApi:
-    """Fresh socket-first caller. Control talks to Herdr even if native owns chrome."""
-    return HerdrApi()
+    """Process-wide socket-first caller. Control talks to Herdr even if native owns chrome."""
+    global _CLI_API
+    if _CLI_API is not None:
+        return _CLI_API
+    api = HerdrApi()
+    try:
+        api.open()
+    except Exception:
+        pass
+    _CLI_API = api
+    return api
 
 
 def _print_api(result, args: argparse.Namespace, *, line: Optional[str] = None) -> int:
@@ -1064,6 +1088,114 @@ def cmd_layout(args: argparse.Namespace) -> int:
     if args.pane:
         params["pane_id"] = args.pane
     return _run_api(args, "layout.export", params)
+
+
+def cmd_set_ratio(args: argparse.Namespace) -> int:
+    """Update a split ratio (``layout.set_split_ratio``)."""
+    path: list = []
+    if args.path:
+        try:
+            loaded = json.loads(args.path)
+        except json.JSONDecodeError as exc:
+            _die(f"invalid --path JSON: {exc}")
+        if not isinstance(loaded, list):
+            _die("--path must be a JSON array of hop indexes")
+        path = loaded
+    params = {"ratio": args.ratio, "path": path}
+    if args.tab:
+        params["tab_id"] = args.tab
+    return _run_api(args, "layout.set_split_ratio", params, line="set split ratio")
+
+
+def cmd_move_pane(args: argparse.Namespace) -> int:
+    """Move a running pane to another tab (``pane.move``)."""
+    if args.new_tab:
+        destination = {"type": "new_tab", "label": args.label or "moved"}
+        if args.workspace:
+            destination["workspace_id"] = args.workspace
+    elif args.tab:
+        destination = {"type": "tab", "tab_id": args.tab, "split": args.split}
+        if args.target:
+            destination["target_pane_id"] = args.target
+    else:
+        _die("move-pane: pass --tab or --new-tab")
+    params = {
+        "pane_id": args.pane_id,
+        "destination": destination,
+        "focus": not args.no_focus,
+    }
+    return _run_api(args, "pane.move", params, line=f"moved {args.pane_id}")
+
+
+def cmd_focus_dir(args: argparse.Namespace) -> int:
+    """Focus the neighboring pane (``pane.focus_direction``)."""
+    return _run_api(
+        args,
+        "pane.focus_direction",
+        {"direction": args.direction},
+        line=f"focus {args.direction}",
+    )
+
+
+def cmd_move_tab(args: argparse.Namespace) -> int:
+    """Move a tab in the strip or to another workspace (``tab.move``)."""
+    params: dict = {"tab_id": args.tab_id}
+    if args.index is not None:
+        params["index"] = args.index
+    if args.workspace:
+        params["workspace_id"] = args.workspace
+    return _run_api(args, "tab.move", params, line=f"moved tab {args.tab_id}")
+
+
+def cmd_rename_pane(args: argparse.Namespace) -> int:
+    """Rename a Herdr pane (``pane.rename``)."""
+    return _run_api(
+        args,
+        "pane.rename",
+        {"pane_id": args.pane_id, "label": args.label},
+        line=f"renamed pane {args.pane_id}",
+    )
+
+
+def cmd_rename_agent(args: argparse.Namespace) -> int:
+    """Rename a Herdr agent (``agent.rename``)."""
+    return _run_api(
+        args,
+        "agent.rename",
+        {"pane_id": args.target, "target": args.target, "label": args.label},
+        line=f"renamed agent {args.target}",
+    )
+
+
+def cmd_start_agent(args: argparse.Namespace) -> int:
+    """Start an agent in a pane (``agent.start``)."""
+    params: dict = {"pane_id": args.pane_id, "target": args.pane_id}
+    if args.agent:
+        params["agent"] = args.agent
+    return _run_api(
+        args, "agent.start", params, line=f"started agent on {args.pane_id}"
+    )
+
+
+def cmd_notify(args: argparse.Namespace) -> int:
+    """Show a Herdr notification (``notification.show``)."""
+    params: dict = {"title": args.title}
+    if args.body:
+        params["body"] = args.body
+    return _run_api(args, "notification.show", params, line="notified")
+
+
+def cmd_wait_output(args: argparse.Namespace) -> int:
+    """Wait for pane output (``pane.wait_for_output``)."""
+    params: dict = {"pane_id": args.pane_id, "pattern": args.pattern}
+    if args.timeout_ms is not None:
+        params["timeout_ms"] = args.timeout_ms
+    return _run_api(
+        args,
+        "pane.wait_for_output",
+        params,
+        line=f"wait output {args.pane_id}",
+    )
 
 
 def cmd_agent_prompt(args: argparse.Namespace) -> int:
@@ -1555,6 +1687,76 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--pane")
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_layout)
+
+    s = sub.add_parser("set-ratio", help="Set a tab split ratio (layout.set_split_ratio)")
+    s.add_argument("--tab")
+    s.add_argument("--ratio", type=float, required=True)
+    s.add_argument(
+        "--path",
+        help='JSON array of split hops, e.g. [] or [0]',
+    )
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_set_ratio)
+
+    s = sub.add_parser("move-pane", help="Move a running pane to another tab")
+    s.add_argument("pane_id")
+    s.add_argument("--tab", help="destination tab id")
+    s.add_argument("--new-tab", action="store_true", help="move into a new tab")
+    s.add_argument("--label", help="label for --new-tab")
+    s.add_argument("--workspace", help="workspace for --new-tab")
+    s.add_argument("--split", choices=("right", "down"), default="right")
+    s.add_argument("--target", help="target pane in the destination tab")
+    s.add_argument("--no-focus", action="store_true")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_move_pane)
+
+    s = sub.add_parser("focus-dir", help="Focus a neighboring pane (pane.focus_direction)")
+    s.add_argument(
+        "direction",
+        choices=("right", "left", "up", "down"),
+    )
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_focus_dir)
+
+    s = sub.add_parser("move-tab", help="Move a Herdr tab (tab.move)")
+    s.add_argument("tab_id")
+    s.add_argument("--index", type=int, help="new index in the tab strip")
+    s.add_argument("--workspace", help="destination workspace id")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_move_tab)
+
+    s = sub.add_parser("rename-pane", help="Rename a Herdr pane (pane.rename)")
+    s.add_argument("pane_id")
+    s.add_argument("label")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_rename_pane)
+
+    s = sub.add_parser("rename-agent", help="Rename a Herdr agent (agent.rename)")
+    s.add_argument("target")
+    s.add_argument("label")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_rename_agent)
+
+    s = sub.add_parser("start-agent", help="Start an agent in a pane (agent.start)")
+    s.add_argument("pane_id")
+    s.add_argument("--agent", help="agent id / manifest name")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_start_agent)
+
+    s = sub.add_parser("notify", help="Show a Herdr notification (notification.show)")
+    s.add_argument("title")
+    s.add_argument("--body")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_notify)
+
+    s = sub.add_parser(
+        "wait-output", help="Wait for pane output (pane.wait_for_output)"
+    )
+    s.add_argument("pane_id")
+    s.add_argument("pattern")
+    s.add_argument("--timeout-ms", type=int)
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_wait_output)
 
     s = sub.add_parser(
         "agent-prompt",

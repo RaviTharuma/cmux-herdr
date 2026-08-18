@@ -336,6 +336,8 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
         lines = params.get("lines")
         if lines is not None:
             argv.extend(["--lines", str(lines)])
+        if params.get("ansi"):
+            argv.append("--ansi")
         return argv
     if method == "layout.export":
         argv = ["pane", "layout"]
@@ -391,6 +393,28 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
         return ["agent", "send-keys", pane, keys]
     if method == "agent.rename" and pane and label:
         return ["agent", "rename", pane, label]
+    if method == "tab.move" and tab:
+        argv = ["tab", "move", tab]
+        index = params.get("index")
+        if index is not None:
+            argv.extend(["--index", str(index)])
+        dest = _str(params.get("workspace_id"))
+        if dest:
+            argv.extend(["--workspace", dest])
+        return argv
+    if method == "pane.rename" and pane and label:
+        return ["pane", "rename", pane, label]
+    if method == "pane.wait_for_output" and pane:
+        argv = ["pane", "wait", pane]
+        pattern = _str(params.get("pattern") or params.get("needle"))
+        if pattern:
+            argv.extend(["--pattern", pattern])
+        timeout_ms = params.get("timeout_ms")
+        if timeout_ms is not None:
+            argv.extend(["--timeout-ms", str(timeout_ms)])
+        return argv
+    if method == "pane.process_info" and pane:
+        return ["pane", "process-info", pane]
     if method == "notification.show":
         title = _str(params.get("title"))
         if not title:
@@ -437,7 +461,11 @@ CliRunner = Callable[[Sequence[str]], Any]
 
 
 class HerdrApi:
-    """Allowlisted Herdr RPC: socket first, documented CLI fallback."""
+    """Allowlisted Herdr RPC: socket first, documented CLI fallback.
+
+    ``open()`` holds one RPC socket (native ``HerdrNestedTopologyClient``).
+    Never reuse an ``events.subscribe`` stream for requests.
+    """
 
     def __init__(
         self,
@@ -447,11 +475,49 @@ class HerdrApi:
         cli_runner: Optional[CliRunner] = None,
         timeout: float = 8.0,
     ) -> None:
-        """Create a caller. ``client`` is used as-is when provided (tests)."""
+        """Create a caller. Injected ``client`` is used as-is (tests)."""
         self.socket_path = socket_path
         self.client = client
         self.cli_runner = cli_runner
         self.timeout = timeout
+        self._owned_client = False
+
+    def open(self) -> None:
+        """Connect a persistent RPC socket. No-op when a client is injected."""
+        if self.client is not None:
+            if self.client.connected:
+                return
+            if not self._owned_client:
+                return
+            self.client.close()
+            self.client = None
+            self._owned_client = False
+        path = self._resolved_socket_path()
+        if not path:
+            raise ApiError("Herdr socket not available")
+        client = HerdrSocketClient(path, timeout=self.timeout)
+        client.connect()
+        self.client = client
+        self._owned_client = True
+
+    def close(self) -> None:
+        """Close an owned persistent socket. Injected clients are left alone."""
+        if not self._owned_client:
+            return
+        client = self.client
+        self.client = None
+        self._owned_client = False
+        if client is not None:
+            client.close()
+
+    def __enter__(self) -> "HerdrApi":
+        """Open a persistent RPC session."""
+        self.open()
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        """Close an owned persistent session."""
+        self.close()
 
     def call(
         self,
@@ -468,18 +534,19 @@ class HerdrApi:
         name = assert_method_allowed(method)
         payload = dict(params or {})
         socket_error: Optional[str] = None
-        if self.client is not None:
-            try:
-                result = self.client.request(name, payload)
-                return ApiResult(ok=True, method=name, via="socket", result=result)
-            except HerdrSocketError as exc:
-                socket_error = str(exc)
-        else:
-            try:
-                result = self._socket_request(name, payload)
-                return ApiResult(ok=True, method=name, via="socket", result=result)
-            except (ApiError, HerdrSocketError, OSError) as exc:
-                socket_error = str(exc)
+        try:
+            result = self._request_socket(name, payload)
+            return ApiResult(ok=True, method=name, via="socket", result=result)
+        except (ApiError, HerdrSocketError, OSError) as exc:
+            socket_error = str(exc)
+            if self._owned_client:
+                self.close()
+                try:
+                    self.open()
+                    result = self._request_socket(name, payload)
+                    return ApiResult(ok=True, method=name, via="socket", result=result)
+                except (ApiError, HerdrSocketError, OSError) as retry_exc:
+                    socket_error = str(retry_exc)
         if socket_only:
             raise ApiError(socket_error or f"{name} socket request failed")
         argv = build_cli_argv(name, payload)
@@ -491,40 +558,56 @@ class HerdrApi:
             result = self._cli_request(argv)
             return ApiResult(ok=True, method=name, via="cli", result=result)
         except Exception as exc:  # noqa: BLE001 — surface either transport
-            detail = socket_error or str(exc)
+            detail = str(exc) or socket_error
             raise ApiError(f"{name} failed: {detail}") from exc
 
-    def _socket_request(self, method: str, params: Dict[str, Any]) -> Any:
-        """Open a short-lived socket, call once, close. Never reuse subscribe."""
+    def _resolved_socket_path(self) -> Optional[str]:
+        """Prefer an explicit path, then ``HERDR_SOCKET_PATH`` if it exists."""
         path = self.socket_path or socket_path_from_env()
         if not path:
             path = os.environ.get("HERDR_SOCKET_PATH") or ""
         if not path or not os.path.exists(path):
+            return None
+        return path
+
+    def _request_socket(self, method: str, params: Dict[str, Any]) -> Any:
+        """One RPC on the persistent client, or a one-shot connection."""
+        if self.client is not None:
+            return self.client.request(method, params)
+        return self._socket_request(method, params)
+
+    def _socket_request(self, method: str, params: Dict[str, Any]) -> Any:
+        """Open a short-lived socket, call once, close."""
+        path = self._resolved_socket_path()
+        if not path:
             raise ApiError("Herdr socket not available")
         with HerdrSocketClient(path, timeout=self.timeout) as client:
             return client.request(method, params)
 
     def _cli_request(self, argv: Sequence[str]) -> Any:
-        """Run ``herdr <argv>`` via the injected runner or the bridge helper."""
+        """Run ``herdr <argv>`` once. JSON stdout is parsed; plain text is kept.
+
+        Do not retry the same argv after a failure — that double-invokes
+        Herdr and can swallow the real CLI error (or consume a later mock).
+        """
         if self.cli_runner is not None:
             return self.cli_runner(argv)
         try:
-            from .cmux_herdr_bridge import BridgeError, herdr_json, run_cmd, which
+            from .cmux_herdr_bridge import run_cmd, which
         except ImportError:
-            from cmux_herdr_bridge import BridgeError, herdr_json, run_cmd, which
+            from cmux_herdr_bridge import run_cmd, which
         if not which("herdr"):
             raise ApiError("herdr not found on PATH")
-        try:
-            return herdr_json(list(argv))
-        except BridgeError:
-            proc = run_cmd(["herdr", *argv], timeout=self.timeout)
-            if proc.returncode != 0:
-                err = (proc.stderr or proc.stdout or str(proc.returncode)).strip()
-                raise ApiError(err or "herdr CLI failed")
-            out = (proc.stdout or "").strip()
-            if out.startswith("{") or out.startswith("["):
-                try:
-                    return json.loads(out)
-                except json.JSONDecodeError:
-                    return out
-            return out
+        proc = run_cmd(["herdr", *argv], timeout=self.timeout)
+        if proc.returncode != 0:
+            err = (proc.stderr or proc.stdout or str(proc.returncode)).strip()
+            raise ApiError(err or "herdr CLI failed")
+        out = (proc.stdout or "").strip()
+        if not out:
+            return {"ok": True}
+        if out.startswith("{") or out.startswith("["):
+            try:
+                return json.loads(out)
+            except json.JSONDecodeError:
+                return out
+        return out

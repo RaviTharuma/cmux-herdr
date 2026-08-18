@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import unittest
 from typing import Any, Dict, List, Sequence
 
@@ -25,6 +26,14 @@ class _FakeClient:
         self.result = result
         self.error = error
         self.calls: List[tuple] = []
+        self._open = True
+
+    @property
+    def connected(self) -> bool:
+        return self._open
+
+    def close(self) -> None:
+        self._open = False
 
     def request(self, method: str, params: Dict[str, Any]) -> Any:
         self.calls.append((method, params))
@@ -168,6 +177,58 @@ class HerdrApiCallTests(unittest.TestCase):
         ).to_dict()
         self.assertEqual(payload["error"], "missing")
         self.assertFalse(payload["ok"])
+
+    def test_persistent_session_reuses_one_connection(self) -> None:
+        from bridge.test_socket_unit import FakeHerdrUnixServer
+
+        def handler(request: Dict[str, Any]) -> List[Dict[str, Any]]:
+            return [{"id": request.get("id"), "result": {"type": "pong"}}]
+
+        server = FakeHerdrUnixServer(handler)
+        self.addCleanup(server.shutdown)
+        with HerdrApi(socket_path=server.path, timeout=2.0) as api:
+            first = api.call("ping")
+            second = api.call("ping")
+        self.assertTrue(first.ok)
+        self.assertTrue(second.ok)
+        self.assertEqual(first.via, "socket")
+        self.assertEqual(server.accepts, 1)
+
+    def test_injected_client_is_not_closed_by_api_close(self) -> None:
+        client = _FakeClient(result={"type": "pong"})
+        api = HerdrApi(client=client)  # type: ignore[arg-type]
+        api.close()
+        self.assertTrue(client.connected)
+        result = api.call("ping")
+        self.assertEqual(result.via, "socket")
+
+    def test_cli_fallback_invokes_herdr_once(self) -> None:
+        from types import SimpleNamespace
+        from unittest import mock
+
+        fake = SimpleNamespace(returncode=1, stderr="agent focus denied", stdout="")
+        with mock.patch.dict(
+            os.environ, {"HERDR_SOCKET_PATH": "/no/such/herdr.sock"}, clear=False
+        ), mock.patch(
+            "bridge.cmux_herdr_bridge.which", return_value="/mock/herdr"
+        ), mock.patch(
+            "bridge.cmux_herdr_bridge.run_cmd", return_value=fake
+        ) as run_cmd:
+            api = HerdrApi()
+            with self.assertRaises(ApiError) as ctx:
+                api.call("agent.focus", {"pane_id": "w2:p1"})
+            self.assertIn("agent focus denied", str(ctx.exception))
+            self.assertEqual(run_cmd.call_count, 1)
+
+    def test_tab_move_and_pane_rename_map_to_cli(self) -> None:
+        self.assertEqual(
+            build_cli_argv("tab.move", {"tab_id": "w2:t1", "index": 2}),
+            ["tab", "move", "w2:t1", "--index", "2"],
+        )
+        self.assertEqual(
+            build_cli_argv("pane.rename", {"pane_id": "w2:p1", "label": "logs"}),
+            ["pane", "rename", "w2:p1", "logs"],
+        )
 
 
 if __name__ == "__main__":

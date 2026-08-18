@@ -17,7 +17,7 @@ writer when native owns the lease.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 try:
     from .cmux_herdr_api import HerdrApi, extract_agent_status, extract_read_text
@@ -164,6 +164,18 @@ class PumpTransport:
         """Return ``pane.get`` (cwd, agent_status). Empty dict on failure."""
         raise NotImplementedError
 
+    def send_text(self, pane_id: str, text: str) -> None:
+        """Forward typed input. Default is a no-op."""
+        return None
+
+    def send_keys(self, pane_id: str, keys: str) -> None:
+        """Forward a named key. Default is a no-op."""
+        return None
+
+    def close(self) -> None:
+        """Release any persistent RPC session."""
+        return None
+
 
 class MemoryTransport(PumpTransport):
     """In-memory pane reads for tests."""
@@ -177,6 +189,7 @@ class MemoryTransport(PumpTransport):
         self.reads = dict(reads or {})
         self.panes = dict(panes or {})
         self.read_calls: List[str] = []
+        self.sent: List[Tuple[str, str, str]] = []
 
     def read_pane(self, pane_id: str) -> str:
         """Return the canned snapshot and record the call."""
@@ -187,6 +200,14 @@ class MemoryTransport(PumpTransport):
         """Return canned ``pane.get`` data."""
         return dict(self.panes.get(pane_id) or {})
 
+    def send_text(self, pane_id: str, text: str) -> None:
+        """Record a text send (tests)."""
+        self.sent.append(("text", pane_id, text))
+
+    def send_keys(self, pane_id: str, keys: str) -> None:
+        """Record a named-key send (tests)."""
+        self.sent.append(("key", pane_id, keys))
+
 
 class ApiTransport(PumpTransport):
     """Live transport over ``HerdrApi`` (socket first)."""
@@ -196,15 +217,20 @@ class ApiTransport(PumpTransport):
         self.api = api or HerdrApi()
 
     def read_pane(self, pane_id: str) -> str:
-        """``pane.read`` → text. Empty string when the pane is gone."""
-        try:
-            result = self.api.call(
-                "pane.read",
-                {"pane_id": pane_id, "source": "recent", "lines": 200},
-            )
-        except Exception:
-            return ""
-        return extract_read_text(result.result)
+        """``pane.read`` → text. Prefer ANSI; fall back to plain recent."""
+        attempts = (
+            ({"pane_id": pane_id, "source": "recent", "lines": 200, "ansi": True}, True),
+            ({"pane_id": pane_id, "source": "recent", "lines": 200}, False),
+        )
+        for params, socket_only in attempts:
+            try:
+                result = self.api.call("pane.read", params, socket_only=socket_only)
+            except Exception:
+                continue
+            text = extract_read_text(result.result)
+            if text:
+                return text
+        return ""
 
     def pane_info(self, pane_id: str) -> Dict[str, Any]:
         """``pane.get`` → dict. Empty when the pane is gone."""
@@ -214,6 +240,26 @@ class ApiTransport(PumpTransport):
             return {}
         payload = result.result
         return payload if isinstance(payload, dict) else {}
+
+    def send_text(self, pane_id: str, text: str) -> None:
+        """Forward typed input to Herdr (``pane.send_text``)."""
+        try:
+            self.api.call("pane.send_text", {"pane_id": pane_id, "text": text})
+        except Exception:
+            return
+
+    def send_keys(self, pane_id: str, keys: str) -> None:
+        """Forward a named key to Herdr (``pane.send_keys``)."""
+        try:
+            self.api.call("pane.send_keys", {"pane_id": pane_id, "keys": keys})
+        except Exception:
+            return
+
+    def close(self) -> None:
+        """Close a persistent RPC session if this transport owns one."""
+        closer = getattr(self.api, "close", None)
+        if callable(closer):
+            closer()
 
 
 @dataclass
@@ -255,7 +301,7 @@ class LivePump:
         return PumpResult(kind=kind, pane_id=pane_id or None, log="ignored")
 
     def poll(self, host: Any) -> PumpResult:
-        """Timeout tick: ``pane.read`` every live surface (no %output stream)."""
+        """Timeout tick: ``pane.read`` every live surface, then drain input."""
         if host is None:
             return PumpResult(kind=KIND_OUTPUT, log="no_host")
         pane_ids = _live_pane_ids(host)
@@ -263,12 +309,42 @@ class LivePump:
         for pane_id in pane_ids:
             if self._paint(host, pane_id):
                 routed += 1
-        self.log.append(f"poll:{routed}/{len(pane_ids)}")
+        flushed = self.flush_input(host)
+        self.log.append(f"poll:{routed}/{len(pane_ids)} in:{flushed}")
         return PumpResult(
             kind=KIND_OUTPUT,
             routed_output=routed > 0,
             log=f"poll:{routed}",
         )
+
+    def close(self) -> None:
+        """Release the transport (persistent RPC socket)."""
+        closer = getattr(self.transport, "close", None)
+        if callable(closer):
+            closer()
+
+    def flush_input(self, host: Any) -> int:
+        """Drain queued Ghostty input onto Herdr (tmux input forwarder)."""
+        drain = getattr(host, "drain_input", None)
+        if not callable(drain):
+            return 0
+        count = 0
+        for item in drain():
+            pane_id = getattr(item, "pane_id", "") or ""
+            kind = getattr(item, "kind", "")
+            if kind == "key":
+                keys = getattr(item, "key", None)
+                if pane_id and keys:
+                    self.transport.send_keys(pane_id, str(keys))
+                    count += 1
+                continue
+            text = getattr(item, "text", None)
+            if pane_id and text:
+                self.transport.send_text(pane_id, str(text))
+                count += 1
+        if count:
+            self.log.append(f"flush:{count}")
+        return count
 
     def resync(self, host: Any, *, log: str = "resync") -> PumpResult:
         """Full snapshot apply, then poll outputs into new surfaces."""
@@ -304,6 +380,18 @@ class LivePump:
         """Provider focus: project locally, never echo pane.focus."""
         target = pane_id or event_string(body, "focused_pane_id", "active_pane_id")
         if not target:
+            tab_id = event_string(body, "tab_id")
+            apply_tab = getattr(host, "apply_tab_focus", None)
+            if tab_id and callable(apply_tab) and apply_tab(tab_id):
+                self.log.append(f"tab_focus:{tab_id}")
+                return PumpResult(kind=KIND_FOCUS, focused=True, log="tab_focus")
+            workspace_id = event_string(body, "workspace_id")
+            apply_ws = getattr(host, "apply_workspace_focus", None)
+            if workspace_id and callable(apply_ws) and apply_ws(workspace_id):
+                self.log.append(f"workspace_focus:{workspace_id}")
+                return PumpResult(
+                    kind=KIND_FOCUS, focused=True, log="workspace_focus"
+                )
             return PumpResult(kind=KIND_FOCUS, resync=True, log="focus_resync")
         applied = False
         apply_fn = getattr(host, "apply_provider_focus", None)
@@ -349,10 +437,13 @@ class LivePump:
         )
 
     def _paint(self, host: Any, pane_id: str) -> bool:
-        """Read one pane and route the incremental delta. Isolated by pane id."""
+        """Read one pane and seed or route the delta. Isolated by pane id."""
         text = self.transport.read_pane(pane_id)
         if not text:
             return False
+        paint = getattr(host, "paint_read", None)
+        if callable(paint):
+            return bool(paint(pane_id, text))
         route = getattr(host, "route_read_snapshot", None)
         if not callable(route):
             return False

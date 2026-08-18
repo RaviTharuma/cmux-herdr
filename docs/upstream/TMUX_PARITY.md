@@ -140,6 +140,13 @@ cmux-herdr watch --tmux-parity           # attach, pump I/O, remirror, detach on
 cmux-herdr attach / detach / restore     # apply-host lifecycle (never server.stop)
 cmux-herdr api --list                    # published Herdr methods
 cmux-herdr new-tab / close-pane / send   # inner mux control (socket-first)
+cmux-herdr set-ratio --tab w2:t1 --ratio 0.6
+cmux-herdr move-pane w2:p2 --tab w2:t2 --split right
+cmux-herdr focus-dir right
+cmux-herdr move-tab w2:t1 --index 0
+cmux-herdr rename-pane w2:p2 logs
+cmux-herdr start-agent w2:p3 --agent codex
+cmux-herdr notify "sync complete"
 cmux-herdr send-key <pane_id> C-Up       # named keys
 cmux-herdr observe --method pane_surfaces
 cmux-herdr attach-pane <pane_id>         # cbreak + SIGWINCH + ANSI read

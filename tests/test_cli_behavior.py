@@ -130,6 +130,15 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("agent-prompt", result.stdout)
         self.assertIn("agent-wait", result.stdout)
         self.assertIn("layout", result.stdout)
+        self.assertIn("set-ratio", result.stdout)
+        self.assertIn("move-pane", result.stdout)
+        self.assertIn("focus-dir", result.stdout)
+        self.assertIn("move-tab", result.stdout)
+        self.assertIn("rename-pane", result.stdout)
+        self.assertIn("rename-agent", result.stdout)
+        self.assertIn("start-agent", result.stdout)
+        self.assertIn("notify", result.stdout)
+        self.assertIn("wait-output", result.stdout)
 
     def test_unknown_command_is_argparse_error(self):
         result = self.run_cli("does-not-exist")
@@ -331,9 +340,9 @@ if sys.argv[1:2] == ["list-status"]:
             fake_bin.mkdir()
             write_executable(fake_bin / "herdr", FAKE_HERDR_FULL)
             path = f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}"
-            ws = self.run_cli("focus-workspace", "w1", path=path)
-            agent = self.run_cli("focus-agent", "p1", path=path)
-            pane = self.run_cli("focus-pane", "p1", path=path)
+            ws = self.run_cli("focus-workspace", "w1", path=path, env_extra={"HERDR_SOCKET_PATH": "/no/such/herdr.sock"})
+            agent = self.run_cli("focus-agent", "p1", path=path, env_extra={"HERDR_SOCKET_PATH": "/no/such/herdr.sock"})
+            pane = self.run_cli("focus-pane", "p1", path=path, env_extra={"HERDR_SOCKET_PATH": "/no/such/herdr.sock"})
         self.assertEqual(ws.returncode, 0, ws.stderr)
         self.assertIn("focused workspace w1", ws.stdout)
         self.assertEqual(agent.returncode, 0, agent.stderr)
@@ -371,6 +380,7 @@ raise SystemExit(9)
                 "focus-pane",
                 "p1",
                 path=f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
+                env_extra={"HERDR_SOCKET_PATH": "/no/such/herdr.sock"},
             )
         self.assertEqual(result.returncode, 1)
         self.assertIn("focus refused", result.stderr)
