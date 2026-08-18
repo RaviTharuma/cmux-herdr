@@ -208,7 +208,7 @@ Status keys use `herdr:<pane_id>`. Every sync removes stale `herdr:*` keys while
 ## Layout
 
 ```text
-VERSION                     version source of truth (e.g. 0.3.1)
+VERSION                     version source of truth (e.g. 0.3.2)
 CHANGELOG.md                release notes
 RELEASE.md                  tag / gh release / install-from-tag steps
 OPEN.md                     stopgap inventory + open checklist

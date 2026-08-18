@@ -450,6 +450,35 @@ class LivePump:
         return bool(route(pane_id, text))
 
 
+def watch_followup(
+    result: Optional[PumpResult],
+    *,
+    had_event: bool,
+    event_gap: bool = False,
+) -> str:
+    """What ``watch --tmux-parity`` should do after a pump step.
+
+    Native SessionHost paints I/O on every tick and only rebuilds chrome
+    after topology (or a subscribe gap). Status events refresh pills.
+    Timeout polls never remirror.
+
+    Returns:
+        ``project`` (remirror cmux viewers), ``pills`` (status only),
+        or ``none``.
+    """
+    if event_gap:
+        return "project"
+    if result is None:
+        return "none" if had_event else "project"
+    if result.resync:
+        return "project"
+    if result.status_updated:
+        return "pills"
+    if not had_event:
+        return "none"
+    return "none"
+
+
 def _live_pane_ids(host: Any) -> List[str]:
     """Pane ids with a live in-memory surface."""
     getter = getattr(host, "live_pane_ids", None)

@@ -44,6 +44,7 @@ try:
         fetch_snapshot,
         focus_pane,
         herdr_json,
+        herdr_rpc,
         native_attachment_is_live,
         resolve_cmux_workspace,
         run_cmd,
@@ -83,6 +84,7 @@ except ImportError:  # running as a loose file with PYTHONPATH=bridge
         fetch_snapshot,
         focus_pane,
         herdr_json,
+        herdr_rpc,
         native_attachment_is_live,
         resolve_cmux_workspace,
         run_cmd,
@@ -1555,6 +1557,11 @@ def send_pane_text(pane_id: str, text: str) -> None:
     """Forward text to a Herdr pane. Attach stays read-only if send is unavailable."""
     if not text:
         return
+    try:
+        herdr_rpc("pane.send_text", {"pane_id": pane_id, "text": text})
+        return
+    except BridgeError:
+        pass
     if not which("herdr"):
         raise BridgeError("herdr not found on PATH")
     flag_attempts = (
@@ -1597,10 +1604,17 @@ def send_pane_named_key(pane_id: str, name: str) -> Dict[str, Any]:
         raise BridgeError(f"unknown key name: {name}")
     if item.key:
         try:
-            send_pane_text(pane_id, item.key)
+            herdr_rpc(
+                "pane.send_keys",
+                {"pane_id": pane_id, "keys": item.key, "key": item.key},
+            )
             return {"pane_id": pane_id, "key": item.key, "via": "send_keys"}
         except BridgeError:
-            pass
+            try:
+                send_pane_text(pane_id, item.key)
+                return {"pane_id": pane_id, "key": item.key, "via": "send_keys"}
+            except BridgeError:
+                pass
     if item.csi:
         send_pane_text(pane_id, item.csi.decode("latin-1"))
         return {"pane_id": pane_id, "key": item.key, "via": "csi"}
@@ -1610,9 +1624,38 @@ def send_pane_named_key(pane_id: str, name: str) -> Dict[str, Any]:
 def read_pane_text(pane_id: str, *, lines: int = 200, ansi: bool = True) -> str:
     """Read current Herdr pane contents for the attach follower.
 
-    Prefers ANSI/raw so the viewer looks closer to a tmux ``%output`` feed.
-    Falls back to unwrapped text when the Herdr build has no ``--ansi``.
+    Socket-first ``pane.read`` (same wire as native SessionHost). Prefers
+    ANSI so the viewer looks closer to a tmux ``%output`` feed. Falls back
+    to the documented CLI when the socket is down.
     """
+    try:
+        from .cmux_herdr_api import extract_read_text
+    except ImportError:
+        from cmux_herdr_api import extract_read_text
+
+    params: Dict[str, Any] = {
+        "pane_id": pane_id,
+        "source": "recent",
+        "lines": lines,
+    }
+    if ansi:
+        params["ansi"] = True
+    try:
+        text = extract_read_text(herdr_rpc("pane.read", params))
+        if text:
+            return text
+    except BridgeError:
+        pass
+    if ansi:
+        try:
+            plain = dict(params)
+            plain.pop("ansi", None)
+            plain["source"] = "recent-unwrapped"
+            text = extract_read_text(herdr_rpc("pane.read", plain))
+            if text:
+                return text
+        except BridgeError:
+            pass
     attempts: List[List[str]] = []
     if ansi:
         attempts.append(
@@ -1677,6 +1720,14 @@ def resize_herdr_pane(pane_id: str, cols: int, rows: int) -> None:
     """Tell Herdr the viewer size (plugin analogue of tmux client-size claim)."""
     if cols <= 0 or rows <= 0:
         return
+    try:
+        herdr_rpc(
+            "pane.resize",
+            {"pane_id": pane_id, "cols": cols, "rows": rows},
+        )
+        return
+    except BridgeError:
+        pass
     attempts = (
         ["herdr", "pane", "resize", pane_id, "--cols", str(cols), "--rows", str(rows)],
         ["herdr", "pane", "resize", pane_id, str(cols), str(rows)],

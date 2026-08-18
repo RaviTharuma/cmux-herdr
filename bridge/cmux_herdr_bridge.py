@@ -211,13 +211,15 @@ def _herdr_api():
         return _RPC_API
     try:
         from .cmux_herdr_api import ApiError, HerdrApi
+        from .cmux_herdr_socket import HerdrSocketError
     except ImportError:
         from cmux_herdr_api import ApiError, HerdrApi
+        from cmux_herdr_socket import HerdrSocketError
 
     api = HerdrApi()
     try:
         api.open()
-    except ApiError:
+    except (ApiError, HerdrSocketError, OSError):
         pass
     _RPC_API = api
     return api
@@ -473,34 +475,25 @@ def fetch_snapshot() -> Snapshot:
 def fetch_snapshot_via_socket() -> Optional[Snapshot]:
     """Return a Snapshot from ``session.snapshot`` over the Herdr socket.
 
+    Reuses the process-wide ``HerdrApi`` session (native nested client).
     Returns None when the socket is unavailable or the payload cannot be
     parsed into panes. Never raises for transport failures.
     """
-    path = os.environ.get("HERDR_SOCKET_PATH")
-    if not path or not os.path.exists(path):
-        return None
     try:
-        from .cmux_herdr_socket import (
-            HerdrSocketClient,
-            HerdrSocketError,
-            assert_socket_secure,
-        )
+        from .cmux_herdr_api import ApiError
+        from .cmux_herdr_socket import HerdrSocketError
     except ImportError:
-        try:
-            from cmux_herdr_socket import (  # type: ignore
-                HerdrSocketClient,
-                HerdrSocketError,
-                assert_socket_secure,
-            )
-        except ImportError:
-            return None
+        from cmux_herdr_api import ApiError
+        from cmux_herdr_socket import HerdrSocketError
     try:
-        assert_socket_secure(path)
-        with HerdrSocketClient(path, timeout=5.0) as client:
-            client.ping()
-            result = client.snapshot()
-    except (OSError, HerdrSocketError, ValueError, TypeError):
+        payload = _herdr_api().call("session.snapshot", {}, socket_only=True).result
+    except (ApiError, HerdrSocketError, OSError, ValueError, TypeError):
         return None
+    return _snapshot_from_session_payload(payload)
+
+
+def _snapshot_from_session_payload(result: Any) -> Optional[Snapshot]:
+    """Parse a ``session.snapshot`` result into a Snapshot, or None."""
     if not isinstance(result, dict):
         return None
     if isinstance(result.get("snapshot"), dict):

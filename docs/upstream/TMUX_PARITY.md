@@ -110,13 +110,14 @@ SSH ControlMaster, `tmux -CC` parser, `%layout-change` wire format, control-mode
 
 ### Plugin (cannot close without native cmux)
 
-- No Ghostty PTY theft; `attach-pane` is a second client, like `tmux attach` from another terminal.
-- No true `%output` byte stream; poll `pane.read` + incremental delta when the snapshot extends.
-- No Bonsplit divider-drag → `resize-pane` (CLI has no drag session).
+This is the plugin ceiling. Further depth is AppKit, not more Python.
+
+- No Ghostty PTY theft; `attach-pane` is a second client, like `tmux attach` from another terminal. Reads/sends/resizes now use the same Unix-socket RPC as native SessionHost, then CLI fallback.
+- No true `%output` byte stream; poll `pane.read` + incremental delta when the snapshot extends. Subscribe gaps force a snapshot resync. Timeout ticks paint only (no chrome remirror).
+- No Bonsplit divider-drag → `resize-pane` (the plugin has no Bonsplit owner). Native [RaviTharuma/cmux#17](https://github.com/RaviTharuma/cmux/pull/17) owns that host path.
 - `cmux split` / `set-ratio` / `move-tab` / `focus-surface` verbs differ across cmux CLI builds; the bridge tries fallbacks and records errors.
 - The live apply machine runs `make_panel` / output / drag / focus /
-  size / attach in-process. `watch --tmux-parity` now pumps `pane.read`
-  into those surfaces. They are still in-memory Ghostty analogues — the
+  size / attach in-process. Surfaces are in-memory Ghostty analogues — the
   plugin cannot open a real `TerminalPanel`.
 
 ### Native PR7 (must copy tmux, not invent a third model)

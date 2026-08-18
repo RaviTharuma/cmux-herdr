@@ -136,6 +136,11 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] **Control CLI pack**: `set-ratio` / `move-pane` / `focus-dir` /
       `move-tab` / `rename-pane` / `rename-agent` / `start-agent` /
       `notify` / `wait-output`.
+- [x] **SessionHost watch ceiling**: subscribe gap → snapshot resync;
+      timeout poll does not remirror; `attach-pane` I/O is socket-first
+      (`pane.read` / `pane.send_*` / `pane.resize`). Snapshot uses the
+      shared HerdrApi session. This is as far as userspace can go without
+      Ghostty PTY theft / a live Bonsplit controller.
 - [x] Native-title lock + diff-before-write (`lock-title` / `unlock-title`,
       `CMUX_HERDR_LOCK_TITLES`).
 - [x] Heuristic-once parent map (`parent_tab_id` + `heuristic_satisfied`; session
@@ -188,7 +193,12 @@ Remaining for that PR is maintainer review / merge — not more missing-PATH wor
 Two native layers (do not collapse them):
 
 1. **Sidebar nested topology** — [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (open, dirty). Virtual rows + `nested.node.focus`. **Not** ssh-tmux.
-2. **Window mirror (PR7)** — paste-ready [docs/upstream/PR7_HERDR_WINDOW_MIRROR.md](./docs/upstream/PR7_HERDR_WINDOW_MIRROR.md). Copy `RemoteTmuxWindowMirror`: real cmux tabs, Bonsplit panes, Ghostty I/O, layout, resize, zoom, prune. Honest missing list (seed, named keys, focus rollback, attach/detach, …): [TMUX_PARITY.md — contract vs live](./docs/upstream/TMUX_PARITY.md#contract-vs-live-appkit).
+2. **Window mirror (PR7)** — live AppKit host is
+   [RaviTharuma/cmux#17](https://github.com/RaviTharuma/cmux/pull/17) (other
+   chat; do not stack onto that branch). Plugin `--tmux-parity` is the
+   userspace stand-in and is at ceiling: socket RPC + SessionHost pump +
+   attach-pane followers. Remaining depth is Ghostty `TerminalPanel` /
+   Bonsplit, which this repo cannot do.
 
 Matrix: [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
 

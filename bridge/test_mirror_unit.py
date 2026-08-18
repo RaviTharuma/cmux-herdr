@@ -422,10 +422,19 @@ class ParseAndAttachTests(unittest.TestCase):
             self.assertFalse(wait_herdr_event(timeout=0.05))
             self.assertTrue(started)
         from bridge import cmux_herdr_mirror as mirror
+        from bridge.cmux_herdr_bridge import BridgeError
+
+        with mock.patch.object(mirror, "herdr_rpc") as rpc:
+            send_pane_text("w2:p1", "hello")
+            rpc.assert_called_once_with(
+                "pane.send_text", {"pane_id": "w2:p1", "text": "hello"}
+            )
 
         fail = mock.Mock(returncode=1, stderr="nope", stdout="")
         ok = mock.Mock(returncode=0, stderr="", stdout="")
-        with mock.patch.object(mirror, "which", return_value="/mock/herdr"), mock.patch.object(
+        with mock.patch.object(
+            mirror, "herdr_rpc", side_effect=BridgeError("socket down")
+        ), mock.patch.object(mirror, "which", return_value="/mock/herdr"), mock.patch.object(
             mirror, "run_cmd", return_value=fail
         ), mock.patch.object(mirror.subprocess, "run", return_value=ok) as sp_run:
             send_pane_text("w2:p1", "x")

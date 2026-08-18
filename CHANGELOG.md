@@ -9,6 +9,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **SessionHost watch ceiling**: subscribe gap (or periodic 10× interval)
+  triggers a full `session.snapshot` resync. Timeout ticks paint I/O only —
+  they do not remirror cmux chrome (native SessionHost does not rebuild
+  Bonsplit every poll). `attach-pane` read/send/resize go socket-first
+  through `herdr_rpc`. `fetch_snapshot` reuses the process-wide HerdrApi
+  session.
+
 - **Persistent Herdr RPC session**: `HerdrApi.open()` holds one Unix-socket
   connection (native `HerdrNestedTopologyClient`). `watch --tmux-parity`
   reuses it for pane reads instead of connecting per poll. Reconnects once

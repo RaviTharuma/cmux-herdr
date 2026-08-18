@@ -13,9 +13,11 @@ from bridge.cmux_herdr_pump import (
     KIND_TOPOLOGY,
     LivePump,
     MemoryTransport,
+    PumpResult,
     classify_event,
     event_type,
     unwrap_event,
+    watch_followup,
 )
 from bridge.test_live_unit import _window
 
@@ -190,6 +192,26 @@ class PumpApplyTests(unittest.TestCase):
         self.assertIn(b"hello", buf)
         self.assertIn(b"!", buf)
         self.assertNotIn(b"hello", host.windows["w2:t1"].surfaces["w2:p2"].buffer)
+
+
+class WatchFollowupTests(unittest.TestCase):
+    def test_subscribe_gap_remirrors(self) -> None:
+        self.assertEqual(
+            watch_followup(None, had_event=False, event_gap=True),
+            "project",
+        )
+
+    def test_timeout_poll_does_not_remirror(self) -> None:
+        result = PumpResult(kind=KIND_OUTPUT, routed_output=True, log="poll")
+        self.assertEqual(watch_followup(result, had_event=False), "none")
+
+    def test_topology_resync_projects(self) -> None:
+        result = PumpResult(kind=KIND_TOPOLOGY, resync=True, log="topology")
+        self.assertEqual(watch_followup(result, had_event=True), "project")
+
+    def test_status_event_refreshes_pills(self) -> None:
+        result = PumpResult(kind=KIND_STATUS, status_updated=True, log="status")
+        self.assertEqual(watch_followup(result, had_event=True), "pills")
 
 
 if __name__ == "__main__":
