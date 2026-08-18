@@ -1,0 +1,37 @@
+name: apply-herdr-cr3-round4
+on:
+  push:
+    paths:
+      - .github/workflows/apply-herdr-cr3-round4.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cursor/nested-topology-herdr-v1-becf
+          fetch-depth: 0
+
+      - name: Force-apply round-4 CR fixes
+        env:
+          BUNDLE_URL: https://raw.githubusercontent.com/RaviTharuma/cmux-herdr/cursor/pr10045-coderabbit-replies-f1c1/docs/upstream/patches/herdr-cr3-round4.bundle
+        run: |
+          set -euo pipefail
+          git config user.name "Ravi Tharuma"
+          git config user.email "25951435+RaviTharuma@users.noreply.github.com"
+          git reset --hard 7ee2084a09b5f6a0b0d3c7003876ec031d504bed
+          curl -fsSL "$BUNDLE_URL" -o /tmp/herdr-cr3-round4.bundle
+          git bundle verify /tmp/herdr-cr3-round4.bundle
+          git fetch /tmp/herdr-cr3-round4.bundle HEAD:refs/heads/cr3-round4
+          git merge --ff-only cr3-round4
+          git push --force-with-lease origin HEAD:cursor/nested-topology-herdr-v1-becf
+          if [ -f .github/workflows/apply-herdr-cr3-round4.yml ]; then
+            git rm -f .github/workflows/apply-herdr-cr3-round4.yml
+            git commit -m "chore: remove one-shot apply-herdr-cr3-round4 workflow"
+            git push origin HEAD:cursor/nested-topology-herdr-v1-becf
+          fi
