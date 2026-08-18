@@ -9,6 +9,26 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- **Persistent Herdr RPC session**: `HerdrApi.open()` holds one Unix-socket
+  connection (native `HerdrNestedTopologyClient`). `watch --tmux-parity`
+  reuses it for pane reads instead of connecting per poll. Reconnects once
+  on drop. Never reuses `events.subscribe` for requests. `herdr_rpc`
+  reuses one process-wide session. CLI fallback runs `herdr` **once** so
+  the real stderr (not a leftover socket miss) is what the user sees.
+
+- **Input drain + pane seed on the pump**: queued Ghostty→Herdr keys are
+  flushed via `pane.send_keys` / `pane.send_text`. First `pane.read` seeds
+  the surface (tmux seed gate); later ticks apply a delta. ANSI read is
+  preferred. `tab.focused` / `workspace.focused` project onto the session
+  host without a full resync.
+
+- **Socket-first focus/split**: `focus-pane` / `focus-tab` / `focus-workspace`
+  / `focus-agent` / `split` use the allowlisted RPC (CLI fallback). Doctor
+  and `status` ping the API.
+
+- **CLI**: `set-ratio`, `move-pane`, `focus-dir`, `move-tab`, `rename-pane`,
+  `rename-agent`, `start-agent`, `notify`, `wait-output`.
+
 - **Herdr control-surface parity** (`bridge/cmux_herdr_api.py`):
   socket-first allowlisted RPC for the published protocol-17 methods
   (tabs, panes, workspaces, agents, layout). CLI fallback when the

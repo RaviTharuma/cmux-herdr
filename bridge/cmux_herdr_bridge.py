@@ -191,6 +191,57 @@ def herdr_json(args: Sequence[str], *, timeout: float = 15.0) -> Any:
     return _parse_json_payload(proc.stdout)
 
 
+_RPC_API = None
+
+
+def reset_herdr_rpc() -> None:
+    """Drop the process-wide RPC session (tests / socket path change)."""
+    global _RPC_API
+    api = _RPC_API
+    _RPC_API = None
+    closer = getattr(api, "close", None)
+    if callable(closer):
+        closer()
+
+
+def _herdr_api():
+    """Reuse one ``HerdrApi`` (native ``HerdrNestedTopologyClient``)."""
+    global _RPC_API
+    if _RPC_API is not None:
+        return _RPC_API
+    try:
+        from .cmux_herdr_api import ApiError, HerdrApi
+    except ImportError:
+        from cmux_herdr_api import ApiError, HerdrApi
+
+    api = HerdrApi()
+    try:
+        api.open()
+    except ApiError:
+        pass
+    _RPC_API = api
+    return api
+
+
+def herdr_rpc(method: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    """Socket-first Herdr RPC. Wraps ``ApiError`` as ``BridgeError``.
+
+    Prefer this for control mutations so the plugin uses the same wire as
+    native. Falls back to the documented CLI inside ``HerdrApi``.
+    Reuses one RPC socket for the process when the Unix path is live.
+    """
+    try:
+        from .cmux_herdr_api import ApiError
+    except ImportError:
+        from cmux_herdr_api import ApiError
+
+    try:
+        result = _herdr_api().call(method, params or {})
+    except ApiError as exc:
+        raise BridgeError(str(exc)) from exc
+    return result.result
+
+
 def cmux_cmd(
     args: Sequence[str],
     *,
@@ -1531,6 +1582,7 @@ def dual_status() -> Dict[str, Any]:
             ),
             "cli": which("herdr"),
             "available": False,
+            "api": {"ok": False},
         },
         "cmux": {
             "surface_id": os.environ.get("CMUX_SURFACE_ID"),
@@ -1554,6 +1606,15 @@ def dual_status() -> Dict[str, Any]:
     }
     info["herdr"]["available"] = herdr_available()
     info["cmux"]["available"] = cmux_available()
+    try:
+        from .cmux_herdr_api import HerdrApi
+    except ImportError:
+        from cmux_herdr_api import HerdrApi
+    try:
+        ping = HerdrApi().call("ping")
+        info["herdr"]["api"] = {"ok": bool(ping.ok), "via": ping.via}
+    except Exception as exc:  # noqa: BLE001
+        info["herdr"]["api"] = {"ok": False, "error": str(exc)}
     if info["cmux"]["available"]:
         try:
             info["cmux"]["resolved_workspace"] = resolve_cmux_workspace()
@@ -1608,56 +1669,38 @@ def focus_tab(tab_id_or_label: str) -> str:
                 )
     if target is None:
         raise BridgeError(f"tab not found: {tab_id_or_label}")
-    proc = run_cmd(["herdr", "tab", "focus", target])
-    if proc.returncode != 0:
-        raise BridgeError((proc.stderr or proc.stdout or "tab focus failed").strip())
+    herdr_rpc("tab.focus", {"tab_id": target})
     return target
 
 
 def focus_pane(pane_id: str) -> str:
-    """Focus a pane by id via ``herdr agent focus``.
+    """Focus a pane by id via socket ``agent.focus``.
 
-    Herdr ``pane focus`` only accepts a direction, so agent focus is the correct
-    id-based path. Do not fall back to ``pane zoom`` — zoom is not focus and
-    previously produced misleading success when focus failed.
+    Herdr ``pane.focus_direction`` is directional only, so agent focus is
+    the id-based path. Do not fall back to ``pane zoom``.
     """
-    if not which("herdr"):
-        raise BridgeError("herdr not found on PATH")
-    proc = run_cmd(["herdr", "agent", "focus", pane_id])
-    if proc.returncode == 0:
-        return pane_id
-    err = (proc.stderr or proc.stdout or "").strip()
-    # Best-effort: distinguish a missing pane from a genuine focus failure.
     try:
-        herdr_json(["pane", "get", pane_id])
+        herdr_rpc("agent.focus", {"target": pane_id, "pane_id": pane_id})
+        return pane_id
     except BridgeError as exc:
-        detail = str(exc).lower()
-        if "not found" in detail or "unknown" in detail or "no such" in detail:
-            raise BridgeError(f"pane not found: {pane_id}") from exc
-    raise BridgeError(err or f"herdr agent focus failed for pane {pane_id}")
+        try:
+            herdr_rpc("pane.get", {"pane_id": pane_id})
+        except BridgeError as inner:
+            detail = str(inner).lower()
+            if "not found" in detail or "unknown" in detail or "no such" in detail:
+                raise BridgeError(f"pane not found: {pane_id}") from inner
+        raise BridgeError(str(exc) or f"herdr agent focus failed for pane {pane_id}") from exc
 
 
 def focus_workspace(workspace_id: str) -> str:
-    """Focus a Herdr workspace by id via ``herdr workspace focus``."""
-    if not which("herdr"):
-        raise BridgeError("herdr not found on PATH")
-    proc = run_cmd(["herdr", "workspace", "focus", workspace_id])
-    if proc.returncode != 0:
-        raise BridgeError(
-            (proc.stderr or proc.stdout or "workspace focus failed").strip()
-        )
+    """Focus a Herdr workspace by id via socket ``workspace.focus``."""
+    herdr_rpc("workspace.focus", {"workspace_id": workspace_id})
     return workspace_id
 
 
 def focus_agent(target: str) -> str:
-    """Focus a Herdr agent by pane id / label via ``herdr agent focus``."""
-    if not which("herdr"):
-        raise BridgeError("herdr not found on PATH")
-    proc = run_cmd(["herdr", "agent", "focus", target])
-    if proc.returncode != 0:
-        raise BridgeError(
-            (proc.stderr or proc.stdout or "agent focus failed").strip()
-        )
+    """Focus a Herdr agent by pane id / label via socket ``agent.focus``."""
+    herdr_rpc("agent.focus", {"target": target, "pane_id": target})
     return target
 
 
@@ -1987,6 +2030,30 @@ def diagnose_install() -> Dict[str, Any]:
         }
     )
 
+    api_ok = False
+    api_via = None
+    api_detail = "Herdr API ping not attempted"
+    try:
+        from .cmux_herdr_api import HerdrApi
+    except ImportError:
+        from cmux_herdr_api import HerdrApi
+    try:
+        ping = HerdrApi().call("ping")
+        api_ok = bool(ping.ok)
+        api_via = ping.via
+        api_detail = f"ping via {ping.via}"
+    except Exception as exc:  # noqa: BLE001 — doctor must never crash
+        api_detail = f"ping failed: {exc}"
+    checks.append(
+        {
+            "name": "herdr_api",
+            "ok": api_ok,
+            "hard": False,
+            "via": api_via,
+            "detail": api_detail,
+        }
+    )
+
     fp = collect_host_fingerprint()
     missing = fingerprint_missing_fields(fp)
     claiming_nested = bool(os.environ.get("HERDR_ENV"))
@@ -2138,15 +2205,4 @@ def diagnose_install() -> Dict[str, Any]:
 def split_pane(direction: str = "right") -> Any:
     if direction not in ("right", "down"):
         raise BridgeError("--direction must be right or down")
-    proc = run_cmd(
-        ["herdr", "pane", "split", "--current", "--direction", direction]
-    )
-    if proc.returncode != 0:
-        raise BridgeError((proc.stderr or proc.stdout or "split failed").strip())
-    out = (proc.stdout or "").strip()
-    if out.startswith("{"):
-        try:
-            return json.loads(out)
-        except json.JSONDecodeError:
-            return out
-    return out or "ok"
+    return herdr_rpc("pane.split", {"direction": direction}) or "ok"

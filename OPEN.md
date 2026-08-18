@@ -129,6 +129,13 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] **Live SessionHost pump** (`bridge/cmux_herdr_pump.py`):
       `watch --tmux-parity` routes `pane.read`, focus, and `agent_status`
       into `LiveApplyHost`. Isolated per pane. Not Ghostty PTY theft.
+- [x] **Persistent RPC + input drain**: one Herdr socket for pump reads;
+      first paint seeds; queued keys flush to `pane.send_*`; focus/split
+      go socket-first. Doctor pings the API. `workspace.focused` does not
+      full-resync. CLI fallback is a single `herdr` invoke.
+- [x] **Control CLI pack**: `set-ratio` / `move-pane` / `focus-dir` /
+      `move-tab` / `rename-pane` / `rename-agent` / `start-agent` /
+      `notify` / `wait-output`.
 - [x] Native-title lock + diff-before-write (`lock-title` / `unlock-title`,
       `CMUX_HERDR_LOCK_TITLES`).
 - [x] Heuristic-once parent map (`parent_tab_id` + `heuristic_satisfied`; session

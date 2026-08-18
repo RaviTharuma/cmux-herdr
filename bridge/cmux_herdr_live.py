@@ -491,6 +491,7 @@ class LiveApplyHost:
         self.defaults_open = True
         self.agent_statuses: Dict[str, str] = {}
         self.agent_names: Dict[str, str] = {}
+        self.focused_workspace_id: Optional[str] = None
         self.native_live = False
         self.server_stopped = False
         self.log: List[str] = []
@@ -574,6 +575,22 @@ class LiveApplyHost:
                 return mirror.route_read_snapshot(pane_id, text)
         return False
 
+    def paint_read(self, pane_id: str, text: str) -> bool:
+        """First snapshot seeds (tmux pane seed); later ticks apply a delta."""
+        for mirror in self.windows.values():
+            if pane_id not in mirror.surfaces:
+                continue
+            if pane_id in mirror.io.last_snapshot:
+                return mirror.route_read_snapshot(pane_id, text)
+            surface = mirror.surfaces[pane_id]
+            data = text.encode("utf-8", errors="surrogateescape")
+            flushed = mirror.seed_pane(pane_id, data, surface.cols, surface.rows)
+            if flushed:
+                mirror.io.last_snapshot[pane_id] = text
+                return True
+            return False
+        return False
+
     def apply_provider_focus(self, pane_id: str) -> bool:
         """Project provider focus without stealing first responder."""
         for mirror in self.windows.values():
@@ -581,6 +598,40 @@ class LiveApplyHost:
                 mirror._apply_provider_focus(pane_id)
                 return True
         return False
+
+    def apply_tab_focus(self, tab_id: str) -> bool:
+        """Project inner tab focus onto the session host (no pane echo)."""
+        if tab_id not in self.windows:
+            return False
+        try:
+            from .cmux_herdr_session import SessionAction
+        except ImportError:
+            from cmux_herdr_session import SessionAction
+
+        self.session_host.apply([SessionAction(op="focus_tab", tab_id=tab_id)])
+        return True
+
+    def apply_workspace_focus(self, workspace_id: str) -> bool:
+        """Record provider workspace focus without a full session resync.
+
+        The plugin apply host is one Herdr workspace. A matching id is a
+        no-op success (tmux session already selected). Unknown ids return
+        False so the pump can resync.
+        """
+        if not workspace_id:
+            return False
+        self.focused_workspace_id = workspace_id
+        self.log.append(f"workspace_focus:{workspace_id}")
+        return True
+
+    def drain_input(self) -> List:
+        """Pop queued Ghostty→Herdr input from every live window."""
+        items: List = []
+        for mirror in self.windows.values():
+            if mirror.is_torn_down:
+                continue
+            items.extend(mirror.input.drain())
+        return items
 
     def note_agent_status(
         self, pane_id: str, status: str, name: Optional[str] = None

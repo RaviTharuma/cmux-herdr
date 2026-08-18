@@ -144,6 +144,13 @@ cmux-herdr split --direction right
 cmux-herdr zoom-pane w2:p34 --mode on
 cmux-herdr resize-pane w2:p34 --direction right --amount 0.1
 cmux-herdr layout --tab w2:t1
+cmux-herdr set-ratio --tab w2:t1 --ratio 0.6
+cmux-herdr move-pane w2:p2 --tab w2:t2
+cmux-herdr focus-dir right
+cmux-herdr move-tab w2:t1 --index 0
+cmux-herdr rename-pane w2:p2 logs
+cmux-herdr start-agent w2:p3 --agent codex
+cmux-herdr notify "tests done" --body "all green"
 cmux-herdr json-dump
 ```
 
@@ -201,7 +208,7 @@ Status keys use `herdr:<pane_id>`. Every sync removes stale `herdr:*` keys while
 ## Layout
 
 ```text
-VERSION                     version source of truth (e.g. 0.3.0)
+VERSION                     version source of truth (e.g. 0.3.1)
 CHANGELOG.md                release notes
 RELEASE.md                  tag / gh release / install-from-tag steps
 OPEN.md                     stopgap inventory + open checklist

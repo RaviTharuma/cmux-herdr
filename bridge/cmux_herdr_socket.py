@@ -130,6 +130,11 @@ class HerdrSocketClient:
         except OSError:
             return
 
+    @property
+    def connected(self) -> bool:
+        """True while the Unix stream is open."""
+        return self._sock is not None
+
     def __enter__(self) -> "HerdrSocketClient":
         """Connect and return self."""
         self.connect()
@@ -278,7 +283,7 @@ class HerdrEventSession:
 
     def alive(self) -> bool:
         """True while the subscribe socket is still open."""
-        return self.client._sock is not None
+        return self.client.connected
 
     def close(self) -> None:
         """Tear down the subscribe socket."""

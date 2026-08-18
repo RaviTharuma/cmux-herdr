@@ -152,6 +152,45 @@ class PumpApplyTests(unittest.TestCase):
         self.assertNotIn(b"seed-a", host.windows["w2:t1"].surfaces["w2:p2"].buffer)
         self.assertCountEqual(host.live_pane_ids(), ["w2:p1", "w2:p2"])
 
+    def test_tab_focus_without_pane_id(self) -> None:
+        host = self._host()
+        pump = LivePump(transport=MemoryTransport())
+        result = pump.handle_event({"type": "tab.focused", "tab_id": "w2:t1"}, host)
+        self.assertTrue(result.focused)
+        self.assertEqual(result.log, "tab_focus")
+        self.assertEqual(host.session_host.focus, "w2:t1")
+
+    def test_workspace_focus_without_pane_id(self) -> None:
+        host = self._host()
+        pump = LivePump(transport=MemoryTransport())
+        result = pump.handle_event(
+            {"type": "workspace.focused", "workspace_id": "w2"}, host
+        )
+        self.assertTrue(result.focused)
+        self.assertEqual(result.log, "workspace_focus")
+        self.assertFalse(result.resync)
+        self.assertEqual(host.focused_workspace_id, "w2")
+
+    def test_flush_input_sends_queued_named_key(self) -> None:
+        host = self._host()
+        self.assertEqual(host.windows["w2:t1"].send_named_key("w2:p1", "Up"), "enqueued")
+        transport = MemoryTransport()
+        pump = LivePump(transport=transport)
+        flushed = pump.flush_input(host)
+        self.assertEqual(flushed, 1)
+        self.assertEqual(transport.sent[0][0], "key")
+        self.assertEqual(transport.sent[0][1], "w2:p1")
+        self.assertIn("Up", transport.sent[0][2])
+
+    def test_paint_read_seeds_then_applies_delta(self) -> None:
+        host = self._host()
+        self.assertTrue(host.paint_read("w2:p1", "hello"))
+        self.assertTrue(host.paint_read("w2:p1", "hello!"))
+        buf = host.windows["w2:t1"].surfaces["w2:p1"].buffer
+        self.assertIn(b"hello", buf)
+        self.assertIn(b"!", buf)
+        self.assertNotIn(b"hello", host.windows["w2:t1"].surfaces["w2:p2"].buffer)
+
 
 if __name__ == "__main__":
     unittest.main()
