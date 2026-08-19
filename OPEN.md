@@ -11,7 +11,7 @@ As of **2026-08-19** (errors/lackings freeze live).
 | Artifact | URL | Status |
 |---|---|---|
 | Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open; CR **0**/14; `mergeStateStatus=UNSTABLE`; tip `2f483ad94f0d` — needs maintainer approval |
-| Nested topology Herdr v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open; CR **0**/173; `mergeStateStatus=BLOCKED`; tip `b02b8a954327` (mirror on tip; dogfood open) |
+| Nested topology Herdr v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open; CR **0**; tip `5e33880b165b` (RemoteHerdrHandoff lease wire); merge **BLOCKED** |
 | Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open (native work on cmux fork / #10045) |
 | Community poll (native Herdr vs plugin) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open; **1 upvote / 0 comments** |
 | Errors & lackings freeze | [docs/upstream/ERRORS_AND_LACKINGS.md](./docs/upstream/ERRORS_AND_LACKINGS.md) | Freeze `freeze-2026-08-19T065836Z` |

@@ -160,6 +160,12 @@ Safe default remains `mirror` (current tab only, no prune) so casual use does no
 Agent/worktree/manifest/title verbs that ssh-tmux does not have: see
 [HERDR_BEYOND_TMUX.md](./HERDR_BEYOND_TMUX.md).
 
+
+
+### Native lease wire (2026-08-19)
+
+`RemoteHerdrController` claims `RemoteHerdrHandoff` (`writer-*` / `native-live`) on attach and releases on detach, so plugin `sync` / `watch` / `mirror` yield while the mirror is live. Nested sidebar still uses `NestedPluginWriterHandoff` locks in parallel.
+
 ## Native landing sequence
 
 1. Land or rebase [#10045](https://github.com/manaflow-ai/cmux/pull/10045) (sidebar + socket + focus).
