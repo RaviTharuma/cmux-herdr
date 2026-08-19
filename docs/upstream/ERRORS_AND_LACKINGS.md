@@ -91,7 +91,7 @@ From [OPEN.md](../../OPEN.md) + [TMUX_PARITY.md](./TMUX_PARITY.md):
 | ID | Severity | Item |
 |----|----------|------|
 | L-SINGLE-WRITER | **watch** | Plugin must no-op when native attachment live (handoff/lease). Fork [#18](https://github.com/RaviTharuma/cmux/pull/18) / native handoff — keep verified under dogfood. |
-| L-TITLE-LOCK | **watch** | Native-title lock + heuristic-once must not thrash under dual plugin+native |
+| L-TITLE-LOCK | **watch** | Native-title lock + heuristic-once must not thrash under dual plugin+native. Native writes plugin-format `associations-*.json` locks on title updates. |
 | L-ASSOC-KEY | **watch** | Plugin `pane_id:session_id` is cache only — never public nested ID |
 | L-SIZE-AUTHORITY | **watch** | Single size-claim writer (`size-authority` / claim) — dual writers thrash SIGWINCH. Native writes `native` sentinel on attach; plugin `may_claim` yields. |
 
@@ -169,4 +169,5 @@ Human-only next steps for blockers: approving review + branch policy for merge; 
 | Plugin OSS v0.3.4 | **released** (MIT, CI, community files) |
 | Native claims size-authority | **landed** tip `3c9f5ac9748a` via fork [#21](https://github.com/RaviTharuma/cmux/pull/21) + plugin [#44](https://github.com/RaviTharuma/cmux-herdr/pull/44) |
 | Native lease heartbeat while live | **landed** tip `5fe182483a54` via fork [#22](https://github.com/RaviTharuma/cmux/pull/22) + plugin [#46](https://github.com/RaviTharuma/cmux-herdr/pull/46) |
+| Native title-lock association file | **shipping** — `RemoteHerdrAssociationStore` + NestedPluginWriterHandoff TTL |
 | Fork drafts #12–#18 | **closed** (none open on `RaviTharuma/cmux`) |

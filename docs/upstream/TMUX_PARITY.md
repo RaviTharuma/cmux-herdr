@@ -174,6 +174,10 @@ Same attach path also claims `size-authority-<fingerprint>` with the `native` se
 
 Lease freshness requires a live pid **and** `heartbeat_ms` within TTL (45s). `RemoteHerdrController` refreshes `heartbeatNative` + size-authority every ~15s while any session host is live, and samples wall clock before each write (so `heartbeat_ms` is not frozen at store init). Plugin `watch` already calls `heartbeat_plugin_writer`.
 
+### Native title-lock association wire (2026-08-19)
+
+`RemoteHerdrAssociationStore` writes plugin-format `associations-<fingerprint>.json` (`title_lock` / `locked_title`) on tab/pane title updates. Plugin sync after detach respects those locks. `NestedPluginWriterHandoff` locks now carry `pid` + `heartbeat_ms` and expire when stale (same TTL), refreshed on the controller heartbeat loop.
+
 ## Native landing sequence
 
 1. Land or rebase [#10045](https://github.com/manaflow-ai/cmux/pull/10045) (sidebar + socket + focus).

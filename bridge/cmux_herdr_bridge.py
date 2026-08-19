@@ -2167,6 +2167,28 @@ def diagnose_install() -> Dict[str, Any]:
         }
     )
 
+    assoc = _load_association_map(fp) if fingerprint_complete else {"panes": {}}
+    panes = assoc.get("panes") if isinstance(assoc.get("panes"), dict) else {}
+    locked = [
+        pid
+        for pid, entry in panes.items()
+        if isinstance(entry, dict) and entry.get("title_lock")
+    ]
+    checks.append(
+        {
+            "name": "title_locks",
+            "ok": True,
+            "hard": False,
+            "locked_count": len(locked),
+            "locked_panes": locked[:20],
+            "association_path": _association_path(fp) if fingerprint_complete else None,
+            "detail": (
+                f"title locks={len(locked)}"
+                + (f" ({', '.join(locked[:5])}{'…' if len(locked) > 5 else ''})" if locked else "")
+            ),
+        }
+    )
+
     launch = _launchagent_status()
     checks.append(
         {
