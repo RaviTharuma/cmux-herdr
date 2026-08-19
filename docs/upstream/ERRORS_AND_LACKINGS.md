@@ -167,5 +167,5 @@ Human-only next steps for blockers: approving review + branch policy for merge; 
 
 | Native claims plugin lease files | **landed** tip `5e33880b165b` via fork [#20](https://github.com/RaviTharuma/cmux/pull/20) — `RemoteHerdrController` → `RemoteHerdrHandoff.claimNative` |
 | Plugin OSS v0.3.4 | **released** (MIT, CI, community files) |
-| Native claims size-authority | **shipping** — `RemoteHerdrSizeAuthority` + plugin `may_claim` yield on `native` / native-live |
+| Native claims size-authority | **landed** tip `3c9f5ac9748a` via fork [#21](https://github.com/RaviTharuma/cmux/pull/21) + plugin [#44](https://github.com/RaviTharuma/cmux-herdr/pull/44) |
 | Fork drafts #12–#18 | **closed** (none open on `RaviTharuma/cmux`) |

@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-19T08:00:02Z",
+  "updated_at": "2026-08-19T08:05:06Z",
   "freeze_id": "freeze-2026-08-19T065836Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active. Errors/lackings freeze: docs/upstream/ERRORS_AND_LACKINGS.md",
   "tracks": {
@@ -9,9 +9,9 @@
       "url": "https://github.com/manaflow-ai/cmux/pull/10045",
       "state": "OPEN",
       "head": "cursor/nested-topology-herdr-v1-becf",
-      "sha": "5e33880b165b632f3467f08ea6c14c25b4c80188",
-      "tip_message": "fix(herdr): claim RemoteHerdrHandoff lease so plugin yields (#20)",
-      "updated_at": "2026-08-19T07:24:37Z",
+      "sha": "3c9f5ac9748aae8c6ab5eec652c14f8a79644f8d",
+      "tip_message": "feat(herdr): claim size-authority so plugin SIGWINCH yields (#21)",
+      "updated_at": "2026-08-19T08:05:06Z",
       "mergeable": "MERGEABLE",
       "merge_state": "BLOCKED",
       "review_decision": null,
@@ -102,13 +102,6 @@
       "bcId": "bc-57027a20-617a-4342-bf4f-56b0005ef1c1",
       "status": "RUNNING",
       "lane": "integration_ops"
-    },
-    {
-      "name": "Plugin open-source-vorbereitung",
-      "bcId": "bc-4e5b419e-9c7b-4018-aad1-3b0285e41410",
-      "status": "RUNNING",
-      "lane": "oss_hygiene",
-      "note": "Avoid colliding on VERSION/LICENSE/CI"
     }
   ],
   "idle_agents_notable": [
@@ -132,6 +125,6 @@
     "lacking_plugin_count": 8,
     "shared_contract_watches": 4
   },
-  "notes": "v0.3.4 OSS on main. Native tip claims lease + size-authority (shipping). Plugin may_claim yields on native. Upstream merge still BLOCKED.",
+  "notes": "Plugin size-authority yield on main (#44). Native tip 3c9f5ac claims lease + size-authority. Upstream merge still BLOCKED.",
   "plugin_release": "v0.3.4"
 }
