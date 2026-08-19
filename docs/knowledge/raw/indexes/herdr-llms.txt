@@ -1,0 +1,45 @@
+# Herdr stable documentation index
+
+> Current stable release: 0.8.0.
+
+Open only the pages relevant to the current task. Links return raw source files from the exact documented revision. For another topic, return to this index instead of following `/docs/` links inside a page, which serve human-facing HTML.
+
+## Documentation
+
+- [Herdr documentation](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/index.mdx): Terminal workspace manager for AI coding agents.
+- [Agent automation](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/agent-automation.mdx): Use Herdr's layout, pane, and agent primitives to coordinate coding agents from scripts or other agents.
+- [Agent skill file](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/agent-skill.mdx): Install Herdr instructions for Claude Code or another coding agent.
+- [Agents](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/agents.mdx): See what Herdr can detect, how agent state works, and how integrations improve it.
+- [CLI reference](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/cli-reference.mdx): Herdr commands for sessions, workspaces, tabs, panes, notifications, agents, waits, integrations, and status.
+- [Concepts](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/concepts.mdx): Understand Herdr workspaces, tabs, panes, agents, sessions, and modes.
+- [Config reference](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/data/config-reference.json): Every canonical config.toml key, with types, defaults, and allowed values.
+- [Configuration](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/configuration.mdx): Configure Herdr keybindings, themes, sidebar behavior, notifications, and advanced options.
+- [How to work with Herdr](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/how-to-work.mdx): Run Herdr locally, inside SSH, or through remote attach.
+- [Install Herdr](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/install.mdx): Install, update, and verify Herdr on Linux, macOS, and Windows beta.
+- [Integrations](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/integrations.mdx): Install Herdr integrations for Pi, OMP, Claude Code, Codex, GitHub Copilot CLI, Devin CLI, Droid, Kimi Code CLI, OpenCode, Kilo Code CLI, Hermes Agent, Qoder CLI, Cursor Agent CLI, MastraCode, Antigravity CLI, and Grok CLI.
+- [Keyboard](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/keyboard.mdx): What the prefix is, which bindings to learn first, and how to go prefix-free.
+- [Marketplace](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/marketplace.mdx): Discover community Herdr plugins on GitHub, and get your own plugin listed.
+- [Persistence and remote access](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/persistence-remote.mdx): Detach from Herdr, reattach later, use named sessions, and connect over SSH.
+- [Plugins](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/plugins.mdx): Author local Herdr plugins with manifest actions, event hooks, and panes.
+- [Quick start](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/quick-start.mdx): Create your first Herdr workspace and run agents in persistent terminal panes.
+- [Session state and restore](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/session-state.mdx): Understand what Herdr keeps live, restores after restart, replays from history, resumes through agent integrations, and hands off during updates.
+- [Socket API](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/socket-api.mdx): Control a running Herdr server from scripts, tools, and coding agents.
+- [Troubleshooting](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/troubleshooting.mdx): Diagnose common installation, terminal input, session, keybinding, and remote access problems.
+- [Windows beta](https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/content/docs/windows-beta.mdx): Native Windows support status, supported workflows, and known limitations.
+
+## Using the config reference
+
+The Config reference link above is a large structured JSON file. When command tools are available, fetch and filter it by exact key instead of loading the whole file:
+
+```sh
+curl -fsSL 'https://raw.githubusercontent.com/herdrdev/herdr/v0.8.0/docs/next/website/src/data/config-reference.json' | jq --arg key 'ui.sidebar_width' \
+  '.sections[].keys[] | select(.key == $key)'
+```
+
+## Optional bundles
+- [Abridged documentation](https://herdr.dev/llms-small.txt)
+- [Complete documentation](https://herdr.dev/llms-full.txt)
+
+## Other resources
+- [Agent guide](https://herdr.dev/agent-guide.md): help a human understand, set up, or troubleshoot Herdr
+- [Preview documentation](https://herdr.dev/llms-preview.txt): use only for the preview channel

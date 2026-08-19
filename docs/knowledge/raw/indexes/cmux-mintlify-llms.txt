@@ -1,0 +1,32 @@
+# cmux
+
+## Docs
+
+- [Introduction](https://mintlify.wiki/manaflow-ai/cmux/introduction.md): A Ghostty-based macOS terminal with vertical tabs and notifications for AI coding agents
+- [Installation](https://mintlify.wiki/manaflow-ai/cmux/installation.md): Install cmux on macOS via DMG or Homebrew
+- [Quickstart](https://mintlify.wiki/manaflow-ai/cmux/quickstart.md): Get up and running with cmux in 5 minutes
+- [Notifications](https://mintlify.wiki/manaflow-ai/cmux/features/notifications.md): Visual notification system for AI coding agents with notification rings, badges, and a unified panel
+- [Workspaces and tabs](https://mintlify.wiki/manaflow-ai/cmux/features/workspaces-and-tabs.md): Organize terminal sessions with workspaces, vertical tabs, and metadata tracking
+- [Splits and panes](https://mintlify.wiki/manaflow-ai/cmux/features/splits-and-panes.md): Split terminals and browsers horizontally and vertically to work on multiple tasks simultaneously
+- [Browser](https://mintlify.wiki/manaflow-ai/cmux/features/browser.md): Built-in WebKit browser with scriptable API for agent interaction
+- [Keyboard shortcuts](https://mintlify.wiki/manaflow-ai/cmux/features/keyboard-shortcuts.md): Complete keyboard shortcut reference for cmux
+- [Automation overview](https://mintlify.wiki/manaflow-ai/cmux/automation/overview.md): Control cmux programmatically via CLI and socket API
+- [CLI reference](https://mintlify.wiki/manaflow-ai/cmux/automation/cli-reference.md): Complete reference for the cmux command-line tool
+- [Socket API](https://mintlify.wiki/manaflow-ai/cmux/automation/socket-api.md): JSON-RPC protocol for direct socket communication with cmux
+- [Environment variables](https://mintlify.wiki/manaflow-ai/cmux/automation/environment-variables.md): Auto-set context variables for cmux automation
+- [Claude Code integration](https://mintlify.wiki/manaflow-ai/cmux/integrations/claude-code.md): Get real-time notifications from Claude Code sessions in cmux
+- [OpenCode integration](https://mintlify.wiki/manaflow-ai/cmux/integrations/opencode.md): Configure OpenCode to send notifications through cmux
+- [Custom agent integrations](https://mintlify.wiki/manaflow-ai/cmux/integrations/custom-agents.md): Build custom integrations using the cmux CLI and socket API
+- [Settings](https://mintlify.wiki/manaflow-ai/cmux/configuration/settings.md): Configure cmux behavior, appearance, and integrations through the in-app settings panel
+- [Ghostty configuration](https://mintlify.wiki/manaflow-ai/cmux/configuration/ghostty-config.md): How cmux reads and applies your Ghostty configuration for themes, fonts, and colors
+- [Themes](https://mintlify.wiki/manaflow-ai/cmux/configuration/themes.md): Configure and customize terminal color schemes using Ghostty themes
+- [Window Commands](https://mintlify.wiki/manaflow-ai/cmux/cli/windows.md): Manage cmux windows with CLI commands
+- [Workspace Commands](https://mintlify.wiki/manaflow-ai/cmux/cli/workspaces.md): Manage cmux workspaces (vertical tabs) with CLI commands
+- [Surface Commands](https://mintlify.wiki/manaflow-ai/cmux/cli/surfaces.md): Manage terminal and browser surfaces (panels) in cmux
+- [Pane Commands](https://mintlify.wiki/manaflow-ai/cmux/cli/panes.md): Manage panes (split containers) in cmux workspaces
+- [Browser Commands](https://mintlify.wiki/manaflow-ai/cmux/cli/browser.md): Control embedded browser surfaces with CLI automation
+- [Notification Commands](https://mintlify.wiki/manaflow-ai/cmux/cli/notifications.md): Send and manage in-app notifications for AI coding agents
+- [Philosophy](https://mintlify.wiki/manaflow-ai/cmux/resources/philosophy.md): The design philosophy and principles behind cmux
+- [Troubleshooting](https://mintlify.wiki/manaflow-ai/cmux/resources/troubleshooting.md): Common issues and solutions for cmux
+- [Contributing](https://mintlify.wiki/manaflow-ai/cmux/resources/contributing.md): How to contribute to cmux development
+- [Changelog](https://mintlify.wiki/manaflow-ai/cmux/resources/changelog.md): Version history and release notes for cmux

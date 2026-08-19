@@ -1,0 +1,297 @@
+# cmux
+
+> cmux is a free and open source (GPL), fully scriptable native macOS terminal built on libghostty, purpose-built for running AI coding agents. Every action is available through a CLI and a Unix socket API, so agents can drive the terminal itself. It works with the CLI agents you already use (Claude Code, Codex, OpenCode, Gemini CLI, Aider, and any CLI tool) and adds workspace organization, agent notification rings, and vertical tabs on top of a GPU-accelerated terminal.
+
+## What cmux is
+
+- Native macOS app: written in Swift and AppKit with no Electron, built on libghostty (the Ghostty engine) for GPU-accelerated rendering.
+- Agent-first: run many AI coding agents in parallel, each in its own workspace, instead of juggling one terminal.
+- Notification rings: a pane lights up the moment an agent needs your attention, so you are not babysitting prompts.
+- Keyboard-first attention: shortcuts such as jump to latest unread move directly to the agent that needs a decision.
+- Workspace organization: a vertical sidebar groups work by workspace, each showing its git branch, working directory, ports, and the latest line of agent output.
+- Vertical tabs: tabs live in the sidebar instead of a cramped top bar, scaling to dozens of concurrent sessions.
+- Performance under load: native Swift/AppKit plus libghostty keeps the UI lightweight while many agents, dev servers, and browser panes are running.
+- Agent-agnostic and open source (GPL): bring your own agent, no required account to use the terminal.
+
+## Programmable
+
+cmux is designed to be driven by scripts and agents, not just used by hand. Every command is available through both a `cmux` CLI and a Unix socket, so anything an agent has in its PATH can control the running app:
+
+- Control the app: create and switch workspaces, open split panes and surfaces, send input to a terminal, read screen contents, and capture screenshots over the socket API.
+- Browser automation: open an in-app browser surface and drive it programmatically (navigate, snapshot the DOM, click, type, fill, wait, evaluate JavaScript, inspect console and network, manage cookies and storage), so agents can verify web changes in the same terminal.
+- Hooks: run your own commands on cmux events to wire it into other tools and notification pipelines.
+- Skills and custom commands: package reusable agent workflows and bind them to commands.
+- Sidebar metadata and notifications are scriptable, so external processes can update workspace status and ring panes.
+
+## Key facts
+
+- Platform: macOS
+- License: GPL, free to download
+- Built on: libghostty (the Ghostty terminal engine)
+- Works with: Claude Code, Codex, OpenCode, Gemini CLI, Aider, and any CLI tool
+- Automation: `cmux` CLI and Unix socket API, browser automation, hooks, skills, and custom commands
+- Remote tmux: attach to existing tmux sessions over SSH while preserving cmux workspaces and notifications.
+- Agent pages: every public page has Markdown and plain-text variants for AI crawlers and answer engines.
+- Download: https://cmux.com/docs/getting-started
+- Updates: https://cmux.com/feed.xml
+- Source: https://github.com/manaflow-ai/cmux
+
+## Comparisons and buying guides
+
+- [Best terminals and agent workspaces for AI coding agents](https://cmux.com/compare/best-terminal-for-ai-coding-agents): compares cmux, Conductor, Superset, Cursor, Devin, VS Code, Zed, Warp, Ghostty, iTerm2, tmux, Kitty, Alacritty, WezTerm, OpenCode, Herdr, and other tools for agent-heavy workflows.
+- [cmux vs Alacritty](https://cmux.com/compare/cmux-vs-alacritty): native macOS agent supervision versus a fast cross-platform OpenGL terminal emulator.
+- [cmux vs Conductor](https://cmux.com/compare/cmux-vs-conductor): native terminal/browser supervision versus a Mac app for running Claude Code, Codex, Cursor, and OpenCode in isolated workspaces.
+- [cmux vs Cursor](https://cmux.com/compare/cmux-vs-cursor): terminal agent supervision beside any editor versus an AI editor and hosted agent platform.
+- [cmux vs Devin](https://cmux.com/compare/cmux-vs-devin): local terminal supervision for your CLI agents versus a cloud AI software engineer and team agent platform.
+- [cmux vs Ghostty](https://cmux.com/compare/cmux-vs-ghostty): cmux as a libghostty-based agent workflow app versus Ghostty as a general-purpose terminal.
+- [cmux vs Herdr](https://cmux.com/compare/cmux-vs-herdr): native Mac agent workspace with browser panes versus a terminal-native agent multiplexer with SSH attach.
+- [cmux vs iTerm2](https://cmux.com/compare/cmux-vs-iterm2): agent-aware native terminal workspace versus a mature general-purpose macOS terminal.
+- [cmux vs Kitty](https://cmux.com/compare/cmux-vs-kitty): agent-aware macOS workspace versus a fast, feature-rich, GPU-based terminal emulator.
+- [cmux vs OpenCode](https://cmux.com/compare/cmux-vs-opencode): terminal workspace and supervision layer versus an open source coding agent that can run in terminal, desktop, or IDE surfaces.
+- [cmux vs Superset](https://cmux.com/compare/cmux-vs-superset): native terminal/browser supervision versus an Electron agent orchestration workspace.
+- [cmux vs tmux](https://cmux.com/compare/cmux-vs-tmux): native macOS agent supervision versus a portable terminal multiplexer.
+- [cmux vs VS Code](https://cmux.com/compare/cmux-vs-vscode): terminal agent supervision beside a general-purpose editor and extension platform.
+- [cmux vs Warp](https://cmux.com/compare/cmux-vs-warp): agent supervision terminal versus an AI-enhanced terminal product.
+- [cmux vs WezTerm](https://cmux.com/compare/cmux-vs-wezterm): agent notification workspace versus a cross-platform terminal emulator and multiplexer.
+- [cmux vs Windsurf](https://cmux.com/compare/cmux-vs-windsurf): terminal agent supervision beside any editor versus the Devin Desktop IDE lineage.
+- [cmux vs Zed](https://cmux.com/compare/cmux-vs-zed): terminal agent supervision beside a fast collaborative code editor.
+- [How to run multiple Claude Code agents in parallel](https://cmux.com/compare/multiple-claude-code-agents-parallel): explains parallel Claude Code, Codex, OpenCode, and other CLI agents with visible workspaces, notification rings, and jump-to-latest-unread review flow.
+
+## Page variants
+
+Every public HTML page supports Markdown and plain-text variants by appending `.md` or `.txt` to the page path. Text variants include `X-Robots-Tag: noindex, follow` and a canonical link header so search engines keep indexing the canonical HTML page.
+
+## Agent-readable pages
+
+- [Home](https://cmux.com/index.md)
+  - Text: https://cmux.com/index.txt
+- [cmux iOS](https://cmux.com/ios.md)
+  - Text: https://cmux.com/ios.txt
+- [cmux Browser](https://cmux.com/browser.md)
+  - Text: https://cmux.com/browser.txt
+- [cmux for Linux](https://cmux.com/linux.md)
+  - Text: https://cmux.com/linux.txt
+- [Pricing](https://cmux.com/pricing.md)
+  - Text: https://cmux.com/pricing.txt
+- [Enterprise](https://cmux.com/enterprise.md)
+  - Text: https://cmux.com/enterprise.txt
+- [Blog](https://cmux.com/blog.md)
+  - Text: https://cmux.com/blog.txt
+- [How I used 367 billion tokens in 30 days](https://cmux.com/blog/367-billion-tokens.md)
+  - Text: https://cmux.com/blog/367-billion-tokens.txt
+- [Superrepos and Why Claude Code Is the Best Worktree Manager](https://cmux.com/blog/claude-code-best-worktree-manager.md)
+  - Text: https://cmux.com/blog/claude-code-best-worktree-manager.txt
+- [Introducing cmux Fork](https://cmux.com/blog/cmux-fork.md)
+  - Text: https://cmux.com/blog/cmux-fork.txt
+- [cmux home](https://cmux.com/blog/cmux-home.md)
+  - Text: https://cmux.com/blog/cmux-home.txt
+- [cmux history](https://cmux.com/blog/cmux-history.md)
+  - Text: https://cmux.com/blog/cmux-history.txt
+- [Introducing cmux Finder](https://cmux.com/blog/cmux-finder.md)
+  - Text: https://cmux.com/blog/cmux-finder.txt
+- [cmux Vault](https://cmux.com/blog/cmux-vault.md)
+  - Text: https://cmux.com/blog/cmux-vault.txt
+- [Passkey auth in the cmux browser](https://cmux.com/blog/passkey-auth.md)
+  - Text: https://cmux.com/blog/passkey-auth.txt
+- [Task Manager in cmux](https://cmux.com/blog/task-manager.md)
+  - Text: https://cmux.com/blog/task-manager.txt
+- [A better markdown viewer in cmux](https://cmux.com/blog/markdown-viewer.md)
+  - Text: https://cmux.com/blog/markdown-viewer.txt
+- [Unread workspace shortcuts in cmux](https://cmux.com/blog/unread-shortcuts.md)
+  - Text: https://cmux.com/blog/unread-shortcuts.txt
+- [Session restore in cmux](https://cmux.com/blog/session-restore.md)
+  - Text: https://cmux.com/blog/session-restore.txt
+- [cmux SSH](https://cmux.com/blog/cmux-ssh.md)
+  - Text: https://cmux.com/blog/cmux-ssh.txt
+- [Claude Code teammate agents as native cmux panes](https://cmux.com/blog/cmux-claude-teams.md)
+  - Text: https://cmux.com/blog/cmux-claude-teams.txt
+- [oh-my-openagent subagents as native cmux panes](https://cmux.com/blog/cmux-omo.md)
+  - Text: https://cmux.com/blog/cmux-omo.txt
+- [cmux is now GPL](https://cmux.com/blog/gpl.md)
+  - Text: https://cmux.com/blog/gpl.txt
+- [Cmd+Shift+U](https://cmux.com/blog/cmd-shift-u.md)
+  - Text: https://cmux.com/blog/cmd-shift-u.txt
+- [The Zen of cmux](https://cmux.com/blog/zen-of-cmux.md)
+  - Text: https://cmux.com/blog/zen-of-cmux.txt
+- [Launching cmux on Show HN](https://cmux.com/blog/show-hn-launch.md)
+  - Text: https://cmux.com/blog/show-hn-launch.txt
+- [Introducing cmux](https://cmux.com/blog/introducing-cmux.md)
+  - Text: https://cmux.com/blog/introducing-cmux.txt
+- [Docs](https://cmux.com/docs.md)
+  - Text: https://cmux.com/docs.txt
+- [Getting Started](https://cmux.com/docs/getting-started.md)
+  - Text: https://cmux.com/docs/getting-started.txt
+- [Concepts](https://cmux.com/docs/concepts.md)
+  - Text: https://cmux.com/docs/concepts.txt
+- [Workspace Groups](https://cmux.com/docs/workspace-groups.md)
+  - Text: https://cmux.com/docs/workspace-groups.txt
+- [Configuration](https://cmux.com/docs/configuration.md)
+  - Text: https://cmux.com/docs/configuration.txt
+- [TextBox](https://cmux.com/docs/textbox.md)
+  - Text: https://cmux.com/docs/textbox.txt
+- [Session Restore](https://cmux.com/docs/session-restore.md)
+  - Text: https://cmux.com/docs/session-restore.txt
+- [Vault](https://cmux.com/docs/vault.md)
+  - Text: https://cmux.com/docs/vault.txt
+- [Task Manager](https://cmux.com/docs/task-manager.md)
+  - Text: https://cmux.com/docs/task-manager.txt
+- [Custom Commands](https://cmux.com/docs/custom-commands.md)
+  - Text: https://cmux.com/docs/custom-commands.txt
+- [Dock](https://cmux.com/docs/dock.md)
+  - Text: https://cmux.com/docs/dock.txt
+- [Keyboard Shortcuts](https://cmux.com/docs/keyboard-shortcuts.md)
+  - Text: https://cmux.com/docs/keyboard-shortcuts.txt
+- [CLI Reference](https://cmux.com/docs/api.md)
+  - Text: https://cmux.com/docs/api.txt
+- [Browser Automation](https://cmux.com/docs/browser-automation.md)
+  - Text: https://cmux.com/docs/browser-automation.txt
+- [Skills](https://cmux.com/docs/skills.md)
+  - Text: https://cmux.com/docs/skills.txt
+- [Notifications](https://cmux.com/docs/notifications.md)
+  - Text: https://cmux.com/docs/notifications.txt
+- [SSH](https://cmux.com/docs/ssh.md)
+  - Text: https://cmux.com/docs/ssh.txt
+- [Remote tmux](https://cmux.com/docs/remote-tmux.md)
+  - Text: https://cmux.com/docs/remote-tmux.txt
+- [iOS App](https://cmux.com/docs/ios.md)
+  - Text: https://cmux.com/docs/ios.txt
+- [Claude Code Teams](https://cmux.com/docs/agent-integrations/claude-code-teams.md)
+  - Text: https://cmux.com/docs/agent-integrations/claude-code-teams.txt
+- [oh-my-opencode](https://cmux.com/docs/agent-integrations/oh-my-opencode.md)
+  - Text: https://cmux.com/docs/agent-integrations/oh-my-opencode.txt
+- [oh-my-codex](https://cmux.com/docs/agent-integrations/oh-my-codex.md)
+  - Text: https://cmux.com/docs/agent-integrations/oh-my-codex.txt
+- [oh-my-pi](https://cmux.com/docs/agent-integrations/oh-my-pi.md)
+  - Text: https://cmux.com/docs/agent-integrations/oh-my-pi.txt
+- [oh-my-claudecode](https://cmux.com/docs/agent-integrations/oh-my-claudecode.md)
+  - Text: https://cmux.com/docs/agent-integrations/oh-my-claudecode.txt
+- [Changelog](https://cmux.com/docs/changelog.md)
+  - Text: https://cmux.com/docs/changelog.txt
+- [Community](https://cmux.com/community.md)
+  - Text: https://cmux.com/community.txt
+- [Wall of Love](https://cmux.com/wall-of-love.md)
+  - Text: https://cmux.com/wall-of-love.txt
+- [Nightly](https://cmux.com/nightly.md)
+  - Text: https://cmux.com/nightly.txt
+- [Brand Assets](https://cmux.com/assets.md)
+  - Text: https://cmux.com/assets.txt
+- [Guides](https://cmux.com/guides.md)
+  - Text: https://cmux.com/guides.txt
+- [Compare cmux](https://cmux.com/compare.md)
+  - Text: https://cmux.com/compare.txt
+- [Best terminals and agent workspaces for AI coding agents](https://cmux.com/compare/best-terminal-for-ai-coding-agents.md)
+  - Text: https://cmux.com/compare/best-terminal-for-ai-coding-agents.txt
+- [cmux vs Alacritty](https://cmux.com/compare/cmux-vs-alacritty.md)
+  - Text: https://cmux.com/compare/cmux-vs-alacritty.txt
+- [cmux vs Conductor](https://cmux.com/compare/cmux-vs-conductor.md)
+  - Text: https://cmux.com/compare/cmux-vs-conductor.txt
+- [cmux vs Cursor](https://cmux.com/compare/cmux-vs-cursor.md)
+  - Text: https://cmux.com/compare/cmux-vs-cursor.txt
+- [cmux vs Devin](https://cmux.com/compare/cmux-vs-devin.md)
+  - Text: https://cmux.com/compare/cmux-vs-devin.txt
+- [cmux vs Ghostty](https://cmux.com/compare/cmux-vs-ghostty.md)
+  - Text: https://cmux.com/compare/cmux-vs-ghostty.txt
+- [cmux vs Herdr](https://cmux.com/compare/cmux-vs-herdr.md)
+  - Text: https://cmux.com/compare/cmux-vs-herdr.txt
+- [cmux vs iTerm2](https://cmux.com/compare/cmux-vs-iterm2.md)
+  - Text: https://cmux.com/compare/cmux-vs-iterm2.txt
+- [cmux vs Kitty](https://cmux.com/compare/cmux-vs-kitty.md)
+  - Text: https://cmux.com/compare/cmux-vs-kitty.txt
+- [cmux vs OpenCode](https://cmux.com/compare/cmux-vs-opencode.md)
+  - Text: https://cmux.com/compare/cmux-vs-opencode.txt
+- [cmux vs Superset](https://cmux.com/compare/cmux-vs-superset.md)
+  - Text: https://cmux.com/compare/cmux-vs-superset.txt
+- [cmux vs tmux](https://cmux.com/compare/cmux-vs-tmux.md)
+  - Text: https://cmux.com/compare/cmux-vs-tmux.txt
+- [cmux vs VS Code](https://cmux.com/compare/cmux-vs-vscode.md)
+  - Text: https://cmux.com/compare/cmux-vs-vscode.txt
+- [cmux vs Warp](https://cmux.com/compare/cmux-vs-warp.md)
+  - Text: https://cmux.com/compare/cmux-vs-warp.txt
+- [cmux vs WezTerm](https://cmux.com/compare/cmux-vs-wezterm.md)
+  - Text: https://cmux.com/compare/cmux-vs-wezterm.txt
+- [cmux vs Windsurf](https://cmux.com/compare/cmux-vs-windsurf.md)
+  - Text: https://cmux.com/compare/cmux-vs-windsurf.txt
+- [cmux vs Zed](https://cmux.com/compare/cmux-vs-zed.md)
+  - Text: https://cmux.com/compare/cmux-vs-zed.txt
+- [How to run multiple Claude Code agents in parallel](https://cmux.com/compare/multiple-claude-code-agents-parallel.md)
+  - Text: https://cmux.com/compare/multiple-claude-code-agents-parallel.txt
+- [Best terminal for Mac](https://cmux.com/best-terminal-for-mac.md)
+  - Text: https://cmux.com/best-terminal-for-mac.txt
+- [Built on Ghostty](https://cmux.com/built-on-ghostty.md)
+  - Text: https://cmux.com/built-on-ghostty.txt
+- [Terminal for coding agents](https://cmux.com/agents.md)
+  - Text: https://cmux.com/agents.txt
+- [Terminal for Claude Code](https://cmux.com/agents/claude-code.md)
+  - Text: https://cmux.com/agents/claude-code.txt
+- [Terminal for Codex CLI](https://cmux.com/agents/codex.md)
+  - Text: https://cmux.com/agents/codex.txt
+- [Terminal for OpenCode](https://cmux.com/agents/opencode.md)
+  - Text: https://cmux.com/agents/opencode.txt
+- [Best terminal for Pi](https://cmux.com/agents/pi.md)
+  - Text: https://cmux.com/agents/pi.txt
+- [Best terminal for Grok Build CLI](https://cmux.com/agents/grok.md)
+  - Text: https://cmux.com/agents/grok.txt
+- [Best terminal for GitHub Copilot](https://cmux.com/agents/github-copilot.md)
+  - Text: https://cmux.com/agents/github-copilot.txt
+- [Best terminal for MiMo Code](https://cmux.com/agents/mimo-code.md)
+  - Text: https://cmux.com/agents/mimo-code.txt
+- [Best terminal for OpenClaude](https://cmux.com/agents/openclaude.md)
+  - Text: https://cmux.com/agents/openclaude.txt
+- [Best terminal for OpenClaw](https://cmux.com/agents/openclaw.md)
+  - Text: https://cmux.com/agents/openclaw.txt
+- [Best terminal for Antigravity CLI](https://cmux.com/agents/antigravity.md)
+  - Text: https://cmux.com/agents/antigravity.txt
+- [Best terminal for Hermes Agent](https://cmux.com/agents/hermes.md)
+  - Text: https://cmux.com/agents/hermes.txt
+- [Best terminal for Devin](https://cmux.com/agents/devin.md)
+  - Text: https://cmux.com/agents/devin.txt
+- [Best terminal for Goose](https://cmux.com/agents/goose.md)
+  - Text: https://cmux.com/agents/goose.txt
+- [Best terminal for Auggie CLI](https://cmux.com/agents/auggie.md)
+  - Text: https://cmux.com/agents/auggie.txt
+- [Best terminal for Autohand Code](https://cmux.com/agents/autohand-code.md)
+  - Text: https://cmux.com/agents/autohand-code.txt
+- [Best terminal for Charm coding agent](https://cmux.com/agents/charm.md)
+  - Text: https://cmux.com/agents/charm.txt
+- [Best terminal for Cline](https://cmux.com/agents/cline.md)
+  - Text: https://cmux.com/agents/cline.txt
+- [Best terminal for Codebuff](https://cmux.com/agents/codebuff.md)
+  - Text: https://cmux.com/agents/codebuff.txt
+- [Best terminal for Command Code](https://cmux.com/agents/command-code.md)
+  - Text: https://cmux.com/agents/command-code.txt
+- [Best terminal for Continue](https://cmux.com/agents/continue.md)
+  - Text: https://cmux.com/agents/continue.txt
+- [Best terminal for Factory Droid](https://cmux.com/agents/droid.md)
+  - Text: https://cmux.com/agents/droid.txt
+- [Best terminal for Kilo Code](https://cmux.com/agents/kilo-code.md)
+  - Text: https://cmux.com/agents/kilo-code.txt
+- [Best terminal for Kimi Code CLI](https://cmux.com/agents/kimi.md)
+  - Text: https://cmux.com/agents/kimi.txt
+- [Best terminal for Kiro](https://cmux.com/agents/kiro.md)
+  - Text: https://cmux.com/agents/kiro.txt
+- [Best terminal for Mistral Vibe](https://cmux.com/agents/mistral-vibe.md)
+  - Text: https://cmux.com/agents/mistral-vibe.txt
+- [Best terminal for Qwen Code](https://cmux.com/agents/qwen-code.md)
+  - Text: https://cmux.com/agents/qwen-code.txt
+- [Best terminal for Rovo Dev](https://cmux.com/agents/rovo-dev.md)
+  - Text: https://cmux.com/agents/rovo-dev.txt
+- [Best terminal for OpenHands](https://cmux.com/agents/openhands.md)
+  - Text: https://cmux.com/agents/openhands.txt
+- [Best terminal for Roo Code](https://cmux.com/agents/roo-code.md)
+  - Text: https://cmux.com/agents/roo-code.txt
+- [Terminal for Gemini CLI](https://cmux.com/agents/gemini-cli.md)
+  - Text: https://cmux.com/agents/gemini-cli.txt
+- [Terminal for Aider](https://cmux.com/agents/aider.md)
+  - Text: https://cmux.com/agents/aider.txt
+- [Terminal for Amp](https://cmux.com/agents/amp.md)
+  - Text: https://cmux.com/agents/amp.txt
+- [Terminal for Cursor CLI](https://cmux.com/agents/cursor-cli.md)
+  - Text: https://cmux.com/agents/cursor-cli.txt
+- [Privacy Policy](https://cmux.com/privacy-policy.md)
+  - Text: https://cmux.com/privacy-policy.txt
+- [Terms of Service](https://cmux.com/terms-of-service.md)
+  - Text: https://cmux.com/terms-of-service.txt
+- [EULA](https://cmux.com/eula.md)
+  - Text: https://cmux.com/eula.txt
+
+Localized pages use the same extension pattern with the locale prefix, for example `/ja/docs/getting-started.md`.

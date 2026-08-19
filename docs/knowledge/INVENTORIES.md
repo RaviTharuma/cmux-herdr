@@ -1,0 +1,1029 @@
+# Command and API inventories
+
+Generated from the scraped official sources in `docs/knowledge/raw/`.
+Captured 2026-08-19.
+
+## Herdr CLI (from official CLI reference)
+
+- `herdr                         # launch or attach to the default session`
+- `herdr --session work          # launch or attach to a named session`
+- `herdr --remote workbox        # attach through SSH, using local keybindings`
+- `herdr --remote workbox --remote-keybindings server`
+- `herdr --remote workbox --handoff`
+- `herdr --no-session            # single-process escape hatch`
+- `herdr --default-config        # print default config`
+- `herdr update                  # download and install from the configured channel`
+- `herdr update --handoff        # opt into live handoff for supported running servers`
+- `herdr completion zsh          # generate a zsh completion script`
+- `herdr channel show            # print stable or preview`
+- `herdr channel set preview     # opt into preview builds`
+- `herdr channel set stable      # return a direct install to stable`
+- `herdr --version               # print version`
+- `herdr status`
+- `herdr status server`
+- `herdr status client`
+- `herdr api schema`
+- `herdr api schema --json`
+- `herdr api schema --output herdr-api.schema.json`
+- `herdr completion zsh`
+- `herdr completions zsh`
+- `herdr completion bash`
+- `herdr completion fish`
+- `herdr completion powershell`
+- `herdr completion elvish`
+- `herdr completion zsh > ~/.zfunc/_herdr`
+- `herdr server`
+- `herdr server stop`
+- `herdr server reload-config`
+- `herdr server agent-manifests [--json]`
+- `herdr server update-agent-manifests [--json]`
+- `herdr server reload-agent-manifests`
+- `herdr notification show <title> [--body TEXT] [--position top-left|top-right|bottom-left|bottom-right] [--sound none|done|request]`
+- `herdr session list [--json]`
+- `herdr session attach <name>`
+- `herdr session stop <name> [--json]`
+- `herdr session delete <name> [--json]`
+- `herdr workspace list`
+- `herdr workspace create [--cwd PATH] [--label TEXT] [--env KEY=VALUE] [--focus] [--no-focus]`
+- `herdr workspace get <workspace_id>`
+- `herdr workspace focus <workspace_id>`
+- `herdr workspace rename <workspace_id> <label>`
+- `herdr workspace report-metadata <workspace_id> --source ID [--token NAME=VALUE] [--clear-token NAME] [--seq N] [--ttl-ms N]`
+- `herdr workspace close <workspace_id>`
+- `herdr workspace create --cwd ~/project --label api --no-focus`
+- `herdr worktree list [--workspace ID | --cwd PATH]`
+- `herdr worktree create [--workspace ID | --cwd PATH] [--branch NAME] [--base REF] [--path PATH] [--label TEXT] [--focus] [--no-focus]`
+- `herdr worktree open [--workspace ID | --cwd PATH] (--path PATH | --branch NAME) [--label TEXT] [--focus] [--no-focus]`
+- `herdr worktree remove --workspace ID [--force]`
+- `herdr tab list [--workspace <workspace_id>]`
+- `herdr tab create [--workspace <workspace_id>] [--cwd PATH] [--label TEXT] [--env KEY=VALUE] [--focus] [--no-focus]`
+- `herdr tab get <tab_id>`
+- `herdr tab focus <tab_id>`
+- `herdr tab rename <tab_id> <label>`
+- `herdr tab close <tab_id>`
+- `herdr pane list [--workspace <workspace_id>]`
+- `herdr pane current [--pane ID|--current]`
+- `herdr pane get <pane_id>`
+- `herdr pane layout [--pane ID|--current]`
+- `herdr pane process-info [--pane ID|--current]`
+- `herdr pane neighbor --direction left|right|up|down [--pane ID|--current]`
+- `herdr pane edges [--pane ID|--current]`
+- `herdr pane focus --direction left|right|up|down [--pane ID|--current]`
+- `herdr pane resize --direction left|right|up|down [--amount FLOAT] [--pane ID|--current]`
+- `herdr pane zoom [<pane_id>|--pane ID|--current] [--toggle|--on|--off]`
+- `herdr pane rename <pane_id> <label>|--clear`
+- `herdr pane input [<pane_id>|--pane ID|--current] --right-click herdr|pane`
+- `herdr pane split [<pane_id>|--pane ID|--current] --direction right|down [--ratio FLOAT] [--cwd PATH] [--env KEY=VALUE] [--right-click herdr|pane] [--focus] [--no-focus]`
+- `herdr pane swap --direction left|right|up|down [--pane ID|--current]`
+- `herdr pane swap --source-pane ID --target-pane ID`
+- `herdr pane move <pane_id> --tab <tab_id> --split right|down [--target-pane ID] [--ratio FLOAT] [--focus|--no-focus]`
+- `herdr pane move <pane_id> --new-tab [--workspace ID] [--label TEXT] [--focus|--no-focus]`
+- `herdr pane move <pane_id> --new-workspace [--label TEXT] [--tab-label TEXT] [--focus|--no-focus]`
+- `herdr pane close <pane_id>`
+- `herdr pane read <pane_id> [--source visible|recent|recent-unwrapped|detection] [--lines N] [--format text|ansi] [--ansi] [--raw]`
+- `herdr pane read <pane_id> --source visible --ansi`
+- `herdr pane read <pane_id> --source recent-unwrapped --lines 120`
+- `herdr pane send-text <pane_id> <text>`
+- `herdr pane send-keys <pane_id> <key> [key ...]`
+- `herdr pane run <pane_id> <command>`
+- `herdr pane report-agent <pane_id> \`
+- `herdr pane report-agent-session <pane_id> \`
+- `herdr pane release-agent <pane_id> \`
+- `herdr pane report-metadata <pane_id> \`
+- `herdr agent list`
+- `herdr agent get <target>`
+- `herdr agent read <target> [--source visible|recent|recent-unwrapped|detection] [--lines N] [--format text|ansi] [--ansi]`
+- `herdr agent send-keys <target> <key> [key ...]`
+- `herdr agent prompt <target> <text> [--wait] [--until STATUS]... [--timeout MS]`
+- `herdr agent rename <target> <name>|--clear`
+- `herdr agent focus <target>`
+- `herdr agent wait <target> [--until STATUS]... [--timeout MS]`
+- `herdr agent attach <target> [--takeover]`
+- `herdr agent start <name> --kind KIND --pane ID [--timeout MS] [-- <agent-args...>]`
+- `herdr agent explain <target> [--json|--verbose]`
+- `herdr agent explain --file PATH --agent LABEL [--json|--verbose]`
+- `herdr terminal attach <terminal_id> [--takeover]`
+- `herdr terminal session control <target> [--takeover] [--cols N] [--rows N]`
+- `herdr terminal session observe <target> [--cols N] [--rows N]`
+- `herdr terminal title set <title>`
+- `herdr terminal title clear`
+- `herdr pane wait-output <pane_id> (--match <text> | --regex <pattern>) [--source visible|recent|recent-unwrapped] [--lines N] [--timeout MS] [--raw]`
+- `herdr integration install pi`
+- `herdr integration install omp`
+- `herdr integration install claude`
+- `herdr integration install codex`
+- `herdr integration install copilot`
+- `herdr integration install devin`
+- `herdr integration install droid`
+- `herdr integration install kimi`
+- `herdr integration install opencode`
+- `herdr integration install kilo`
+- `herdr integration install hermes`
+- `herdr integration install qodercli`
+- `herdr integration install qwen`
+- `herdr integration install cursor`
+- `herdr integration install mastracode`
+- `herdr integration install grok`
+- `herdr integration uninstall pi`
+- `herdr integration uninstall omp`
+- `herdr integration uninstall claude`
+- `herdr integration uninstall codex`
+- `herdr integration uninstall copilot`
+- `herdr integration uninstall devin`
+- `herdr integration uninstall droid`
+- `herdr integration uninstall kimi`
+- `herdr integration uninstall opencode`
+- `herdr integration uninstall kilo`
+- `herdr integration uninstall hermes`
+- `herdr integration uninstall qodercli`
+- `herdr integration uninstall qwen`
+- `herdr integration uninstall cursor`
+- `herdr integration uninstall mastracode`
+- `herdr integration uninstall grok`
+- `herdr integration status [--outdated-only]`
+- `herdr plugin install <owner>/<repo>[/subdir...] [--ref REF] [--yes]`
+- `herdr plugin list [--plugin ID] [--json]`
+- `herdr plugin uninstall <plugin_id|owner/repo[/subdir...]>`
+- `herdr plugin enable <plugin_id>`
+- `herdr plugin disable <plugin_id>`
+- `herdr plugin link <path> [--disabled]`
+- `herdr plugin unlink <plugin_id>`
+- `herdr plugin config-dir <plugin_id>`
+- `herdr plugin action list [--plugin ID]`
+- `herdr plugin action invoke <action_id> [--plugin ID]`
+- `herdr plugin log list [--plugin ID] [--limit N]`
+- `herdr plugin pane open --plugin ID --entrypoint ID [--placement overlay|popup|split|tab|zoomed] [--width SIZE] [--height SIZE] [--workspace ID] [--target-pane PANE] [--direction right|down] [--cwd PATH] [--env KEY=VALUE] [--focus|--no-focus]`
+- `herdr plugin pane focus <pane_id>`
+- `herdr plugin pane close <pane_id>`
+
+## Herdr socket methods (from official Socket API page)
+
+- `ping`
+- `server.stop`
+- `server.reload_config`
+- `server.agent_manifests`
+- `server.reload_agent_manifests`
+- `notification.show`
+- `client.window_title.set`
+- `client.window_title.clear`
+- `session.snapshot`
+- `workspace.create`
+- `workspace.list`
+- `workspace.get`
+- `workspace.focus`
+- `workspace.rename`
+- `workspace.move`
+- `workspace.move_block`
+- `workspace.report_metadata`
+- `workspace.close`
+- `worktree.list`
+- `worktree.create`
+- `worktree.open`
+- `worktree.remove`
+- `tab.create`
+- `tab.list`
+- `tab.get`
+- `tab.focus`
+- `tab.rename`
+- `tab.move`
+- `tab.close`
+- `pane.split`
+- `pane.swap`
+- `pane.move`
+- `pane.zoom`
+- `pane.layout`
+- `pane.process_info`
+- `pane.neighbor`
+- `pane.edges`
+- `pane.focus_direction`
+- `pane.resize`
+- `pane.list`
+- `pane.current`
+- `pane.get`
+- `pane.rename`
+- `pane.send_text`
+- `pane.send_keys`
+- `pane.send_input`
+- `pane.input.set`
+- `pane.read`
+- `pane.graphics.info`
+- `pane.graphics.set`
+- `pane.graphics.clear`
+- `pane.graphics.stream`
+- `pane.report_agent`
+- `pane.report_agent_session`
+- `pane.report_metadata`
+- `pane.clear_agent_authority`
+- `pane.release_agent`
+- `pane.close`
+- `pane.wait_for_output`
+- `popup.close`
+- `layout.export`
+- `layout.apply`
+- `layout.set_split_ratio`
+- `agent.list`
+- `agent.get`
+- `agent.read`
+- `agent.explain`
+- `agent.send_keys`
+- `agent.prompt`
+- `agent.wait`
+- `agent.rename`
+- `agent.focus`
+- `agent.start`
+- `agent.view.set`
+- `agent.view.clear`
+- `events.subscribe`
+- `events.wait`
+- `integration.install`
+- `integration.uninstall`
+- `plugin.link`
+- `plugin.list`
+- `plugin.unlink`
+- `plugin.enable`
+- `plugin.disable`
+- `plugin.action.list`
+- `plugin.action.invoke`
+- `plugin.log.list`
+- `plugin.pane.open`
+- `plugin.pane.focus`
+- `plugin.pane.close`
+
+Additional backtick identifiers seen on the Socket API page (includes params/types/events):
+
+- `file.path`
+- `layout.updated`
+- `pane.agent_detected`
+- `pane.agent_status_changed`
+- `pane.closed`
+- `pane.created`
+- `pane.exited`
+- `pane.focused`
+- `pane.moved`
+- `pane.output_matched`
+- `pane.scroll_changed`
+- `pane.send_input.keys`
+- `pane.updated`
+- `plugins.json`
+- `session.json`
+- `tab.closed`
+- `tab.created`
+- `tab.focused`
+- `tab.moved`
+- `tab.renamed`
+- `ui.agent_panel_sort`
+- `ui.toast.herdr.position`
+- `ui.window_title`
+- `workspace.closed`
+- `workspace.created`
+- `workspace.focused`
+- `workspace.metadata_updated`
+- `workspace.moved`
+- `workspace.renamed`
+- `workspace.reordered`
+- `workspace.updated`
+- `workspace.worktree`
+- `worktree.created`
+- `worktree.opened`
+- `worktree.removed`
+
+## Herdr config.toml keys (167 from config-reference.json)
+
+- `advanced.scrollback_limit_bytes`
+- `experimental.allow_nested`
+- `experimental.cjk_ime_agents`
+- `experimental.cjk_ime_cursor_shape`
+- `experimental.kitty_graphics`
+- `experimental.pane_history`
+- `experimental.reveal_hidden_cursor_for_cjk_ime`
+- `experimental.switch_ascii_input_source_in_prefix`
+- `keys.close_pane`
+- `keys.close_tab`
+- `keys.close_workspace`
+- `keys.copy_mode`
+- `keys.cycle_pane_next`
+- `keys.cycle_pane_previous`
+- `keys.detach`
+- `keys.edit_scrollback`
+- `keys.focus_agent`
+- `keys.focus_pane_down`
+- `keys.focus_pane_left`
+- `keys.focus_pane_right`
+- `keys.focus_pane_up`
+- `keys.goto`
+- `keys.help`
+- `keys.indexed.agents`
+- `keys.indexed.tabs`
+- `keys.indexed.workspaces`
+- `keys.last_pane`
+- `keys.move_tab_next`
+- `keys.move_tab_previous`
+- `keys.navigate_pane_down`
+- `keys.navigate_pane_left`
+- `keys.navigate_pane_right`
+- `keys.navigate_pane_up`
+- `keys.navigate_workspace_down`
+- `keys.navigate_workspace_up`
+- `keys.new_tab`
+- `keys.new_workspace`
+- `keys.new_worktree`
+- `keys.next_agent`
+- `keys.next_tab`
+- `keys.next_workspace`
+- `keys.open_notification_target`
+- `keys.open_worktree`
+- `keys.prefix`
+- `keys.previous_agent`
+- `keys.previous_tab`
+- `keys.previous_workspace`
+- `keys.reload_config`
+- `keys.remote_image_paste`
+- `keys.remove_worktree`
+- `keys.rename_pane`
+- `keys.rename_tab`
+- `keys.rename_workspace`
+- `keys.resize_mode`
+- `keys.resize_pane_down`
+- `keys.resize_pane_left`
+- `keys.resize_pane_right`
+- `keys.resize_pane_up`
+- `keys.settings`
+- `keys.split_horizontal`
+- `keys.split_vertical`
+- `keys.swap_pane_down`
+- `keys.swap_pane_left`
+- `keys.swap_pane_right`
+- `keys.swap_pane_up`
+- `keys.switch_tab`
+- `keys.switch_workspace`
+- `keys.toggle_sidebar`
+- `keys.workspace_picker`
+- `keys.zoom`
+- `onboarding`
+- `remote.manage_ssh_config`
+- `server.headless_cols`
+- `server.headless_rows`
+- `session.resume_agents_on_restore`
+- `terminal.default_shell`
+- `terminal.new_cwd`
+- `terminal.shell_mode`
+- `theme.auto_switch`
+- `theme.custom.accent`
+- `theme.custom.active_row_bg`
+- `theme.custom.blue`
+- `theme.custom.green`
+- `theme.custom.mauve`
+- `theme.custom.overlay0`
+- `theme.custom.overlay1`
+- `theme.custom.panel_bg`
+- `theme.custom.peach`
+- `theme.custom.red`
+- `theme.custom.selection_bg`
+- `theme.custom.sidebar_bg`
+- `theme.custom.subtext0`
+- `theme.custom.surface0`
+- `theme.custom.surface1`
+- `theme.custom.surface_dim`
+- `theme.custom.teal`
+- `theme.custom.text`
+- `theme.custom.yellow`
+- `theme.dark_name`
+- `theme.light_name`
+- `theme.name`
+- `ui.accent`
+- `ui.agent_panel_sort`
+- `ui.confirm_close`
+- `ui.copy_on_select`
+- `ui.hide_tab_bar_when_single_tab`
+- `ui.host_cursor`
+- `ui.mobile_width_threshold`
+- `ui.mouse_capture`
+- `ui.mouse_scroll_lines`
+- `ui.pane_borders`
+- `ui.pane_gaps`
+- `ui.pane_outer_borders`
+- `ui.pane_scrollbars`
+- `ui.prompt_new_tab_name`
+- `ui.prompt_new_workspace_name`
+- `ui.redraw_on_focus_gained`
+- `ui.right_click_passthrough_modifier`
+- `ui.show_agent_labels_on_pane_borders`
+- `ui.sidebar.agents.row_gap`
+- `ui.sidebar.agents.rows`
+- `ui.sidebar.agents.rows_by_agent`
+- `ui.sidebar.spaces.row_gap`
+- `ui.sidebar.spaces.rows`
+- `ui.sidebar_collapsed_mode`
+- `ui.sidebar_max_width`
+- `ui.sidebar_min_width`
+- `ui.sidebar_start_collapsed`
+- `ui.sidebar_width`
+- `ui.sound.agents.agy`
+- `ui.sound.agents.amp`
+- `ui.sound.agents.claude`
+- `ui.sound.agents.cline`
+- `ui.sound.agents.codex`
+- `ui.sound.agents.cursor`
+- `ui.sound.agents.devin`
+- `ui.sound.agents.droid`
+- `ui.sound.agents.gemini`
+- `ui.sound.agents.github_copilot`
+- `ui.sound.agents.grok`
+- `ui.sound.agents.hermes`
+- `ui.sound.agents.kilo`
+- `ui.sound.agents.kimi`
+- `ui.sound.agents.kiro`
+- `ui.sound.agents.maki`
+- `ui.sound.agents.open_code`
+- `ui.sound.agents.pi`
+- `ui.sound.agents.qodercli`
+- `ui.sound.agents.qwen`
+- `ui.sound.done_path`
+- `ui.sound.enabled`
+- `ui.sound.path`
+- `ui.sound.request_path`
+- `ui.status_indicators`
+- `ui.tab_bar_position`
+- `ui.tab_bar_right`
+- `ui.tab_bar_right_separator`
+- `ui.toast.clipboard.enabled`
+- `ui.toast.clipboard.position`
+- `ui.toast.delay_seconds`
+- `ui.toast.delivery`
+- `ui.toast.herdr.position`
+- `ui.window_title`
+- `update.channel`
+- `update.manifest_check`
+- `update.version_check`
+- `worktrees.directory`
+
+## cmux CLI / contract commands (from manaflow-ai/cmux `docs/cli-contract.md`)
+
+- `cmux <path>`
+- `cmux [global-options] <command> [options]`
+- `cmux help`
+- `--socket <path>`
+- `--password <value>`
+- `--json`
+- `--id-format <refs\|uuids\|both>`
+- `--window <id\|ref\|index>`
+- `CMUX_SOCKET_PATH`
+- `CMUX_SOCKET`
+- `CMUX_SOCKET_PASSWORD`
+- `CMUX_WORKSPACE_ID`
+- `CMUX_SURFACE_ID`
+- `CMUX_TAB_ID`
+- `welcome`
+- `docs`
+- `settings`
+- `config`
+- `shortcuts`
+- `disable-browser`
+- `enable-browser`
+- `browser-status`
+- `agent-hibernation`
+- `restore`
+- `restore-session`
+- `open`
+- `feedback`
+- `feed`
+- `themes`
+- `claude-teams`
+- `codex-teams`
+- `omo`
+- `omx`
+- `omc`
+- `hooks`
+- `codex`
+- `ping`
+- `capabilities`
+- `events`
+- `auth`
+- `rpc`
+- `identify`
+- `list-windows`
+- `current-window`
+- `new-window`
+- `focus-window`
+- `close-window`
+- `window displays`
+- `window display <name\|index>`
+- `window default-display [<name>\|--clear]`
+- `move-workspace-to-window`
+- `reorder-workspace`
+- `reorder-workspaces`
+- `workspace-action`
+- `workspace`
+- `todo`
+- `comments`
+- `move-tab-to-new-workspace`
+- `list-workspaces`
+- `new-workspace`
+- `ssh`
+- `remote-daemon-status`
+- `ssh-session-list`
+- `ssh-session-attach`
+- `ssh-session-cleanup`
+- `new-split`
+- `list-panes`
+- `list-pane-surfaces`
+- `tree`
+- `top`
+- `focus-pane`
+- `new-pane`
+- `new-surface`
+- `close-surface`
+- `move-surface`
+- `split-off`
+- `reorder-surface`
+- `tab-action`
+- `rename-tab`
+- `drag-surface-to-split`
+- `refresh-surfaces`
+- `reload-config`
+- `surface-health`
+- `debug-terminals`
+- `trigger-flash`
+- `list-panels`
+- `focus-panel`
+- `close-workspace`
+- `select-workspace`
+- `current-workspace`
+- `read-screen`
+- `send`
+- `send-key`
+- `send-panel`
+- `send-key-panel`
+- `notify`
+- `list-notifications`
+- `dismiss-notification`
+- `mark-notification-read`
+- `open-notification`
+- `jump-to-unread`
+- `clear-notifications`
+- `right-sidebar`
+- `set-status`
+- `clear-status`
+- `list-status`
+- `set-progress`
+- `clear-progress`
+- `log`
+- `clear-log`
+- `list-log`
+- `sidebar-state`
+- `claude-hook`
+- `set-app-focus`
+- `simulate-app-active`
+- `browser`
+- `open-browser`
+- `navigate`
+- `browser-back`
+- `browser-forward`
+- `browser-reload`
+- `get-url`
+- `focus-webview`
+- `is-webview-focused`
+- `markdown`
+- `vm-pty-attach`
+- `vm-ssh-attach`
+- `vm-pty-connect`
+- `ssh-pty-attach`
+- `ssh-session-end`
+- `__tmux-compat`
+- `auth status`
+- `auth login`
+- `auth logout`
+- `vm ssh`
+- `vm ssh-info`
+- `vm ssh-attach`
+- `vm exec`
+- `remotes add <name>`
+- `remotes remove <name-or-deviceId>`
+- `themes list`
+- `themes set <theme>`
+- `themes set --light <theme>`
+- `themes set --dark <theme>`
+- `themes clear`
+- `capture-pane`
+- `resize-pane`
+- `pipe-pane`
+- `wait-for`
+- `swap-pane`
+- `break-pane`
+- `join-pane`
+- `last-pane`
+- `find-window`
+- `clear-history`
+- `set-hook`
+- `popup`
+- `set-buffer`
+- `paste-buffer`
+- `list-buffers`
+- `respawn-pane`
+- `display-message`
+- `browser snapshot`
+- `browser eval`
+- `browser wait`
+- `browser select`
+- `browser scroll`
+- `browser screenshot`
+- `browser get`
+- `browser is`
+- `browser find`
+- `browser frame`
+- `browser dialog`
+- `browser download`
+- `browser profiles`
+- `browser import`
+- `browser cookies`
+- `browser storage`
+- `browser tab`
+- `browser highlight`
+- `browser state`
+- `browser viewport <width> <height>`
+- `browser viewport reset`
+- `browser offline`
+- `browser trace`
+- `browser network`
+- `browser screencast`
+- `browser identify`
+- `hooks setup`
+- `hooks uninstall`
+- `hooks <agent> install`
+- `hooks <agent> uninstall`
+- `hooks claude <event>`
+- `hooks codex <event>`
+- `hooks feed --source <agent>`
+- `hooks <agent> <event>`
+- `right-sidebar focus`
+- `right-sidebar set <files\|find\|vault\|sessions\|feed\|dock>`
+- `right-sidebar mode`
+- `--workspace <id\|ref\|index>`
+- `--no-focus`
+- `sidebar validate [name]`
+- `sidebar reload [name]`
+- `sidebar select <name>`
+- `sidebar open <name>`
+- `docs settings`
+- `docs shortcuts`
+- `docs api`
+- `docs browser`
+- `docs agents`
+- `settings open [target]`
+- `settings path`
+- `settings docs`
+- `settings <target>`
+- `config reload`
+- `config get sidebar-font-size`
+- `config set sidebar-font-size <points>`
+- `config sidebar-font-size [points]`
+- `config get surface-tab-bar-font-size`
+- `config set surface-tab-bar-font-size <points>`
+- `config surface-tab-bar-font-size [points]`
+- `--cursor-file <path>`
+- `--name <event>`
+- `--category <name>`
+- `--reconnect`
+- `--limit <n>`
+- `--no-ack`
+- `id`
+- `text`
+- `state`
+- `origin`
+
+## cmux socket methods (Mintlify automation/socket-api.md examples)
+
+- `<method-name>`
+- `browser.back`
+- `browser.click`
+- `browser.eval`
+- `browser.fill`
+- `browser.find.role`
+- `browser.find.testid`
+- `browser.find.text`
+- `browser.focus_webview`
+- `browser.get.attr`
+- `browser.get.count`
+- `browser.get.html`
+- `browser.get.text`
+- `browser.get.title`
+- `browser.get.value`
+- `browser.is.checked`
+- `browser.is.enabled`
+- `browser.is.visible`
+- `browser.is_webview_focused`
+- `browser.navigate`
+- `browser.open_split`
+- `browser.press`
+- `browser.screenshot`
+- `browser.select`
+- `browser.snapshot`
+- `browser.type`
+- `browser.url.get`
+- `browser.wait`
+- `pane.create`
+- `pane.focus`
+- `pane.list`
+- `pane.surfaces`
+- `surface.close`
+- `surface.create`
+- `surface.focus`
+- `surface.health`
+- `surface.list`
+- `surface.move`
+- `surface.read_text`
+- `surface.reorder`
+- `surface.send_key`
+- `surface.send_text`
+- `surface.split`
+- `surface.trigger_flash`
+- `system.capabilities`
+- `system.identify`
+- `tab.action`
+- `window.current`
+- `window.focus`
+- `window.list`
+- `workspace.action`
+- `workspace.close`
+- `workspace.create`
+- `workspace.current`
+- `workspace.list`
+- `workspace.move_to_window`
+- `workspace.rename`
+- `workspace.reorder`
+- `workspace.select`
+
+## cmux socket methods (cmux.com/docs/api.md examples)
+
+- `notification.clear`
+- `notification.create`
+- `notification.list`
+- `pane.surfaces`
+- `surface.focus`
+- `surface.list`
+- `surface.send_key`
+- `surface.send_text`
+- `surface.split`
+- `system.capabilities`
+- `system.identify`
+- `system.ping`
+- `workspace.close`
+- `workspace.create`
+- `workspace.current`
+- `workspace.list`
+- `workspace.select`
+
+## DeepWiki Herdr pages
+
+- https://deepwiki.com/herdrdev/herdr/1-overview
+- https://deepwiki.com/herdrdev/herdr/1.1-getting-started
+- https://deepwiki.com/herdrdev/herdr/1.2-core-concepts
+- https://deepwiki.com/herdrdev/herdr/1.3-contributing-and-development-workflow
+- https://deepwiki.com/herdrdev/herdr/10-configuration-reference
+- https://deepwiki.com/herdrdev/herdr/10.1-keybindings-configuration
+- https://deepwiki.com/herdrdev/herdr/10.2-git-worktree-integration
+- https://deepwiki.com/herdrdev/herdr/11-self-update-system
+- https://deepwiki.com/herdrdev/herdr/12-testing-infrastructure
+- https://deepwiki.com/herdrdev/herdr/12.1-integration-and-api-tests
+- https://deepwiki.com/herdrdev/herdr/12.2-client-and-server-tests
+- https://deepwiki.com/herdrdev/herdr/13-website-and-documentation
+- https://deepwiki.com/herdrdev/herdr/13.1-marketing-website
+- https://deepwiki.com/herdrdev/herdr/13.2-documentation-pipeline
+- https://deepwiki.com/herdrdev/herdr/14-glossary
+- https://deepwiki.com/herdrdev/herdr/2-architecture
+- https://deepwiki.com/herdrdev/herdr/2.1-app-orchestration-and-state-management
+- https://deepwiki.com/herdrdev/herdr/2.2-headless-server-and-client-protocol
+- https://deepwiki.com/herdrdev/herdr/2.3-pty-and-terminal-runtime
+- https://deepwiki.com/herdrdev/herdr/2.4-layout-engine
+- https://deepwiki.com/herdrdev/herdr/2.5-session-persistence-and-handoff
+- https://deepwiki.com/herdrdev/herdr/3-terminal-emulation
+- https://deepwiki.com/herdrdev/herdr/3.1-ghostty-vt-engine-integration
+- https://deepwiki.com/herdrdev/herdr/3.2-osc-sequences-and-terminal-metadata
+- https://deepwiki.com/herdrdev/herdr/3.3-kitty-graphics-protocol
+- https://deepwiki.com/herdrdev/herdr/3.4-input-encoding-and-keyboard-protocol
+- https://deepwiki.com/herdrdev/herdr/4-agent-detection-and-integration
+- https://deepwiki.com/herdrdev/herdr/4.1-screen-heuristics-and-detection-manifests
+- https://deepwiki.com/herdrdev/herdr/4.2-official-agent-integrations
+- https://deepwiki.com/herdrdev/herdr/4.3-agent-session-resume
+- https://deepwiki.com/herdrdev/herdr/5-user-interface
+- https://deepwiki.com/herdrdev/herdr/5.1-view-geometry-and-rendering-pipeline
+- https://deepwiki.com/herdrdev/herdr/5.2-input-handling-and-modal-system
+- https://deepwiki.com/herdrdev/herdr/5.3-sidebar-navigator-and-agent-panel
+- https://deepwiki.com/herdrdev/herdr/5.4-theming-system
+- https://deepwiki.com/herdrdev/herdr/6-api-and-cli-reference
+- https://deepwiki.com/herdrdev/herdr/6.1-socket-api
+- https://deepwiki.com/herdrdev/herdr/6.2-cli-commands
+- https://deepwiki.com/herdrdev/herdr/6.3-agent-automation-api
+- https://deepwiki.com/herdrdev/herdr/7-plugin-system
+- https://deepwiki.com/herdrdev/herdr/7.1-plugin-authoring-and-manifest
+- https://deepwiki.com/herdrdev/herdr/7.2-plugin-runtime-and-marketplace
+- https://deepwiki.com/herdrdev/herdr/8-remote-access-and-ssh
+- https://deepwiki.com/herdrdev/herdr/8.1-remote-session-lifecycle
+- https://deepwiki.com/herdrdev/herdr/8.2-persistence-modes
+- https://deepwiki.com/herdrdev/herdr/9-platform-abstraction-layer
+- https://deepwiki.com/herdrdev/herdr/9.1-macos-and-linux-platform-implementations
+- https://deepwiki.com/herdrdev/herdr/9.2-windows-platform-and-conpty
+
+## DeepWiki cmux pages
+
+- https://deepwiki.com/manaflow-ai/cmux/1-overview
+- https://deepwiki.com/manaflow-ai/cmux/1.1-system-architecture
+- https://deepwiki.com/manaflow-ai/cmux/1.2-key-concepts-and-terminology
+- https://deepwiki.com/manaflow-ai/cmux/1.3-repository-structure
+- https://deepwiki.com/manaflow-ai/cmux/10-cicd-pipelines
+- https://deepwiki.com/manaflow-ai/cmux/10.1-continuous-integration
+- https://deepwiki.com/manaflow-ai/cmux/10.2-testing-infrastructure
+- https://deepwiki.com/manaflow-ai/cmux/10.3-build-system
+- https://deepwiki.com/manaflow-ai/cmux/10.4-nightly-builds
+- https://deepwiki.com/manaflow-ai/cmux/10.5-release-workflow
+- https://deepwiki.com/manaflow-ai/cmux/10.6-homebrew-cask-automation
+- https://deepwiki.com/manaflow-ai/cmux/11-release-process
+- https://deepwiki.com/manaflow-ai/cmux/11.1-versioning-and-changelog
+- https://deepwiki.com/manaflow-ai/cmux/11.2-release-workflows
+- https://deepwiki.com/manaflow-ai/cmux/12-distribution
+- https://deepwiki.com/manaflow-ai/cmux/12.1-github-releases
+- https://deepwiki.com/manaflow-ai/cmux/12.2-homebrew-distribution
+- https://deepwiki.com/manaflow-ai/cmux/12.3-sparkle-auto-update
+- https://deepwiki.com/manaflow-ai/cmux/13-web-documentation-site
+- https://deepwiki.com/manaflow-ai/cmux/13.1-site-structure-and-styling
+- https://deepwiki.com/manaflow-ai/cmux/13.2-api-routes
+- https://deepwiki.com/manaflow-ai/cmux/13.3-cloud-vm-backend
+- https://deepwiki.com/manaflow-ai/cmux/13.4-presence-worker
+- https://deepwiki.com/manaflow-ai/cmux/13.5-web-localization-(messages*)
+- https://deepwiki.com/manaflow-ai/cmux/13.6-billing-and-pricing-(web)
+- https://deepwiki.com/manaflow-ai/cmux/14-ios-companion-app
+- https://deepwiki.com/manaflow-ai/cmux/14.1-ios-app-architecture
+- https://deepwiki.com/manaflow-ai/cmux/14.2-mobile-terminal-rendering
+- https://deepwiki.com/manaflow-ai/cmux/14.3-mobile-agent-chat
+- https://deepwiki.com/manaflow-ai/cmux/14.4-mobile-host-service-and-pairing
+- https://deepwiki.com/manaflow-ai/cmux/14.5-ios-ci-and-testflight
+- https://deepwiki.com/manaflow-ai/cmux/15-contributing
+- https://deepwiki.com/manaflow-ai/cmux/15.1-development-guidelines
+- https://deepwiki.com/manaflow-ai/cmux/15.2-reporting-issues-and-features
+- https://deepwiki.com/manaflow-ai/cmux/15.3-ai-assisted-repo-workflows-(.claude-skills)
+- https://deepwiki.com/manaflow-ai/cmux/16-glossary
+- https://deepwiki.com/manaflow-ai/cmux/2-development-setup
+- https://deepwiki.com/manaflow-ai/cmux/2.1-prerequisites-and-initial-setup
+- https://deepwiki.com/manaflow-ai/cmux/2.2-building-and-running-locally
+- https://deepwiki.com/manaflow-ai/cmux/2.3-debug-logging-and-tooling
+- https://deepwiki.com/manaflow-ai/cmux/3-core-application-architecture
+- https://deepwiki.com/manaflow-ai/cmux/3.1-application-lifecycle
+- https://deepwiki.com/manaflow-ai/cmux/3.2-state-management
+- https://deepwiki.com/manaflow-ai/cmux/3.3-workspace-and-tab-system
+- https://deepwiki.com/manaflow-ai/cmux/3.4-ui-layer
+- https://deepwiki.com/manaflow-ai/cmux/3.5-canvas-layout-mode
+- https://deepwiki.com/manaflow-ai/cmux/4-panel-system
+- https://deepwiki.com/manaflow-ai/cmux/4.1-panel-architecture
+- https://deepwiki.com/manaflow-ai/cmux/4.2-terminal-panels
+- https://deepwiki.com/manaflow-ai/cmux/4.3-browser-panels
+- https://deepwiki.com/manaflow-ai/cmux/4.4-focus-and-lifecycle-management
+- https://deepwiki.com/manaflow-ai/cmux/4.5-markdown-and-file-preview-panels
+- https://deepwiki.com/manaflow-ai/cmux/4.6-diff-viewer-and-embedded-webviews
+- https://deepwiki.com/manaflow-ai/cmux/5-configuration-system
+- https://deepwiki.com/manaflow-ai/cmux/5.1-ghostty-configuration
+- https://deepwiki.com/manaflow-ai/cmux/5.2-theme-system
+- https://deepwiki.com/manaflow-ai/cmux/5.3-socket-control-settings
+- https://deepwiki.com/manaflow-ai/cmux/5.4-keyboard-shortcuts-and-applescript
+- https://deepwiki.com/manaflow-ai/cmux/6-external-control-and-automation
+- https://deepwiki.com/manaflow-ai/cmux/6.1-socket-control-architecture
+- https://deepwiki.com/manaflow-ai/cmux/6.2-cli-interface
+- https://deepwiki.com/manaflow-ai/cmux/6.3-shell-integration
+- https://deepwiki.com/manaflow-ai/cmux/6.4-ai-agent-integration
+- https://deepwiki.com/manaflow-ai/cmux/6.5-remote-ssh-daemon
+- https://deepwiki.com/manaflow-ai/cmux/6.6-cmux-tui-(rust)-multiplexer-and-control-socket
+- https://deepwiki.com/manaflow-ai/cmux/7-notifications-and-ui-components
+- https://deepwiki.com/manaflow-ai/cmux/7.1-notification-system
+- https://deepwiki.com/manaflow-ai/cmux/7.2-titlebar-accessories
+- https://deepwiki.com/manaflow-ai/cmux/7.3-sidebar
+- https://deepwiki.com/manaflow-ai/cmux/7.4-find-and-search-overlays
+- https://deepwiki.com/manaflow-ai/cmux/7.5-feed-and-dock
+- https://deepwiki.com/manaflow-ai/cmux/7.6-extension-kit-and-custom-sidebars
+- https://deepwiki.com/manaflow-ai/cmux/8-session-management
+- https://deepwiki.com/manaflow-ai/cmux/8.1-session-persistence
+- https://deepwiki.com/manaflow-ai/cmux/8.2-state-recovery
+- https://deepwiki.com/manaflow-ai/cmux/8.3-agent-session-vault
+- https://deepwiki.com/manaflow-ai/cmux/8.4-cmux-vault-cli-and-cloud-transcript-sync
+- https://deepwiki.com/manaflow-ai/cmux/9-ghostty-fork-management
+- https://deepwiki.com/manaflow-ai/cmux/9.1-fork-overview-and-maintenance
+- https://deepwiki.com/manaflow-ai/cmux/9.2-osc-protocol-extensions
+- https://deepwiki.com/manaflow-ai/cmux/9.3-rendering-and-integration-enhancements
+
+## cmux.com markdown pages downloaded
+
+- `agents.md`
+- `agents/aider.md`
+- `agents/amp.md`
+- `agents/antigravity.md`
+- `agents/auggie.md`
+- `agents/autohand-code.md`
+- `agents/charm.md`
+- `agents/claude-code.md`
+- `agents/cline.md`
+- `agents/codebuff.md`
+- `agents/codex.md`
+- `agents/command-code.md`
+- `agents/continue.md`
+- `agents/cursor-cli.md`
+- `agents/devin.md`
+- `agents/droid.md`
+- `agents/gemini-cli.md`
+- `agents/github-copilot.md`
+- `agents/goose.md`
+- `agents/grok.md`
+- `agents/hermes.md`
+- `agents/kilo-code.md`
+- `agents/kimi.md`
+- `agents/kiro.md`
+- `agents/mimo-code.md`
+- `agents/mistral-vibe.md`
+- `agents/openclaude.md`
+- `agents/openclaw.md`
+- `agents/opencode.md`
+- `agents/openhands.md`
+- `agents/pi.md`
+- `agents/qwen-code.md`
+- `agents/roo-code.md`
+- `agents/rovo-dev.md`
+- `assets.md`
+- `best-terminal-for-mac.md`
+- `blog.md`
+- `blog/367-billion-tokens.md`
+- `blog/claude-code-best-worktree-manager.md`
+- `blog/cmd-shift-u.md`
+- `blog/cmux-claude-teams.md`
+- `blog/cmux-finder.md`
+- `blog/cmux-fork.md`
+- `blog/cmux-history.md`
+- `blog/cmux-home.md`
+- `blog/cmux-omo.md`
+- `blog/cmux-ssh.md`
+- `blog/cmux-vault.md`
+- `blog/gpl.md`
+- `blog/introducing-cmux.md`
+- `blog/markdown-viewer.md`
+- `blog/passkey-auth.md`
+- `blog/session-restore.md`
+- `blog/show-hn-launch.md`
+- `blog/task-manager.md`
+- `blog/unread-shortcuts.md`
+- `blog/zen-of-cmux.md`
+- `browser.md`
+- `built-on-ghostty.md`
+- `community.md`
+- `compare.md`
+- `compare/best-terminal-for-ai-coding-agents.md`
+- `compare/cmux-vs-alacritty.md`
+- `compare/cmux-vs-conductor.md`
+- `compare/cmux-vs-cursor.md`
+- `compare/cmux-vs-devin.md`
+- `compare/cmux-vs-ghostty.md`
+- `compare/cmux-vs-herdr.md`
+- `compare/cmux-vs-iterm2.md`
+- `compare/cmux-vs-kitty.md`
+- `compare/cmux-vs-opencode.md`
+- `compare/cmux-vs-superset.md`
+- `compare/cmux-vs-tmux.md`
+- `compare/cmux-vs-vscode.md`
+- `compare/cmux-vs-warp.md`
+- `compare/cmux-vs-wezterm.md`
+- `compare/cmux-vs-windsurf.md`
+- `compare/cmux-vs-zed.md`
+- `compare/multiple-claude-code-agents-parallel.md`
+- `docs.md`
+- `docs/agent-integrations/claude-code-teams.md`
+- `docs/agent-integrations/oh-my-claudecode.md`
+- `docs/agent-integrations/oh-my-codex.md`
+- `docs/agent-integrations/oh-my-opencode.md`
+- `docs/agent-integrations/oh-my-pi.md`
+- `docs/api.md`
+- `docs/browser-automation.md`
+- `docs/changelog.md`
+- `docs/concepts.md`
+- `docs/configuration.md`
+- `docs/custom-commands.md`
+- `docs/dock.md`
+- `docs/getting-started.md`
+- `docs/ios.md`
+- `docs/keyboard-shortcuts.md`
+- `docs/notifications.md`
+- `docs/remote-tmux.md`
+- `docs/session-restore.md`
+- `docs/skills.md`
+- `docs/ssh.md`
+- `docs/task-manager.md`
+- `docs/textbox.md`
+- `docs/vault.md`
+- `docs/workspace-groups.md`
+- `enterprise.md`
+- `eula.md`
+- `extra-guides.md`
+- `guides.md`
+- `index.md`
+- `ios.md`
+- `linux.md`
+- `nightly.md`
+- `pricing.md`
+- `privacy-policy.md`
+- `terms-of-service.md`
+- `wall-of-love.md`
+

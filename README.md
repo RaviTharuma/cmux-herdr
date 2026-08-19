@@ -236,6 +236,7 @@ scripts/uninstall-watch-service.sh   unload watch LaunchAgent
 sidebars/herdr.swift        optional cmux custom sidebar
 agent-skill/SKILL.md        dual-hierarchy agent instructions
 docs/PLUGIN_DESIGN.md       standalone plugin architecture
+docs/knowledge/             scraped Herdr + cmux docs corpus (CLI/API inventories)
 docs/upstream/              issue, native design, tmux parity, PR7 window mirror
 docs/upstream/TMUX_PARITY.md  ssh-tmux capability matrix (plugin + native)
 mapping/concept-map.md      cmux ↔ Herdr ↔ tmux concepts
