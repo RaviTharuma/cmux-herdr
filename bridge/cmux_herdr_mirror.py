@@ -546,12 +546,28 @@ def may_claim_client_size(pane_id: str) -> bool:
     Policy (tmux feed-forward analogue): only one viewer per host fingerprint
     may call ``herdr pane resize``. Prefer ``CMUX_HERDR_SIZE_AUTHORITY``, then
     the size-authority state file written by mirror/watch on focus changes.
+
+    When native owns the writer lease (or wrote the ``native`` size-authority
+    sentinel), every plugin attach-pane must no-op so SIGWINCH does not thrash.
     """
+    try:
+        from .cmux_herdr_bridge import native_attachment_is_live
+        from .cmux_herdr_handoff import FORCE_PLUGIN_ENV, env_truthy
+    except ImportError:
+        from cmux_herdr_bridge import native_attachment_is_live
+        from cmux_herdr_handoff import FORCE_PLUGIN_ENV, env_truthy
+
+    if native_attachment_is_live() and not env_truthy(FORCE_PLUGIN_ENV):
+        return False
+
     env_auth = (os.environ.get(SIZE_AUTHORITY_ENV) or "").strip()
     if env_auth:
         return env_auth == pane_id
     file_auth = read_size_authority()
     if file_auth:
+        # Native attachment writes the literal token ``native`` (no pane match).
+        if file_auth == "native" or file_auth.startswith("native:"):
+            return False
         return file_auth == pane_id
     # Single-viewer / first-attach fallback: allow until mirror elects one.
     return True

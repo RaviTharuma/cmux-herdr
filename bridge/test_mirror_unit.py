@@ -613,6 +613,44 @@ class AdvancedParityTests(unittest.TestCase):
                 self.assertTrue(mirror.may_claim_client_size("w2:p2"))
                 self.assertFalse(mirror.may_claim_client_size("w2:p1"))
 
+    def test_native_size_authority_blocks_all_plugin_panes(self):
+        from bridge import cmux_herdr_mirror as mirror
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "CMUX_SURFACE_ID": "surface-1",
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+            },
+            clear=False,
+        ):
+            mirror.write_size_authority("native")
+            self.assertFalse(mirror.may_claim_client_size("w2:p1"))
+            self.assertFalse(mirror.may_claim_client_size("native"))
+            mirror.write_size_authority("native:w2:p1")
+            self.assertFalse(mirror.may_claim_client_size("w2:p1"))
+
+    def test_native_live_lease_blocks_size_claim(self):
+        from bridge import cmux_herdr_mirror as mirror
+
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ,
+            {
+                "XDG_STATE_HOME": tmp,
+                "CMUX_SURFACE_ID": "surface-1",
+                "HERDR_SOCKET_PATH": "/tmp/herdr.sock",
+                "CMUX_HERDR_NATIVE_LIVE": "1",
+            },
+            clear=False,
+        ):
+            self.assertFalse(mirror.may_claim_client_size("w2:p1"))
+            with mock.patch.dict(
+                os.environ, {"CMUX_HERDR_FORCE_PLUGIN": "1"}, clear=False
+            ):
+                # Force-plugin restores file/env election (no file → allow).
+                self.assertTrue(mirror.may_claim_client_size("w2:p1"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -166,6 +166,10 @@ Agent/worktree/manifest/title verbs that ssh-tmux does not have: see
 
 `RemoteHerdrController` claims `RemoteHerdrHandoff` (`writer-*` / `native-live`) on attach and releases on detach, so plugin `sync` / `watch` / `mirror` yield while the mirror is live. Nested sidebar still uses `NestedPluginWriterHandoff` locks in parallel.
 
+### Native size-authority wire (2026-08-19)
+
+Same attach path also claims `size-authority-<fingerprint>` with the `native` sentinel (cleared on detach). Plugin `attach-pane` SIGWINCH handlers call `may_claim_client_size`, which no-ops when native owns the writer lease **or** when the file is `native` / `native:*`. Inspect via `cmux-herdr lease` / `doctor` (`size_authority` check).
+
 ## Native landing sequence
 
 1. Land or rebase [#10045](https://github.com/manaflow-ai/cmux/pull/10045) (sidebar + socket + focus).
