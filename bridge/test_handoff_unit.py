@@ -22,6 +22,7 @@ from bridge.cmux_herdr_handoff import (
     claim_native_writer,
     claim_plugin_writer,
     clear_shared_restore,
+    heartbeat_native_writer,
     heartbeat_plugin_writer,
     observe_foreign,
     parse_lease_text,
@@ -142,6 +143,17 @@ class HandoffLeaseTests(unittest.TestCase):
         self.assertIsNotNone(beat)
         assert beat is not None
         self.assertGreaterEqual(beat.heartbeat_ms, first.heartbeat_ms)
+
+    def test_heartbeat_keeps_native_fresh(self) -> None:
+        claim_native_writer("fp", pid=os.getpid())
+        first = resolve_writer("fp").lease
+        assert first is not None
+        time.sleep(0.01)
+        beat = heartbeat_native_writer("fp", pid=os.getpid())
+        self.assertIsNotNone(beat)
+        assert beat is not None
+        self.assertGreaterEqual(beat.heartbeat_ms, first.heartbeat_ms)
+        self.assertTrue(resolve_writer("fp").native_live)
 
     def test_release_plugin_does_not_drop_native(self) -> None:
         claim_native_writer("fp", pid=os.getpid())

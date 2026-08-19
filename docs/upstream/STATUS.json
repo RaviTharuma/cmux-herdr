@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-19T08:05:06Z",
+  "updated_at": "2026-08-19T08:13:49Z",
   "freeze_id": "freeze-2026-08-19T065836Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active. Errors/lackings freeze: docs/upstream/ERRORS_AND_LACKINGS.md",
   "tracks": {
@@ -125,6 +125,6 @@
     "lacking_plugin_count": 8,
     "shared_contract_watches": 4
   },
-  "notes": "Plugin size-authority yield on main (#44). Native tip 3c9f5ac claims lease + size-authority. Upstream merge still BLOCKED.",
+  "notes": "Native lease heartbeat shipping (controller ~15s + heartbeat_native_writer). Tip still 3c9f5ac until heartbeat fold. Upstream merge BLOCKED.",
   "plugin_release": "v0.3.4"
 }

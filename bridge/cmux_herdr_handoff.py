@@ -518,6 +518,44 @@ def heartbeat_plugin_writer(
     )
 
 
+def heartbeat_native_writer(
+    fingerprint: str,
+    *,
+    socket_path: str = "",
+    endpoint_hash: str = "",
+    pid: Optional[int] = None,
+) -> Optional[WriterLease]:
+    """Refresh a live native lease (AppKit twin of ``heartbeat_plugin_writer``).
+
+    Returns None when another process owns a fresh native lease. Re-claims when
+    the prior native lease is stale/unclaimed so plugin watch stays yielded.
+    """
+    owner_pid = pid if pid is not None else os.getpid()
+    decision = resolve_writer(fingerprint)
+    if decision.native_live:
+        if (
+            decision.lease is not None
+            and decision.lease.pid > 0
+            and decision.lease.pid != owner_pid
+        ):
+            return None
+        return write_lease(
+            OWNER_NATIVE,
+            fingerprint,
+            socket_path=socket_path
+            or (decision.lease.socket_path if decision.lease else ""),
+            endpoint_hash=endpoint_hash
+            or (decision.lease.endpoint_hash if decision.lease else ""),
+            pid=owner_pid,
+        )
+    return claim_native_writer(
+        fingerprint,
+        socket_path=socket_path,
+        endpoint_hash=endpoint_hash,
+        pid=owner_pid,
+    )
+
+
 def claim_native_writer(
     fingerprint: str,
     *,
@@ -661,6 +699,7 @@ __all__ = [
     "clear_owner",
     "clear_shared_restore",
     "env_truthy",
+    "heartbeat_native_writer",
     "heartbeat_plugin_writer",
     "legacy_native_marker_path",
     "load_leases",

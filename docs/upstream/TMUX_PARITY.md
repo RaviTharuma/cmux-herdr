@@ -170,6 +170,10 @@ Agent/worktree/manifest/title verbs that ssh-tmux does not have: see
 
 Same attach path also claims `size-authority-<fingerprint>` with the `native` sentinel (cleared on detach). Plugin `attach-pane` SIGWINCH handlers call `may_claim_client_size`, which no-ops when native owns the writer lease **or** when the file is `native` / `native:*`. Inspect via `cmux-herdr lease` / `doctor` (`size_authority` check).
 
+### Native lease heartbeat (2026-08-19)
+
+Lease freshness requires a live pid **and** `heartbeat_ms` within TTL (45s). `RemoteHerdrController` refreshes `heartbeatNative` + size-authority every ~15s while any session host is live, and samples wall clock before each write (so `heartbeat_ms` is not frozen at store init). Plugin `watch` already calls `heartbeat_plugin_writer`.
+
 ## Native landing sequence
 
 1. Land or rebase [#10045](https://github.com/manaflow-ai/cmux/pull/10045) (sidebar + socket + focus).
