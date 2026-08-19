@@ -10,7 +10,7 @@ Both Herdr paths must match that contract as closely as the host allows.
 
 [#10045](https://github.com/manaflow-ai/cmux/pull/10045) is the **sidebar/control-socket** nested-topology v1 (virtual rows). That is *not* ssh-tmux. **PR7 (`RemoteHerdrWindowMirror` + `RemoteHerdrImpose`)** is the surface mirror. Paste-ready plan: [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md).
 
-**Development continues.** The live apply *machine* now runs in the plugin (`LiveApplyHost`: makePanel, output, drag, focus, size, attach/restore). Plugin surfaces are still in-memory Ghostty analogues (no PTY theft). Native AppKit must swap those surfaces for real `TerminalPanel`s. Another chat owns #10045 CodeRabbit — see [LANES.md](./LANES.md).
+**Development continues.** The live apply *machine* now runs in the plugin (`LiveApplyHost`: makePanel, output, drag, focus, size, attach/restore). Plugin surfaces are still in-memory Ghostty analogues (no PTY theft). Native AppKit must swap those surfaces for real `TerminalPanel`s. Native review of #10045 is a separate track — see [LANES.md](./LANES.md).
 
 ## Capability matrix
 

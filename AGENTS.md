@@ -8,8 +8,8 @@ build step, no compiled artifacts. It needs only a Python 3.10+ interpreter (the
 
 ### Lint / test / build / run
 
-- Tests: `./scripts/test.sh` (stdlib `unittest` only — **do not add pytest**). It runs
-  `py_compile` on the sources plus `unittest discover` over `bridge/` and `tests/`.
+- GitHub Actions workflow `.github/workflows/ci.yml` runs `./scripts/test.sh`
+  on Python 3.10–3.13. Do not add pytest.
 - There is no separate lint or build step; `py_compile` inside `scripts/test.sh` is the
   compile check.
 - Run the CLI directly from the repo without installing: `./bin/cmux-herdr <command>`

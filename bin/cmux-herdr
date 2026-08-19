@@ -79,7 +79,7 @@ from bridge.cmux_herdr_mirror import (  # noqa: E402
 from bridge.cmux_herdr_pump import ApiTransport, LivePump, watch_followup  # noqa: E402
 from bridge.cmux_herdr_socket import HerdrEventSession  # noqa: E402
 
-__version__ = "0.1.0"
+__version__ = "0.3.4"
 
 
 def _read_version() -> str:

@@ -7,10 +7,26 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-08-19
+
 ### Added
 
+- MIT [LICENSE](LICENSE), [CONTRIBUTING.md](CONTRIBUTING.md),
+  [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md),
+  GitHub issue/PR templates, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
+  maintainer guides ([docs/MAINTAINING.md](docs/MAINTAINING.md),
+  [docs/de/](docs/de/)), and GitHub Actions CI (`./scripts/test.sh` on
+  Python 3.10–3.13).
 - `cmux-herdr lease` — inspect plugin↔native writer lease.
 - Ignore local agent scratch (`.tmp-push/`, `proto_push_args.json`).
+
+### Security
+
+- Removed `docs/live-env-snapshot.txt` (local hostname, home-relative paths,
+  and workspace titles). No API keys were in that file. Older git history
+  still contains the blob; `main` is not force-pushed.
+- Removed `.github/workflows/auto-squash-merge.yml`, which could squash-merge
+  public PRs whose branch name started with `cursor/`.
 
 ## [0.3.3] - 2026-08-19
 
@@ -150,15 +166,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   never crosses panes, provider focus never echoes `pane.focus`, title
   `ESC k` sequences are stripped, cwd updates only the active pane.
   Session host linearizes `reconcile_session` into create/rename/close/
-  close-defaults/reorder/focus (tmux `rebuildTopology`). Native twins stay
-  on a separate fork branch (not merged into #10045 while the other chat
-  owns CodeRabbit). See [docs/upstream/LANES.md](docs/upstream/LANES.md).
+  close-defaults/reorder/focus (tmux `rebuildTopology`).   Native twins stay
+  on a separate fork branch (not merged into #10045 while that PR is in
+  review). See [docs/upstream/LANES.md](docs/upstream/LANES.md).
 
 - **Host-apply verbs** (`bridge/cmux_herdr_host.py`): linearize impose +
   reconcile into tmux apply order (create panels, mutate tree, impose
   dividers, focus). `FakeBonsplitHost` proves the order without AppKit.
   Native twin is `RemoteHerdrHostApply` on a separate fork branch (not
-  merged into #10045 while the other chat owns CodeRabbit). See
+  merged into #10045 while that PR is in review). See
   [docs/upstream/LANES.md](docs/upstream/LANES.md).
 
 - **Bonsplit impose planner** (`bridge/cmux_herdr_impose.py`): ssh-tmux
@@ -291,4 +307,8 @@ Works today without any cmux upstream merge.
 - Native nested topology ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)) is
   intentionally out of scope for the plugin.
 
+[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.3.4
+[0.3.3]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.3.3
+[0.2.0]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.2.0
 [0.1.0]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.1.0

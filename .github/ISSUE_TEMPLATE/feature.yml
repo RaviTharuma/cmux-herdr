@@ -1,0 +1,37 @@
+name: Plugin enhancement
+description: A feature or docs change for cmux-herdr
+title: "[Enhancement] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for the **plugin**. Native cmux work belongs on
+        [manaflow-ai/cmux](https://github.com/manaflow-ai/cmux).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is awkward or missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should cmux-herdr do instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI
+        - Mirror / watch / attach-pane
+        - Install / LaunchAgent
+        - Docs
+        - Tests / CI
+        - Other
+    validations:
+      required: true

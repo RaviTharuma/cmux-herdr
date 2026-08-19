@@ -1,8 +1,25 @@
 # cmux-herdr
 
-User-controlled **plugin bridge** between [Herdr](https://github.com/herdrdev/herdr) (inner agent terminal mux) and [cmux](https://github.com/manaflow-ai/cmux) (outer macOS terminal workspace).
+[![CI](https://github.com/RaviTharuma/cmux-herdr/actions/workflows/ci.yml/badge.svg)](https://github.com/RaviTharuma/cmux-herdr/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-It works **today without any cmux upstream PR**. Current stopgap release target: **v0.1.0** (see [CHANGELOG.md](CHANGELOG.md), [RELEASE.md](RELEASE.md)).
+User-controlled **plugin bridge** between [Herdr](https://github.com/herdrdev/herdr)
+(inner agent terminal mux) and [cmux](https://github.com/manaflow-ai/cmux)
+(outer macOS terminal workspace).
+
+It works **today without any cmux upstream PR**. Current release: **v0.3.4**
+([changelog](CHANGELOG.md), [how to tag](RELEASE.md)).
+
+**Deutsch:** [Kurzüberblick](docs/de/README.md) · [GitHub erklärt](docs/de/GITHUB.md)
+
+There is **no compile step** and nothing to `pip`/`npm` install. The plugin is
+plain Python 3.10+ (standard library only). `./scripts/test.sh` syntax-checks
+the sources and runs stdlib `unittest`. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+Documentation index: [docs/README.md](docs/README.md).
+How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md).
+License: [MIT](LICENSE).
 
 ## Why
 
@@ -23,7 +40,7 @@ When Herdr runs nested inside a cmux terminal, cmux sees one terminal surface wh
 | **Upstream native sidebar** | [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) — nested topology tree + focus (not ssh-tmux) |
 | **Upstream native tmux parity** | Engine PR: [RaviTharuma/cmux#8](https://github.com/RaviTharuma/cmux/pull/8) (`RemoteHerdrWindowMirror` in `CmuxNestedTopology`). AppKit/Bonsplit/Ghostty host wiring still required. See [PR7](docs/upstream/PR7_HERDR_WINDOW_MIRROR.md). |
 
-See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [tmux parity](docs/upstream/TMUX_PARITY.md), [concept map](mapping/concept-map.md), and the paste-ready [upstream issue/design package](docs/upstream/).
+See [plugin design](docs/PLUGIN_DESIGN.md), [open limitations](OPEN.md), [tmux parity](docs/upstream/TMUX_PARITY.md), [concept map](mapping/concept-map.md), and the [upstream design notes](docs/upstream/README.md) (native cmux work — not required to use this plugin).
 
 
 ## Hybrid association state
@@ -60,7 +77,7 @@ cmux-herdr unlock-title w2:p34
 ## Requirements
 
 - macOS with `cmux` and `herdr` on `PATH`
-- Python 3.10+ (stdlib only; no pip dependencies)
+- Python 3.10+ (stdlib only; **not** on PyPI; no pip dependencies)
 - A working Herdr socket (usual when `HERDR_ENV=1`)
 - Run `sync`/`watch` from a Herdr pane nested in cmux so both socket contexts are available; `tree` and `agents` still work without cmux
 - Herdr **0.8+** supported (agent name may live under `agent_session.agent`)
@@ -87,7 +104,14 @@ Uninstall:
 ./scripts/uninstall.sh
 ```
 
-Tagged install after `v0.1.0` exists: see [RELEASE.md](RELEASE.md).
+Install a tagged release (see [RELEASE.md](RELEASE.md)):
+
+```bash
+git clone --branch v0.3.4 --depth 1 \
+  https://github.com/RaviTharuma/cmux-herdr.git
+cd cmux-herdr
+./scripts/install.sh
+```
 
 ### Install paths
 
@@ -216,7 +240,7 @@ Status keys use `herdr:<pane_id>`. Every sync removes stale `herdr:*` keys while
 ## Layout
 
 ```text
-VERSION                     version source of truth (e.g. 0.3.2)
+VERSION                     version source of truth (e.g. 0.3.4)
 CHANGELOG.md                release notes
 RELEASE.md                  tag / gh release / install-from-tag steps
 OPEN.md                     stopgap inventory + open checklist
@@ -273,9 +297,9 @@ Full stopgap inventory and open checklist: **[OPEN.md](OPEN.md)**.
 Equivalent manual commands:
 
 ```bash
-python3 -m py_compile bin/cmux-herdr bridge/cmux_herdr_bridge.py
-PYTHONPATH=bridge python3 -m unittest discover -s bridge -p 'test_*.py' -v
-PYTHONPATH=bridge python3 -m unittest discover -s tests -p 'test_*.py' -v
+python3 -m py_compile bin/cmux-herdr bridge/cmux_herdr_*.py
+PYTHONPATH=. python3 -m unittest discover -s bridge -p 'test_*.py' -v
+PYTHONPATH=. python3 -m unittest discover -s tests -p 'test_*.py' -v
 ./bin/cmux-herdr --version
 ./bin/cmux-herdr doctor
 ./bin/cmux-herdr status
@@ -297,6 +321,20 @@ The standalone bridge intentionally does not pretend that inner Herdr panes are 
 - [Incremental PR plan](docs/upstream/PR_PLAN.md)
 
 No issue or PR is opened automatically. This plugin does **not** implement #8737.
+
+## Contributing
+
+Bug reports and PRs are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md)
+and the [Code of Conduct](CODE_OF_CONDUCT.md). Security issues go through
+[SECURITY.md](SECURITY.md) (private advisory), not a public issue.
+
+First time publishing or maintaining this GitHub repo?
+[docs/MAINTAINING.md](docs/MAINTAINING.md) (English) and
+[docs/de/GITHUB.md](docs/de/GITHUB.md) (Deutsch).
+
+## License
+
+[MIT](LICENSE) © 2026 Ravi Tharuma.
 
 ## Upstream tracking
 

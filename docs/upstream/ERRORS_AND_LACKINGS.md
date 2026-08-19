@@ -2,7 +2,6 @@
 
 **Freeze ID:** `freeze-2026-08-19T065836Z`  
 **Frozen at:** `2026-08-19T06:58:36Z`  
-**Branch:** `cursor/agent-lanes-f1c1` (integration_ops)  
 **Repo:** `RaviTharuma/cmux-herdr`
 
 This is the durable snapshot of **what is still wrong, blocked, or missing** across Herdr ↔ cmux.
