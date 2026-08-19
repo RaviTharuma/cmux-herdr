@@ -5,3 +5,8 @@ __pycache__/
 # editor/agent refine backups
 *.bak
 *.bak-*
+
+# local agent scratch (never commit)
+.tmp-push/
+proto_push_args.json
+*.bundle

@@ -31,6 +31,7 @@ from bridge.cmux_herdr_bridge import (  # noqa: E402
     _load_association_map,
     _parent_key,
     clear_cmux_herdr_statuses,
+    collect_host_fingerprint,
     default_herdr_socket_path,
     diagnose_install,
     dual_status,
@@ -215,6 +216,43 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(report, indent=2, default=str))
     return 0 if report.get("ok") else 1
+
+
+def cmd_lease(args: argparse.Namespace) -> int:
+    """Show the shared plugin↔native writer lease for this host fingerprint."""
+    fp = collect_host_fingerprint()
+    key = _parent_key(fp)
+    decision = resolve_writer(key)
+    payload = {
+        "fingerprint": key,
+        "writer": decision.writer,
+        "outcome": decision.outcome,
+        "native_live": decision.native_live,
+        "plugin_live": decision.plugin_live,
+        "lease_stale": decision.lease_stale,
+        "force_plugin": decision.force_plugin,
+        "env_native_live": decision.env_native_live,
+    }
+    if decision.lease is not None:
+        lease = decision.lease
+        payload["lease"] = {
+            "owner": lease.owner,
+            "pid": lease.pid,
+            "path": lease.path,
+            "heartbeat_ms": lease.heartbeat_ms,
+        }
+    if args.json:
+        print(json.dumps(payload, indent=2, default=str))
+    else:
+        print(f"fingerprint : {key or '(incomplete)'}")
+        print(f"writer      : {decision.writer}")
+        print(f"outcome     : {decision.outcome}")
+        print(f"native_live : {decision.native_live}")
+        print(f"plugin_live : {decision.plugin_live}")
+        print(f"lease_stale : {decision.lease_stale}")
+        if decision.force_plugin:
+            print("force_plugin: True")
+    return 0
 
 
 def cmd_tree(args: argparse.Namespace) -> int:
@@ -1487,6 +1525,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--json", action="store_true", help="Also print raw JSON report")
     s.set_defaults(func=cmd_doctor)
+
+    s = sub.add_parser(
+        "lease",
+        help="Show plugin↔native writer lease for this host fingerprint",
+    )
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_lease)
 
     s = sub.add_parser("tree", help="Pretty-print herdr workspaces/tabs/panes/agents")
     s.add_argument("--json", action="store_true")
