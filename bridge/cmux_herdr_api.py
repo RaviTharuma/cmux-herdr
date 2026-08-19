@@ -454,6 +454,15 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
         return ["agent", "send-keys", pane, keys]
     if method == "agent.rename" and pane and label:
         return ["agent", "rename", pane, label]
+    if method == "agent.explain" and pane:
+        return ["agent", "explain", pane]
+    if method == "agent.view.set" and pane:
+        view = _str(params.get("view"))
+        if not view:
+            return None
+        return ["agent", "view", "set", pane, view]
+    if method == "agent.view.clear" and pane:
+        return ["agent", "view", "clear", pane]
     if method == "pane.rename" and pane and label:
         return ["pane", "rename", pane, label]
     if method == "pane.wait_for_output" and pane:
@@ -471,6 +480,60 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
     if method == "pane.process_info":
         argv = ["pane", "process-info"]
         argv.extend(_cli_pane_target(pane))
+        return argv
+    if method == "pane.release_agent" and pane:
+        return ["pane", "release-agent", pane]
+    if method == "pane.clear_agent_authority" and pane:
+        return ["pane", "clear-agent-authority", pane]
+    if method == "client.window_title.set":
+        title = _str(params.get("title"))
+        if not title:
+            return None
+        return ["client", "window-title", "set", title]
+    if method == "client.window_title.clear":
+        return ["client", "window-title", "clear"]
+    if method == "layout.apply":
+        # Layout trees are JSON; prefer socket. No stable CLI tree passthrough.
+        return None
+    if method == "server.agent_manifests":
+        return ["server", "agent-manifests"]
+    if method == "server.reload_agent_manifests":
+        return ["server", "reload-agent-manifests"]
+    if method == "worktree.list":
+        return ["worktree", "list"]
+    if method == "worktree.create":
+        argv = ["worktree", "create"]
+        path = _str(params.get("path"))
+        name = _str(params.get("name"))
+        if path:
+            argv.extend(["--path", path])
+        if name:
+            argv.extend(["--name", name])
+        return argv
+    if method == "worktree.open":
+        target = _str(params.get("id") or params.get("path"))
+        if not target:
+            return None
+        return ["worktree", "open", target]
+    if method == "worktree.remove":
+        target = _str(params.get("id") or params.get("path"))
+        if not target:
+            return None
+        return ["worktree", "remove", target]
+    if method == "workspace.move" and workspace:
+        argv = ["workspace", "move", workspace]
+        index = params.get("index")
+        if index is not None:
+            argv.extend(["--index", str(index)])
+        return argv
+    if method == "workspace.move_block" and workspace:
+        block = _str(params.get("block"))
+        if not block:
+            return None
+        argv = ["workspace", "move-block", workspace, block]
+        index = params.get("index")
+        if index is not None:
+            argv.extend(["--index", str(index)])
         return argv
     if method == "notification.show":
         title = _str(params.get("title"))

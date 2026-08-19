@@ -34,6 +34,12 @@ Already shipped earlier (also Herdr-only vs tmux): `start-agent`,
 `rename-agent`, `agent-prompt`, `agent-wait`, `notify`, `wait-output`,
 status pills from `agent_status`, busy-close confirmation.
 
+## Transport
+
+Socket-first via `HerdrApi`. When the Unix socket is down, these verbs fall
+back to documented `herdr` CLI argv (`build_cli_argv`). `layout.apply` stays
+socket-only (no stable CLI tree passthrough).
+
 ## Still via `api` only (on purpose)
 
 | Method | Why no dedicated CLI yet |
