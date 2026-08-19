@@ -155,6 +155,11 @@ cmux-herdr attach-pane <pane_id>         # cbreak + SIGWINCH + ANSI read
 
 Safe default remains `mirror` (current tab only, no prune) so casual use does not close extra tabs.
 
+## Herdr beyond tmux
+
+Agent/worktree/manifest/title verbs that ssh-tmux does not have: see
+[HERDR_BEYOND_TMUX.md](./HERDR_BEYOND_TMUX.md).
+
 ## Native landing sequence
 
 1. Land or rebase [#10045](https://github.com/manaflow-ai/cmux/pull/10045) (sidebar + socket + focus).

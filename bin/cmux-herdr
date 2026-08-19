@@ -1304,6 +1304,137 @@ def cmd_agent_wait(args: argparse.Namespace) -> int:
     return _run_api(args, "agent.wait", params, line=line)
 
 
+def cmd_agent_explain(args: argparse.Namespace) -> int:
+    """Explain agent/pane state (``agent.explain``) — Herdr-only vs tmux."""
+    params: dict = {"target": args.target, "pane_id": args.target}
+    return _run_api(args, "agent.explain", params, line=f"explain {args.target}")
+
+
+def cmd_agent_view(args: argparse.Namespace) -> int:
+    """Set or clear the agent view (``agent.view.set`` / ``agent.view.clear``)."""
+    params: dict = {"target": args.target, "pane_id": args.target}
+    if args.clear:
+        return _run_api(args, "agent.view.clear", params, line=f"cleared view {args.target}")
+    if not args.view:
+        _die("agent-view: pass VIEW or --clear")
+    params["view"] = args.view
+    return _run_api(args, "agent.view.set", params, line=f"view {args.target}={args.view}")
+
+
+def cmd_process_info(args: argparse.Namespace) -> int:
+    """Show process info for a pane (``pane.process_info``)."""
+    return _run_api(
+        args,
+        "pane.process_info",
+        {"pane_id": args.pane_id},
+        line=f"process {args.pane_id}",
+    )
+
+
+def cmd_release_agent(args: argparse.Namespace) -> int:
+    """Release agent authority on a pane (``pane.release_agent``)."""
+    return _run_api(
+        args,
+        "pane.release_agent",
+        {"pane_id": args.pane_id},
+        line=f"released agent {args.pane_id}",
+    )
+
+
+def cmd_clear_agent_authority(args: argparse.Namespace) -> int:
+    """Clear agent authority metadata (``pane.clear_agent_authority``)."""
+    return _run_api(
+        args,
+        "pane.clear_agent_authority",
+        {"pane_id": args.pane_id},
+        line=f"cleared authority {args.pane_id}",
+    )
+
+
+def cmd_window_title(args: argparse.Namespace) -> int:
+    """Set or clear the Herdr client window title."""
+    if args.clear:
+        return _run_api(args, "client.window_title.clear", {}, line="cleared window title")
+    if not args.title:
+        _die("window-title: pass TITLE or --clear")
+    return _run_api(
+        args,
+        "client.window_title.set",
+        {"title": args.title},
+        line="set window title",
+    )
+
+
+def cmd_layout_apply(args: argparse.Namespace) -> int:
+    """Apply a layout tree JSON (``layout.apply``)."""
+    try:
+        tree = json.loads(args.tree)
+    except json.JSONDecodeError as exc:
+        _die(f"invalid --tree JSON: {exc}")
+    params: dict = {"layout": tree, "tree": tree}
+    if args.tab:
+        params["tab_id"] = args.tab
+    return _run_api(args, "layout.apply", params, line="applied layout")
+
+
+def cmd_manifests(args: argparse.Namespace) -> int:
+    """List or reload Herdr agent manifests (server.*)."""
+    if args.reload:
+        return _run_api(
+            args,
+            "server.reload_agent_manifests",
+            {},
+            line="reloaded agent manifests",
+        )
+    return _run_api(args, "server.agent_manifests", {}, line="agent manifests")
+
+
+def cmd_worktree(args: argparse.Namespace) -> int:
+    """Herdr worktree verbs (list/create/open/remove) — no tmux analogue."""
+    action = args.action
+    if action == "list":
+        return _run_api(args, "worktree.list", {}, line="worktrees")
+    if action == "create":
+        params: dict = {"path": args.path} if args.path else {}
+        if args.name:
+            params["name"] = args.name
+        return _run_api(args, "worktree.create", params, line="created worktree")
+    if action == "open":
+        if not args.target:
+            _die("worktree open: pass TARGET id/path")
+        return _run_api(
+            args,
+            "worktree.open",
+            {"id": args.target, "path": args.target},
+            line=f"opened worktree {args.target}",
+        )
+    if action == "remove":
+        if not args.target:
+            _die("worktree remove: pass TARGET id/path")
+        return _run_api(
+            args,
+            "worktree.remove",
+            {"id": args.target, "path": args.target},
+            line=f"removed worktree {args.target}",
+        )
+    _die(f"worktree: unknown action {action!r}")
+
+
+def cmd_workspace_move(args: argparse.Namespace) -> int:
+    """Move a workspace or block (``workspace.move`` / ``workspace.move_block``)."""
+    if args.block:
+        params = {"workspace_id": args.workspace_id, "block": args.block}
+        if args.index is not None:
+            params["index"] = args.index
+        return _run_api(
+            args, "workspace.move_block", params, line=f"moved block {args.workspace_id}"
+        )
+    params = {"workspace_id": args.workspace_id}
+    if args.index is not None:
+        params["index"] = args.index
+    return _run_api(args, "workspace.move", params, line=f"moved workspace {args.workspace_id}")
+
+
 def _add_read_flags(sp: argparse.ArgumentParser, *, include_raw: bool) -> None:
     """Shared flags for read-pane / read-agent (herdr pass-through)."""
     sp.add_argument(
@@ -1875,6 +2006,99 @@ def build_parser() -> argparse.ArgumentParser:
     _add_timeout_flags(s)
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_agent_wait)
+
+    # --- Herdr-beyond-tmux (no ssh-tmux analogue) ---
+    s = sub.add_parser(
+        "agent-explain",
+        help="Explain agent/pane state (agent.explain; Herdr-only)",
+    )
+    s.add_argument("target", help="pane id or agent label")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_agent_explain)
+
+    s = sub.add_parser(
+        "agent-view",
+        help="Set/clear agent view (agent.view.*; Herdr-only)",
+    )
+    s.add_argument("target", help="pane id or agent label")
+    s.add_argument("view", nargs="?", help="view name to set")
+    s.add_argument("--clear", action="store_true", help="clear the agent view")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_agent_view)
+
+    s = sub.add_parser(
+        "process-info",
+        help="Show pane process info (pane.process_info; Herdr-only)",
+    )
+    s.add_argument("pane_id")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_process_info)
+
+    s = sub.add_parser(
+        "release-agent",
+        help="Release agent on a pane (pane.release_agent; Herdr-only)",
+    )
+    s.add_argument("pane_id")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_release_agent)
+
+    s = sub.add_parser(
+        "clear-agent-authority",
+        help="Clear pane agent authority (pane.clear_agent_authority)",
+    )
+    s.add_argument("pane_id")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_clear_agent_authority)
+
+    s = sub.add_parser(
+        "window-title",
+        help="Set/clear Herdr client window title (client.window_title.*)",
+    )
+    s.add_argument("title", nargs="?", help="title text")
+    s.add_argument("--clear", action="store_true")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_window_title)
+
+    s = sub.add_parser(
+        "layout-apply",
+        help="Apply a layout tree JSON (layout.apply)",
+    )
+    s.add_argument("--tree", required=True, help="layout tree as JSON object")
+    s.add_argument("--tab", help="target tab id")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_layout_apply)
+
+    s = sub.add_parser(
+        "manifests",
+        help="List/reload Herdr agent manifests (server.agent_manifests)",
+    )
+    s.add_argument("--reload", action="store_true", help="reload manifests from disk")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_manifests)
+
+    s = sub.add_parser(
+        "worktree",
+        help="Herdr worktree list/create/open/remove (no tmux analogue)",
+    )
+    s.add_argument(
+        "action",
+        choices=("list", "create", "open", "remove"),
+    )
+    s.add_argument("target", nargs="?", help="id/path for open/remove")
+    s.add_argument("--path", help="path for create")
+    s.add_argument("--name", help="name for create")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_worktree)
+
+    s = sub.add_parser(
+        "workspace-move",
+        help="Move a workspace or block (workspace.move / move_block)",
+    )
+    s.add_argument("workspace_id")
+    s.add_argument("--index", type=int, help="new index")
+    s.add_argument("--block", help="block id for workspace.move_block")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_workspace_move)
 
     return p
 

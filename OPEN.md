@@ -15,6 +15,7 @@ As of **2026-08-19** (errors/lackings freeze live).
 | Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open (native work on cmux fork / #10045) |
 | Community poll (native Herdr vs plugin) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open; **1 upvote / 0 comments** |
 | Errors & lackings freeze | [docs/upstream/ERRORS_AND_LACKINGS.md](./docs/upstream/ERRORS_AND_LACKINGS.md) | Freeze `freeze-2026-08-19T065836Z` |
+| Herdr beyond tmux | [docs/upstream/HERDR_BEYOND_TMUX.md](./docs/upstream/HERDR_BEYOND_TMUX.md) | Agent/worktree/manifest CLI (no tmux analogue) |
 | This plugin | https://github.com/RaviTharuma/cmux-herdr | Advanced tmux-parity on `main` (v0.2.0); stopgap until native lands |
 | Thrash / annoyance report | [docs/upstream/ANNOYANCES.md](./docs/upstream/ANNOYANCES.md) | Living doc |
 
@@ -156,6 +157,10 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       `RemoteHerdrImpose`): tmux +1 divider-cell fractions, targeted leaf
       expand/remove, `plan(w) <= w`, divider-drag hold/resolve. Plugin applies
       fractions via `set-ratio`.
+- [x] **Herdr-beyond-tmux CLI**: `agent-explain`, `agent-view`, `process-info`,
+      `release-agent`, `clear-agent-authority`, `window-title`, `layout-apply`,
+      `manifests`, `worktree`, `workspace-move` — see
+      [docs/upstream/HERDR_BEYOND_TMUX.md](docs/upstream/HERDR_BEYOND_TMUX.md).
 - [x] **Host-apply verb list** (`bridge/cmux_herdr_host.py`): ordered
       create→tree→impose→focus (tmux `makePanel` before rebuild). Fake host
       proves the order. Native twin stays on a **separate** fork branch —
