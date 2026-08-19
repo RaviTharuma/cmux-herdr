@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-19T07:24:37Z",
+  "updated_at": "2026-08-19T07:33:51Z",
   "freeze_id": "freeze-2026-08-19T065836Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active. Errors/lackings freeze: docs/upstream/ERRORS_AND_LACKINGS.md",
   "tracks": {
@@ -125,5 +125,6 @@
     "lacking_plugin_count": 8,
     "shared_contract_watches": 4
   },
-  "notes": "Handoff landed on tip via RaviTharuma/cmux#19. Fork drafts #12-#18 closed as superseded. Herdr-beyond-tmux CLI shipping on cmux-herdr."
+  "notes": "Plugin v0.3.3 released. Handoff on tip. Upstream merges still BLOCKED/UNSTABLE.",
+  "plugin_release": "v0.3.3"
 }

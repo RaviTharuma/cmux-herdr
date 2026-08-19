@@ -58,6 +58,9 @@ cmux-herdr status
 - Read helpers: `read-pane <pane_id>`, `read-agent <target>`
 - Inner mux control (socket-first, same methods as native): `api`, `new-tab`,
   `close-pane` (`--force` if busy), `send`, `agent-prompt`, `agent-wait`, `layout`
+- Herdr-only (no tmux analogue): `agent-explain`, `agent-view`, `process-info`,
+  `worktree`, `manifests`, `window-title`, `start-agent`, `notify`
+- Writer lease (plugin↔native handoff): `cmux-herdr lease`
 - Inspect / clear mirrored pills: `cmux-herdr associations`, `cmux-herdr clear`
 
 ## Safe agent splitting
