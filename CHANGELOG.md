@@ -7,7 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-08-19
+
 ### Added
+
+- **CLI fallbacks for Herdr-beyond-tmux verbs** when the Unix socket is down
+  (`agent.explain` / `agent.view.*` / `pane.process_info` / release+authority /
+  window title / manifests / worktrees / workspace-move).
+- Behavioral CLI tests for those wrappers.
 
 - **Herdr-beyond-tmux CLI**: first-class commands for agent explain/view,
   process-info, release/clear agent authority, window title, layout-apply,

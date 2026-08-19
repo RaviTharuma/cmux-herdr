@@ -151,8 +151,16 @@ cmux-herdr move-tab w2:t1 --index 0
 cmux-herdr rename-pane w2:p2 logs
 cmux-herdr start-agent reviewer --kind codex --pane w2:p3
 cmux-herdr notify "tests done" --body "all green"
+cmux-herdr agent-explain w2:p3
+cmux-herdr agent-view w2:p3 diff
+cmux-herdr process-info w2:p3
+cmux-herdr worktree list
+cmux-herdr manifests
+cmux-herdr window-title "cmux-herdr"
 cmux-herdr json-dump
 ```
+
+Herdr-only surface (no ssh-tmux analogue): [docs/upstream/HERDR_BEYOND_TMUX.md](docs/upstream/HERDR_BEYOND_TMUX.md).
 
 ### Custom sidebar
 

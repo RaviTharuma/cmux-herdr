@@ -617,6 +617,71 @@ raise SystemExit(9)
         self.assertIn("busy", result.stderr)
         self.assertIn("--force", result.stderr)
 
+    def test_beyond_tmux_commands_fall_back_to_herdr_cli(self):
+        fake = r'''#!/usr/bin/env python3
+import json, sys
+argv = sys.argv[1:]
+command = argv[:2] if len(argv) >= 2 else argv
+triple = argv[:3] if len(argv) >= 3 else argv
+if argv[:1] == ["status"]:
+    print(json.dumps({"status": "ok"}))
+    raise SystemExit(0)
+if command == ["agent", "explain"]:
+    print(json.dumps({"result": {"explain": argv[2] if len(argv) > 2 else ""}}))
+    raise SystemExit(0)
+if triple == ["agent", "view", "set"]:
+    print(json.dumps({"result": {"view": argv[4] if len(argv) > 4 else ""}}))
+    raise SystemExit(0)
+if command == ["pane", "process-info"]:
+    print(json.dumps({"result": {"pid": 42, "pane_id": argv[-1]}}))
+    raise SystemExit(0)
+if command == ["worktree", "list"]:
+    print(json.dumps({"result": {"worktrees": [{"id": "wt1"}]}}))
+    raise SystemExit(0)
+if command == ["server", "agent-manifests"]:
+    print(json.dumps({"result": {"manifests": ["codex"]}}))
+    raise SystemExit(0)
+if triple == ["client", "window-title", "set"]:
+    print(json.dumps({"result": {"title": argv[3] if len(argv) > 3 else ""}}))
+    raise SystemExit(0)
+print("unexpected " + " ".join(argv), file=sys.stderr)
+raise SystemExit(9)
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_bin = Path(tmp) / "bin"
+            fake_bin.mkdir()
+            write_executable(fake_bin / "herdr", fake)
+            path, env = self._lifecycle_env(tmp, fake_bin)
+            # Force CLI path: no live Unix socket RPC.
+            env["HERDR_SOCKET_PATH"] = str(Path(tmp) / "missing.sock")
+            explained = self.run_cli(
+                "agent-explain", "w1:p1", "--json", path=path, env_extra=env
+            )
+            viewed = self.run_cli(
+                "agent-view", "w1:p1", "diff", "--json", path=path, env_extra=env
+            )
+            proc = self.run_cli(
+                "process-info", "w1:p1", "--json", path=path, env_extra=env
+            )
+            trees = self.run_cli("worktree", "list", "--json", path=path, env_extra=env)
+            mans = self.run_cli("manifests", "--json", path=path, env_extra=env)
+            title = self.run_cli(
+                "window-title", "demo", "--json", path=path, env_extra=env
+            )
+        for result, method in (
+            (explained, "agent.explain"),
+            (viewed, "agent.view.set"),
+            (proc, "pane.process_info"),
+            (trees, "worktree.list"),
+            (mans, "server.agent_manifests"),
+            (title, "client.window_title.set"),
+        ):
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            payload = json.loads(result.stdout)
+            self.assertTrue(payload["ok"], payload)
+            self.assertEqual(payload["via"], "cli")
+            self.assertEqual(payload["method"], method)
+
 
 if __name__ == "__main__":
     unittest.main()

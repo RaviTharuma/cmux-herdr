@@ -351,6 +351,54 @@ class HerdrApiCallTests(unittest.TestCase):
             ],
         )
 
+    def test_beyond_tmux_cli_fallbacks(self) -> None:
+        """Herdr-only verbs get documented CLI argv when socket is down."""
+        self.assertEqual(
+            build_cli_argv("agent.explain", {"pane_id": "w2:p1"}),
+            ["agent", "explain", "w2:p1"],
+        )
+        self.assertEqual(
+            build_cli_argv("agent.view.set", {"pane_id": "w2:p1", "view": "diff"}),
+            ["agent", "view", "set", "w2:p1", "diff"],
+        )
+        self.assertEqual(
+            build_cli_argv("agent.view.clear", {"pane_id": "w2:p1"}),
+            ["agent", "view", "clear", "w2:p1"],
+        )
+        self.assertEqual(
+            build_cli_argv("pane.release_agent", {"pane_id": "w2:p1"}),
+            ["pane", "release-agent", "w2:p1"],
+        )
+        self.assertEqual(
+            build_cli_argv("pane.clear_agent_authority", {"pane_id": "w2:p1"}),
+            ["pane", "clear-agent-authority", "w2:p1"],
+        )
+        self.assertEqual(
+            build_cli_argv("client.window_title.set", {"title": "demo"}),
+            ["client", "window-title", "set", "demo"],
+        )
+        self.assertEqual(
+            build_cli_argv("client.window_title.clear", {}),
+            ["client", "window-title", "clear"],
+        )
+        self.assertEqual(
+            build_cli_argv("server.agent_manifests", {}),
+            ["server", "agent-manifests"],
+        )
+        self.assertEqual(
+            build_cli_argv("worktree.list", {}),
+            ["worktree", "list"],
+        )
+        self.assertEqual(
+            build_cli_argv("worktree.open", {"id": "wt1"}),
+            ["worktree", "open", "wt1"],
+        )
+        self.assertEqual(
+            build_cli_argv("workspace.move", {"workspace_id": "w2", "index": 1}),
+            ["workspace", "move", "w2", "--index", "1"],
+        )
+        self.assertIsNone(build_cli_argv("layout.apply", {"tree": {"type": "pane"}}))
+
 
 if __name__ == "__main__":
     unittest.main()
