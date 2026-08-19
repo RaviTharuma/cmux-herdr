@@ -112,6 +112,8 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("read-pane", result.stdout)
         self.assertIn("read-agent", result.stdout)
         self.assertIn("focus-workspace", result.stdout)
+        self.assertIn("doctor", result.stdout)
+        self.assertIn("lease", result.stdout)
         self.assertIn("focus-agent", result.stdout)
         self.assertIn("mirror", result.stdout)
         self.assertIn("attach-pane", result.stdout)
@@ -681,6 +683,20 @@ raise SystemExit(9)
             self.assertTrue(payload["ok"], payload)
             self.assertEqual(payload["via"], "cli")
             self.assertEqual(payload["method"], method)
+
+    def test_lease_reports_unclaimed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {
+                "HOME": tmp,
+                "XDG_STATE_HOME": str(Path(tmp) / "state"),
+                "CMUX_SURFACE_ID": "surface-lease",
+                "HERDR_SOCKET_PATH": str(Path(tmp) / "herdr.sock"),
+            }
+            result = self.run_cli("lease", "--json", env_extra=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertIn(payload["outcome"], ("unclaimed", "plugin_owns", "native_owns"))
+        self.assertIn("writer", payload)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- `cmux-herdr lease` — inspect plugin↔native writer lease.
+- Ignore local agent scratch (`.tmp-push/`, `proto_push_args.json`).
+
 ## [0.3.3] - 2026-08-19
 
 ### Added
