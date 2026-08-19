@@ -1,0 +1,303 @@
+{
+  "freeze_id": "freeze-2026-08-19T065836Z",
+  "frozen_at": "2026-08-19T06:58:36Z",
+  "branch": "cursor/agent-lanes-f1c1",
+  "repo": "RaviTharuma/cmux-herdr",
+  "tips": {
+    "10045": {
+      "sha": "b02b8a954327eeb191783e6913db6d59910003f1",
+      "short": "b02b8a954327",
+      "message": "fix(herdr): run nested.topology socket tests off the main thread",
+      "committed_at": "2026-08-18T13:46:06Z",
+      "mergeable": "MERGEABLE",
+      "merge_state": "BLOCKED",
+      "review_decision": null,
+      "threads": 173,
+      "unresolved": 0,
+      "coderabbit": "success",
+      "mirror_sources_on_tip": true
+    },
+    "8736": {
+      "sha": "2f483ad94f0dc8a2d7e05afba2bd2bbbd28a6f70",
+      "short": "2f483ad94f0d",
+      "message": "Reject alias-local --json and load Herdr-compat strings from the app bundle",
+      "committed_at": "2026-08-18T13:49:01Z",
+      "mergeable": "MERGEABLE",
+      "merge_state": "UNSTABLE",
+      "review_decision": null,
+      "threads": 14,
+      "unresolved": 0,
+      "coderabbit": "success"
+    }
+  },
+  "checks_on_tips": {
+    "Socket Security: Pull Request Alerts": "success",
+    "Socket Security: Project Report": "success",
+    "cubic · AI code reviewer": "neutral",
+    "Vercel Agent Review": "neutral",
+    "[code]smith": "skipped",
+    "CodeRabbit (status context)": "success",
+    "macOS / swift test / Xcode": "absent"
+  },
+  "errors": [
+    {
+      "id": "E-MERGE-10045",
+      "severity": "blocker",
+      "item": "#10045 merge BLOCKED",
+      "sha": "b02b8a954327eeb191783e6913db6d59910003f1"
+    },
+    {
+      "id": "E-MERGE-8736",
+      "severity": "blocker",
+      "item": "#8736 merge UNSTABLE",
+      "sha": "2f483ad94f0dc8a2d7e05afba2bd2bbbd28a6f70"
+    },
+    {
+      "id": "E-NO-APPROVAL",
+      "severity": "blocker",
+      "item": "No approving review on #10045 / #8736 (reviewDecision=null)"
+    },
+    {
+      "id": "E-AUTH-REPLY",
+      "severity": "ops",
+      "item": "Cannot reply/resolve on manaflow-ai/cmux (403)"
+    },
+    {
+      "id": "E-AUTH-PR",
+      "severity": "ops",
+      "item": "Cannot create/merge PRs on cmux-herdr via gh integration"
+    },
+    {
+      "id": "E-AUTH-UPSTREAM-WRITE",
+      "severity": "ops",
+      "item": "Cannot vote/comment on manaflow-ai/cmux discussions/issues (403)"
+    },
+    {
+      "id": "E-CI-MACOS",
+      "severity": "gap",
+      "item": "No visible macOS/swift test check on upstream tip"
+    },
+    {
+      "id": "E-DOGFOOD",
+      "severity": "gap",
+      "item": "macOS dogfood of native mirror still open"
+    },
+    {
+      "id": "E-DOC-STALE",
+      "severity": "hygiene",
+      "item": "OPEN.md lagging live merge states (BLOCKED/UNSTABLE)"
+    }
+  ],
+  "lackings_native": [
+    {
+      "id": "L-OUTPUT-STREAM",
+      "severity": "major",
+      "item": "No Herdr %output; poll pane.read"
+    },
+    {
+      "id": "L-SIZING-CLAIM",
+      "severity": "major",
+      "item": "Feed-forward client size claim incomplete vs tmux"
+    },
+    {
+      "id": "L-TMUX-HELPERS",
+      "severity": "minor",
+      "item": "Not all RemoteTmuxWindowMirror+* helpers ported"
+    },
+    {
+      "id": "L-ACCEPT-PR7",
+      "severity": "major",
+      "item": "PR7 acceptance / dogfood checkboxes open"
+    },
+    {
+      "id": "L-SIDEBAR-ACTIONS",
+      "severity": "major",
+      "item": "Sidebar mutations still Later/guarded vs PARITY_MATRIX"
+    },
+    {
+      "id": "L-PROVIDER-UUID",
+      "severity": "major",
+      "item": "No durable Herdr server UUID in ping"
+    },
+    {
+      "id": "L-EVENT-CURSOR",
+      "severity": "major",
+      "item": "No resumable event cursor"
+    },
+    {
+      "id": "L-CAP-TABLE",
+      "severity": "minor",
+      "item": "Protocol 17 lacks method inventory"
+    },
+    {
+      "id": "L-MOBILE",
+      "severity": "wontfix-v1",
+      "item": "Mobile/remote not in v1"
+    },
+    {
+      "id": "L-NO-SERVER-STOP",
+      "severity": "by-design",
+      "item": "Host close must not server.stop (verify under dogfood)"
+    }
+  ],
+  "lackings_plugin": [
+    {
+      "id": "L-PLUGIN-PTY",
+      "severity": "ceiling",
+      "item": "No PTY theft"
+    },
+    {
+      "id": "L-PLUGIN-OUTPUT",
+      "severity": "ceiling",
+      "item": "Poll pane.read only"
+    },
+    {
+      "id": "L-PLUGIN-BONSPLIT",
+      "severity": "ceiling",
+      "item": "No Bonsplit divider drag"
+    },
+    {
+      "id": "L-PLUGIN-FLAT",
+      "severity": "ceiling",
+      "item": "Flat status projection"
+    },
+    {
+      "id": "L-PLUGIN-SURFACE",
+      "severity": "ceiling",
+      "item": "In-memory surfaces until native panels"
+    },
+    {
+      "id": "L-PLUGIN-REATTACH",
+      "severity": "ceiling",
+      "item": "No reattach after cmux restart"
+    },
+    {
+      "id": "L-PLUGIN-INSTALL",
+      "severity": "ceiling",
+      "item": "No Homebrew/registry/signed install channel"
+    },
+    {
+      "id": "L-PLUGIN-CLI-VARIANCE",
+      "severity": "watch",
+      "item": "cmux CLI verb variance across builds"
+    }
+  ],
+  "shared_contract_watches": [
+    {
+      "id": "L-SINGLE-WRITER",
+      "severity": "watch",
+      "item": "Plugin yields when native attachment live"
+    },
+    {
+      "id": "L-TITLE-LOCK",
+      "severity": "watch",
+      "item": "Title lock + heuristic-once under dual writers"
+    },
+    {
+      "id": "L-ASSOC-KEY",
+      "severity": "watch",
+      "item": "pane_id:session_id cache never public nested ID"
+    },
+    {
+      "id": "L-SIZE-AUTHORITY",
+      "severity": "watch",
+      "item": "Single size-claim writer"
+    }
+  ],
+  "upstream_open": [
+    {
+      "kind": "issue",
+      "number": 8737,
+      "title": "Native nested topology for Herdr-hosted agents",
+      "state": "OPEN"
+    },
+    {
+      "kind": "issue",
+      "number": 9363,
+      "title": "Foundation: provider-neutral nested topology model",
+      "state": "OPEN"
+    },
+    {
+      "kind": "discussion",
+      "number": 10106,
+      "title": "Community poll: native Herdr integration in cmux (tmux counterpart)",
+      "upvotes": 1,
+      "comments": 0
+    },
+    {
+      "kind": "pr",
+      "number": 10045,
+      "merge_state": "BLOCKED"
+    },
+    {
+      "kind": "pr",
+      "number": 8736,
+      "merge_state": "UNSTABLE"
+    }
+  ],
+  "counts": {
+    "errors": 9,
+    "lackings_native": 10,
+    "lackings_plugin": 8,
+    "shared_contract_watches": 4,
+    "fork_prs_open": 6,
+    "upstream_design_artifacts_open": 5
+  },
+  "fork_prs_open": [
+    {
+      "headRefName": "cursor/herdr-handoff-6e7a",
+      "isDraft": true,
+      "number": 18,
+      "title": "Add RemoteHerdrHandoff so native yields to the plugin lease",
+      "updatedAt": "2026-08-17T19:53:58Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/18"
+    },
+    {
+      "headRefName": "cursor/herdr-native-mirror-f1c1",
+      "isDraft": false,
+      "number": 17,
+      "title": "Add native Herdr window mirror (ssh-tmux parity counterpart)",
+      "updatedAt": "2026-08-18T08:12:53Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/17"
+    },
+    {
+      "headRefName": "cursor/herdr-live-machine-6e7a",
+      "isDraft": true,
+      "number": 16,
+      "title": "Add RemoteHerdr live apply machine",
+      "updatedAt": "2026-08-17T19:02:22Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/16"
+    },
+    {
+      "headRefName": "cursor/herdr-lifecycle-6e7a",
+      "isDraft": true,
+      "number": 14,
+      "title": "Add RemoteHerdrLifecycle",
+      "updatedAt": "2026-08-17T18:59:53Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/14"
+    },
+    {
+      "headRefName": "cursor/herdr-io-session-6e7a",
+      "isDraft": true,
+      "number": 13,
+      "title": "Add RemoteHerdr pane I/O and session apply",
+      "updatedAt": "2026-08-17T18:59:52Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/13"
+    },
+    {
+      "headRefName": "cursor/herdr-host-apply-6e7a",
+      "isDraft": true,
+      "number": 12,
+      "title": "Add RemoteHerdrHostApply",
+      "updatedAt": "2026-08-18T08:12:53Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/12"
+    }
+  ],
+  "not_errors": [
+    "CodeRabbit unresolved threads = 0 on both tips",
+    "Socket Security success on both tips",
+    "Fork tip SHA aligned with #10045",
+    "No open plugin issues on cmux-herdr at freeze",
+    "Intentional: no server.stop on host close; sidebar != ssh-tmux"
+  ]
+}
