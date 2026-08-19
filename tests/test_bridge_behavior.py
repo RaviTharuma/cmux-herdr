@@ -209,7 +209,8 @@ class InstallScriptTests(unittest.TestCase):
             sidebar = Path(home) / ".config" / "cmux" / "sidebars" / "herdr.swift"
             self.assertTrue(target.exists())
             self.assertTrue(sidebar.exists())
-            self.assertIn("Done.", install.stdout)
+            self.assertIn("cmux-herdr plugin install", install.stdout)
+            self.assertIn("Plugin installed.", install.stdout)
 
 
 class ParentWorkspaceBindingTests(unittest.TestCase):
