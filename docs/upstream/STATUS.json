@@ -1,0 +1,159 @@
+{
+  "updated_at": "2026-08-19T06:58:36Z",
+  "freeze_id": "freeze-2026-08-19T065836Z",
+  "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active. Errors/lackings freeze: docs/upstream/ERRORS_AND_LACKINGS.md",
+  "tracks": {
+    "native_10045": {
+      "number": 10045,
+      "title": "Add native Herdr integration (counterpart to native nest. TMUX)",
+      "url": "https://github.com/manaflow-ai/cmux/pull/10045",
+      "state": "OPEN",
+      "head": "cursor/nested-topology-herdr-v1-becf",
+      "sha": "b02b8a954327eeb191783e6913db6d59910003f1",
+      "tip_message": "fix(herdr): run nested.topology socket tests off the main thread",
+      "updated_at": "2026-08-18T13:47:29Z",
+      "mergeable": "MERGEABLE",
+      "merge_state": "BLOCKED",
+      "review_decision": null,
+      "review_threads": 173,
+      "unresolved": 0,
+      "commit_status": "success",
+      "check_conclusions": {
+        "neutral": 2,
+        "success": 2,
+        "skipped": 1,
+        "macos_swift": "absent"
+      },
+      "mirror_sources_on_tip": true,
+      "owner_lane": "native_integration",
+      "hot": true
+    },
+    "plugin_8736": {
+      "number": 8736,
+      "title": "Add Herdr CLI compatibility shim (Step toward native Herdr )",
+      "url": "https://github.com/manaflow-ai/cmux/pull/8736",
+      "state": "OPEN",
+      "head": "feat/herdr-native-mvp",
+      "sha": "2f483ad94f0dc8a2d7e05afba2bd2bbbd28a6f70",
+      "tip_message": "Reject alias-local --json and load Herdr-compat strings from the app bundle",
+      "updated_at": "2026-08-18T13:50:42Z",
+      "mergeable": "MERGEABLE",
+      "merge_state": "UNSTABLE",
+      "review_decision": null,
+      "review_threads": 14,
+      "unresolved": 0,
+      "commit_status": "success",
+      "check_conclusions": {
+        "neutral": 2,
+        "success": 2,
+        "skipped": 1,
+        "macos_swift": "absent"
+      },
+      "owner_lane": "plugin_compat",
+      "hot": true
+    }
+  },
+  "upstream_design": {
+    "issue_8737": "OPEN",
+    "issue_9363": "OPEN",
+    "discussion_10106": {
+      "state": "OPEN",
+      "upvotes": 1,
+      "comments": 0
+    }
+  },
+  "idle_or_side_branches": [
+    {
+      "branch": "cursor/plugin-polish-6e7a",
+      "status": "idle_branch"
+    },
+    {
+      "branch": "cursor/tmux-gap-inventory-6e7a",
+      "status": "idle_branch"
+    },
+    {
+      "branch": "cursor/tmux-impose-depth-6e7a",
+      "status": "idle_branch"
+    },
+    {
+      "branch": "cursor/pr10045-coderabbit-replies-f1c1",
+      "status": "idle_branch"
+    },
+    {
+      "branch": "cursor/agent-lanes-f1c1",
+      "status": "integration_ops",
+      "note": "Owns STATUS.json + ERRORS_AND_LACKINGS freeze"
+    },
+    {
+      "branch": "cursor/herdr-api-doc-fixes-b5e6",
+      "status": "idle_branch",
+      "lane_hint": "docs"
+    },
+    {
+      "branch": "cursor/herdr-cmux-knowledge-corpus-f64c",
+      "status": "idle_branch",
+      "lane_hint": "knowledge"
+    }
+  ],
+  "open_fork_prs_cmux": [
+    {
+      "number": 18,
+      "headRefName": "cursor/herdr-handoff-6e7a",
+      "url": "https://github.com/RaviTharuma/cmux/pull/18"
+    },
+    {
+      "number": 17,
+      "headRefName": "cursor/herdr-native-mirror-f1c1",
+      "url": "https://github.com/RaviTharuma/cmux/pull/17"
+    },
+    {
+      "number": 16,
+      "headRefName": "cursor/herdr-live-machine-6e7a",
+      "url": "https://github.com/RaviTharuma/cmux/pull/16"
+    },
+    {
+      "number": 14,
+      "headRefName": "cursor/herdr-lifecycle-6e7a",
+      "url": "https://github.com/RaviTharuma/cmux/pull/14"
+    },
+    {
+      "number": 13,
+      "headRefName": "cursor/herdr-io-session-6e7a",
+      "url": "https://github.com/RaviTharuma/cmux/pull/13"
+    },
+    {
+      "number": 12,
+      "headRefName": "cursor/herdr-host-apply-6e7a",
+      "url": "https://github.com/RaviTharuma/cmux/pull/12"
+    }
+  ],
+  "running_agents_observed": [
+    {
+      "name": "Herdr cmux integration poll (this)",
+      "bcId": "bc-57027a20-617a-4342-bf4f-56b0005ef1c1",
+      "status": "RUNNING",
+      "lane": "integration_ops"
+    }
+  ],
+  "idle_agents_notable": [
+    {
+      "name": "Reply resolve CR via browser",
+      "bcId": "bc-fd15c181-d50c-5e67-91d4-207a4cfcbb5e",
+      "status": "IDLE"
+    },
+    {
+      "name": "Fix host-layer CR findings",
+      "bcId": "bc-be5ebe8d-dc36-541a-8a23-ea7e3f2578e4",
+      "status": "IDLE"
+    }
+  ],
+  "errors_and_lackings": {
+    "md": "docs/upstream/ERRORS_AND_LACKINGS.md",
+    "json": "docs/upstream/ERRORS_AND_LACKINGS.json",
+    "freeze_id": "freeze-2026-08-19T065836Z",
+    "error_count": 9,
+    "lacking_native_count": 10,
+    "lacking_plugin_count": 8,
+    "shared_contract_watches": 4
+  }
+}

@@ -4,18 +4,18 @@ This repo is the **plugin / stopgap** path. It works today without cmux acceptin
 Native first-class nested topology is tracked upstream; this file records what the plugin
 does **not** claim to solve, and what is still open on each path.
 
-As of **2026-08-12** (prep for tagged **v0.1.0**).
+As of **2026-08-19** (errors/lackings freeze live).
 
 ## Live upstream artifacts
 
 | Artifact | URL | Status |
 |---|---|---|
-| Community poll (native Herdr as tmux counterpart) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open |
-| Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open + mergeable |
-| Nested topology v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open |
-| Window-mirror engine | https://github.com/RaviTharuma/cmux/pull/8 | Merged |
-| Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open (no implementation in this repo) |
-| This plugin | https://github.com/RaviTharuma/cmux-herdr | Implemented; v0.2.0 tagged |
+| Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open; CR **0**/14; `mergeStateStatus=UNSTABLE`; tip `2f483ad94f0d` — needs maintainer approval |
+| Nested topology Herdr v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open; CR **0**/173; `mergeStateStatus=BLOCKED`; tip `b02b8a954327` (mirror on tip; dogfood open) |
+| Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open (native work on cmux fork / #10045) |
+| Community poll (native Herdr vs plugin) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open; **1 upvote / 0 comments** |
+| Errors & lackings freeze | [docs/upstream/ERRORS_AND_LACKINGS.md](./docs/upstream/ERRORS_AND_LACKINGS.md) | Freeze `freeze-2026-08-19T065836Z` |
+| This plugin | https://github.com/RaviTharuma/cmux-herdr | Advanced tmux-parity on `main` (v0.2.0); stopgap until native lands |
 | Thrash / annoyance report | [docs/upstream/ANNOYANCES.md](./docs/upstream/ANNOYANCES.md) | Living doc |
 
 Cross-links: PR and issue reference each other; both point back here as the fallback.
@@ -170,11 +170,11 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       create/close/reorder verbs. Native twins stay off #10045 until
       CodeRabbit 5/5.
 
-### B. Native MVP PR (#8736) — open + mergeable
+### B. Native MVP PR (#8736) — open, merge UNSTABLE
 
 Owned by the CMUX-Herdr Integration chat / worktree `cmux-herdr-native`.
-As of 2026-08-12 the PR tip is **open and mergeable** (hidden `__herdr-compat`).
-Review polish on the tip includes:
+As of 2026-08-19 the PR tip is **open**, CR threads **0**, `mergeStateStatus=UNSTABLE` (hidden `__herdr-compat`).
+Needs maintainer approving review / merge — not more missing-PATH work.
 
 | Review item | Status on PR tip |
 |---|---|
