@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-19T06:58:36Z",
+  "updated_at": "2026-08-19T07:24:37Z",
   "freeze_id": "freeze-2026-08-19T065836Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active. Errors/lackings freeze: docs/upstream/ERRORS_AND_LACKINGS.md",
   "tracks": {
@@ -9,9 +9,9 @@
       "url": "https://github.com/manaflow-ai/cmux/pull/10045",
       "state": "OPEN",
       "head": "cursor/nested-topology-herdr-v1-becf",
-      "sha": "b02b8a954327eeb191783e6913db6d59910003f1",
-      "tip_message": "fix(herdr): run nested.topology socket tests off the main thread",
-      "updated_at": "2026-08-18T13:47:29Z",
+      "sha": "40a2f842c43559ee0396a618a101f953c5f0e860",
+      "tip_message": "feat(herdr): add RemoteHerdrHandoff twin for plugin lease files (#19)",
+      "updated_at": "2026-08-19T07:24:37Z",
       "mergeable": "MERGEABLE",
       "merge_state": "BLOCKED",
       "review_decision": null,
@@ -95,38 +95,7 @@
       "lane_hint": "knowledge"
     }
   ],
-  "open_fork_prs_cmux": [
-    {
-      "number": 18,
-      "headRefName": "cursor/herdr-handoff-6e7a",
-      "url": "https://github.com/RaviTharuma/cmux/pull/18"
-    },
-    {
-      "number": 17,
-      "headRefName": "cursor/herdr-native-mirror-f1c1",
-      "url": "https://github.com/RaviTharuma/cmux/pull/17"
-    },
-    {
-      "number": 16,
-      "headRefName": "cursor/herdr-live-machine-6e7a",
-      "url": "https://github.com/RaviTharuma/cmux/pull/16"
-    },
-    {
-      "number": 14,
-      "headRefName": "cursor/herdr-lifecycle-6e7a",
-      "url": "https://github.com/RaviTharuma/cmux/pull/14"
-    },
-    {
-      "number": 13,
-      "headRefName": "cursor/herdr-io-session-6e7a",
-      "url": "https://github.com/RaviTharuma/cmux/pull/13"
-    },
-    {
-      "number": 12,
-      "headRefName": "cursor/herdr-host-apply-6e7a",
-      "url": "https://github.com/RaviTharuma/cmux/pull/12"
-    }
-  ],
+  "open_fork_prs_cmux": [],
   "running_agents_observed": [
     {
       "name": "Herdr cmux integration poll (this)",
@@ -155,5 +124,6 @@
     "lacking_native_count": 10,
     "lacking_plugin_count": 8,
     "shared_contract_watches": 4
-  }
+  },
+  "notes": "Handoff landed on tip via RaviTharuma/cmux#19. Fork drafts #12-#18 closed as superseded. Herdr-beyond-tmux CLI shipping on cmux-herdr."
 }
