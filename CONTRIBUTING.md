@@ -1,7 +1,8 @@
 # Contributing to cmux-herdr
 
-Thank you for taking a look. This is a small, **stdlib-only Python CLI**.
-There is no compiler, no `npm install`, and no `pip install` step.
+Thank you for contributing to the **cmux-herdr** plugin — the cmux plugin for
+Herdr. It is a small, **stdlib-only Python CLI** plus an optional sidebar and
+agent skill. There is no compiler, no `npm install`, and no `pip install` step.
 
 A German overview of the project and of GitHub itself lives in
 [docs/de/README.md](docs/de/README.md). Maintainer GitHub settings are in

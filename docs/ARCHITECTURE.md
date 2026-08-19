@@ -1,18 +1,19 @@
 # Architecture
 
-cmux-herdr is a **Python 3.10+ command-line plugin**. It is not an Xcode app,
-not a Swift package, and not something you compile.
+**cmux-herdr** is a released **cmux plugin for Herdr**: a Python 3.10+ CLI,
+an optional custom sidebar, and an agent skill. It is not an Xcode app, not a
+Swift package, and not something you compile.
 
 ```text
 your Mac
   └── cmux.app          outer terminal workspace (macOS GUI)
         └── a terminal running herdr
               └── Herdr tabs / panes / AI agents
-                    └── cmux-herdr (this repo)
+                    └── cmux-herdr (this plugin)
                           talks to both CLIs + the Herdr Unix socket
 ```
 
-When Herdr is nested inside cmux, cmux normally sees **one** terminal. This
+When Herdr is nested inside cmux, cmux normally sees **one** terminal. The
 plugin copies Herdr agent status into cmux sidebar pills and can create extra
 cmux tabs that *follow* Herdr panes. It cannot steal Herdr's real TTYs into
 Ghostty; that is native cmux work, tracked upstream.

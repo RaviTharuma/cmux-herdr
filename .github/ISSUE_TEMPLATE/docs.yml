@@ -1,5 +1,5 @@
 name: Docs
-description: A mistake, gap, or translation issue in the documentation
+description: A mistake, gap, or translation issue in the cmux-herdr plugin docs
 title: "[Docs] "
 labels: ["documentation"]
 body:

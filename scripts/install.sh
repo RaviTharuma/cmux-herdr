@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install cmux-herdr into the user environment (no root, no cmux upstream PR).
+# Install the cmux-herdr plugin (CLI, sidebar, agent skill). No root required.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -11,7 +11,7 @@ SIDEBAR_DST_DIR="${HOME}/.config/cmux/sidebars"
 SIDEBAR_DST="${SIDEBAR_DST_DIR}/herdr.swift"
 SKILL_SRC="${ROOT}/agent-skill"
 
-echo "cmux-herdr install"
+echo "cmux-herdr plugin install"
 echo "  repo: ${ROOT}"
 
 if [[ ! -f "${BIN_SRC}" ]]; then
@@ -77,12 +77,13 @@ fi
 echo
 echo "Next steps:"
 echo "  1. Ensure ~/.local/bin is on PATH"
-echo "  2. Inside a herdr pane nested in cmux, run:"
+echo "  2. Inside a Herdr pane nested in cmux, run:"
+echo "       cmux-herdr doctor"
 echo "       cmux-herdr status"
 echo "       cmux-herdr sync"
-echo "       cmux-herdr watch          # background mirror every 3s"
+echo "       cmux-herdr watch --tmux-parity"
 echo "  3. Enable custom sidebars in cmux Settings → Beta features,"
 echo "     then: cmux sidebar reload && cmux sidebar validate herdr"
 echo "  4. Agents: skill installed as cmux-herdr (if skill dirs present)"
 echo
-echo "Done."
+echo "Plugin installed."

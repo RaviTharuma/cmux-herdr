@@ -1,6 +1,6 @@
-// Herdr bridge sidebar — best-effort custom sidebar for cmux.
-// Live herdr pane data is mirrored via `cmux-herdr watch` into workspace
-// status pills; this sidebar explains dual hierarchy and navigates cmux
+// cmux-herdr plugin sidebar (`herdr`).
+// Live Herdr pane data is mirrored via `cmux-herdr watch` into workspace
+// status pills; this sidebar explains the dual hierarchy and navigates cmux
 // workspaces. Restricted Swift subset (see cmux docs/custom-sidebars.md).
 // Root must be a top-level View expression (not a struct), matching Examples/.
 

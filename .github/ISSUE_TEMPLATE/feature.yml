@@ -1,5 +1,5 @@
 name: Plugin enhancement
-description: A feature or docs change for cmux-herdr
+description: A feature or docs change for the cmux-herdr plugin
 title: "[Enhancement] "
 labels: ["enhancement"]
 body:
@@ -29,6 +29,7 @@ body:
       options:
         - CLI
         - Mirror / watch / attach-pane
+        - Sidebar / skill
         - Install / LaunchAgent
         - Docs
         - Tests / CI

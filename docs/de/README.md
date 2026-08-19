@@ -1,60 +1,99 @@
-# cmux-herdr — Überblick (Deutsch)
+# cmux-herdr
+
+**Ein cmux-Plugin für Herdr.**
+
+Live-Status-Pills, echte Tabs und Splits, und eine CLI, die verschachtelte
+Herdr-Agenten als vollwertige cmux-Flächen behandelt.
 
 Das GitHub-Projekt ist öffentlich:
 **https://github.com/RaviTharuma/cmux-herdr**
 
 Die technische Hauptsprache des Repos ist **Englisch** (README, Issues, PRs),
-damit andere mitmachen können. Diese Seite erklärt das Projekt auf Deutsch.
+damit andere mitmachen können. Diese Seite ist der deutsche Produktüberblick.
+Vollständige Befehle und Flags: [README.md](../../README.md).
 
-## Was ist das?
+## Was ist das Plugin?
 
 Zwei Programme stecken ineinander:
 
 1. **cmux** — die äußere macOS-App mit Fenstern, Workspaces, Tabs.
 2. **Herdr** — der innere Terminal-Mux für KI-Agenten (Tabs, Panes, Status).
 
-Wenn Herdr *in* einem cmux-Terminal läuft, sieht cmux oft nur **eine** Fläche.
-Dieses Plugin (`cmux-herdr`) ist die Brücke dazwischen:
+Ohne Plugin sieht cmux oft nur **eine** Fläche namens `herdr`. **cmux-herdr**
+ist das Plugin dazwischen:
 
-- Agent-Status von Herdr → farbige Status-Pills in cmux
-- Herdr-Tabs/Panes → echte cmux-Tabs/Splits (`mirror`)
-- Eine CLI, um Herdr zu steuern, ohne dass cmux das nativ können muss
+- Agent-Status von Herdr → farbige Status-Pills in der cmux-Sidebar
+- Herdr-Tabs und -Panes → echte cmux-Tabs und Splits (`mirror`)
+- Eine CLI (`cmux-herdr`), um beide Schichten zu steuern
+- Optionale Custom-Sidebar, Agent-Skill und LaunchAgent
 
-Es ist **kein** Teil von cmux.app. Du installierst es selbst. Es braucht **kein
-Compiling**: reines Python (Standardbibliothek), kein `pip`, kein `npm`, kein
-Xcode-Build. `./scripts/test.sh` prüft nur, ob die `.py`-Dateien gültiges
-Python sind, und führt Unit-Tests aus.
+Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
+Es braucht **kein Compiling**: reines Python 3.10+ (Standardbibliothek), kein
+`pip`, kein `npm`, kein Xcode-Build.
 
-## Was du zum Benutzen brauchst
-
-- macOS
-- `cmux` und `herdr` im `PATH`
-- Python 3.10 oder neuer
-
-Zum **Testen der Quellen** reicht Linux mit Python — so läuft auch GitHub
-Actions. Die echten Spiegel-Befehle brauchen aber die macOS-Apps.
+Aktuelle Version: **v0.3.4**.
 
 ## Installation
 
 ```bash
-git clone https://github.com/RaviTharuma/cmux-herdr.git
+git clone --branch v0.3.4 --depth 1 \
+  https://github.com/RaviTharuma/cmux-herdr.git
 cd cmux-herdr
 ./scripts/install.sh
 cmux-herdr --version
 cmux-herdr doctor
 ```
 
-Details und alle Befehle: [README.md](../../README.md) (Englisch).
+Das legt an:
+
+| Artefakt | Pfad |
+|---|---|
+| CLI | `~/.local/bin/cmux-herdr` |
+| Sidebar | `~/.config/cmux/sidebars/herdr.swift` |
+| Agent-Skill | `~/.agents/skills/cmux-herdr/` |
+
+Schnellstart in einer Herdr-Pane *in* cmux:
+
+```bash
+cmux-herdr status
+cmux-herdr tree
+cmux-herdr sync
+cmux-herdr watch --tmux-parity
+```
+
+## Was du zum Benutzen brauchst
+
+- macOS
+- `cmux` und `herdr` im `PATH`
+- Python 3.10 oder neuer
+- Herdr 0.8+
+
+Zum **Testen der Quellen** reicht Linux mit Python — so läuft auch GitHub
+Actions. Die echten Spiegel-Befehle brauchen die macOS-Apps.
+
+## FAQ
+
+**Ist das offiziell in cmux eingebaut?**
+Nein. Es ist ein installierbares Plugin. Du behältst es, wenn du cmux
+aktualisierst.
+
+**Braucht es einen cmux-PR?**
+Nein. Installieren und loslegen.
+
+**Ersetzt es natives ssh-tmux?**
+Nein. `mirror` erzeugt zusätzliche cmux-Ansichten der laufenden Herdr-Sitzung.
+Die echten PTYs bleiben bei Herdr.
 
 ## Aufbau des Repos (kurz)
 
 | Ordner | Inhalt |
 |---|---|
-| `bin/cmux-herdr` | Das Kommandozeilenprogramm |
+| `bin/cmux-herdr` | Das Kommandozeilenprogramm des Plugins |
 | `bridge/` | Die Logik (Python-Module) plus Unit-Tests |
 | `tests/` | Tests mit nachgemachtem `herdr`/`cmux` |
 | `scripts/` | Installieren, Deinstallieren, Test-Skript |
-| `sidebars/` | Optionale cmux-Sidebar |
+| `sidebars/` | Optionale cmux-Sidebar `herdr` |
+| `agent-skill/` | Skill für Coding-Agenten |
 | `docs/` | Diese Dokumentation |
 | `LICENSE` | MIT — andere dürfen den Code nutzen und verändern |
 
@@ -69,5 +108,5 @@ Wenn du GitHub zum ersten Mal als Maintainer nutzt: **[GITHUB.md](GITHUB.md)**.
 - Lizenz: MIT ([LICENSE](../../LICENSE)).
 - Keine API-Keys, keine Konten, keine Telemetrie.
 - Zustandsdateien liegen nur lokal unter `~/.local/state/cmux-herdr/`.
-- Ein frühes Dump deiner lokalen cmux/Herdr-Sitzung wurde aus `main`
+- Ein frühes Dump einer lokalen cmux/Herdr-Sitzung wurde aus `main`
   entfernt. Lade so etwas nie wieder hoch.

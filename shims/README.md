@@ -8,7 +8,7 @@ The plugin works **without** shell shims. This directory documents optional conv
 
 - `herdr` — inner mux
 - `cmux` — outer app
-- `cmux-herdr` — bridge
+- `cmux-herdr` — this plugin
 
 ## Optional ideas (manual)
 

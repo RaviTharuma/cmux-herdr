@@ -1964,7 +1964,7 @@ def _state_binding_detail(
 
 
 def diagnose_install() -> Dict[str, Any]:
-    """Diagnose third-party install health for ``cmux-herdr doctor``.
+    """Diagnose plugin install health for ``cmux-herdr doctor``.
 
     Hard failures (``ok=False``):
     - herdr missing from PATH

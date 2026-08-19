@@ -6,7 +6,7 @@ LOCAL_BIN="${HOME}/.local/bin"
 TARGET="${LOCAL_BIN}/cmux-herdr"
 SIDEBAR_DST="${HOME}/.config/cmux/sidebars/herdr.swift"
 
-echo "cmux-herdr uninstall"
+echo "cmux-herdr plugin uninstall"
 
 # Clear cmux status pills if CLI still available
 if command -v cmux-herdr >/dev/null 2>&1; then

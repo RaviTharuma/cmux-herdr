@@ -1,5 +1,5 @@
 name: Plugin bug
-description: Something in cmux-herdr is wrong on your machine
+description: A bug in the cmux-herdr plugin (CLI, sidebar, skill, or installer)
 title: "[Bug] "
 labels: ["bug"]
 body:

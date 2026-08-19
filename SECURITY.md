@@ -7,7 +7,7 @@
 | Latest tag on `main` (currently 0.3.x) | Yes |
 | Older tags | Best-effort only |
 
-This project is a local CLI. It has **no cloud service, no accounts, and no
+This plugin is a local CLI. It has **no cloud service, no accounts, and no
 API keys of its own**. Security issues are still welcome: a bug in socket
 handling, path handling, or subprocess quoting can matter on a shared Mac.
 

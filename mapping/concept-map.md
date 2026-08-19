@@ -1,5 +1,8 @@
 # Concept map: cmux ↔ herdr ↔ tmux
 
+Vocabulary for the **cmux-herdr** plugin. cmux is the outer macOS app; Herdr is
+the inner agent mux. The plugin sits between them.
+
 | Concept | cmux (outer) | herdr (inner) | tmux (legacy analogy) |
 |---------|--------------|---------------|------------------------|
 | App / server | `cmux.app` process | `herdr` server | `tmux` server |

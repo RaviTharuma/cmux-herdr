@@ -1,4 +1,4 @@
-# Release checklist
+# Plugin release checklist
 
 After a version PR is on `main`, **push an annotated tag**. GitHub Actions
 (`.github/workflows/release.yml`) runs the test suite and publishes the
