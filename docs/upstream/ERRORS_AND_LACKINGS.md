@@ -93,22 +93,13 @@ From [OPEN.md](../../OPEN.md) + [TMUX_PARITY.md](./TMUX_PARITY.md):
 | L-SINGLE-WRITER | **watch** | Plugin must no-op when native attachment live (handoff/lease). Fork [#18](https://github.com/RaviTharuma/cmux/pull/18) / native handoff — keep verified under dogfood. |
 | L-TITLE-LOCK | **watch** | Native-title lock + heuristic-once must not thrash under dual plugin+native |
 | L-ASSOC-KEY | **watch** | Plugin `pane_id:session_id` is cache only — never public nested ID |
-| L-SIZE-AUTHORITY | **watch** | Single size-claim writer (`size-authority` / claim) — dual writers thrash SIGWINCH |
+| L-SIZE-AUTHORITY | **watch** | Single size-claim writer (`size-authority` / claim) — dual writers thrash SIGWINCH. Native writes `native` sentinel on attach; plugin `may_claim` yields. |
 
 ---
 
 ## 5. Branch / PR sprawl (hygiene risk)
 
-Open **fork** PRs on `RaviTharuma/cmux` (may be superseded by `#10045` tip — verify before landing):
-
-| # | Head → base | Title | Updated |
-|---|-------------|-------|---------|
-| [18](https://github.com/RaviTharuma/cmux/pull/18) | `cursor/herdr-handoff-6e7a` → live-machine | RemoteHerdrHandoff / plugin lease | 2026-08-17 |
-| [17](https://github.com/RaviTharuma/cmux/pull/17) | `cursor/herdr-native-mirror-f1c1` → nested tip | Native Herdr window mirror | 2026-08-18 |
-| [16](https://github.com/RaviTharuma/cmux/pull/16) | `cursor/herdr-live-machine-6e7a` → lifecycle | Live apply machine | 2026-08-17 |
-| [14](https://github.com/RaviTharuma/cmux/pull/14) | `cursor/herdr-lifecycle-6e7a` → io-session | RemoteHerdrLifecycle | 2026-08-17 |
-| [13](https://github.com/RaviTharuma/cmux/pull/13) | `cursor/herdr-io-session-6e7a` → host-apply | Pane I/O + session apply | 2026-08-17 |
-| [12](https://github.com/RaviTharuma/cmux/pull/12) | `cursor/herdr-host-apply-6e7a` → nested tip | RemoteHerdrHostApply | 2026-08-18 |
+Open **fork** PRs on `RaviTharuma/cmux`: **none** (as of 2026-08-19 follow-up; drafts #12–#18 closed after tip fold).
 
 Herdr-related heads on `cmux-herdr` (do not force-push shared tips):  
 `cursor/agent-lanes-f1c1`, `cursor/herdr-api-doc-fixes-b5e6`, `cursor/herdr-cmux-knowledge-corpus-f64c`, `cursor/herdr-tmux-parity-advanced-f1c1`, `cursor/plugin-*`, `cursor/tmux-*`, `cursor/upstream-*`, plus stacked `cursor/herdr-*-6e7a` lanes. Full live list in [STATUS.json](./STATUS.json).
@@ -176,3 +167,5 @@ Human-only next steps for blockers: approving review + branch policy for merge; 
 
 | Native claims plugin lease files | **landed** tip `5e33880b165b` via fork [#20](https://github.com/RaviTharuma/cmux/pull/20) — `RemoteHerdrController` → `RemoteHerdrHandoff.claimNative` |
 | Plugin OSS v0.3.4 | **released** (MIT, CI, community files) |
+| Native claims size-authority | **shipping** — `RemoteHerdrSizeAuthority` + plugin `may_claim` yield on `native` / native-live |
+| Fork drafts #12–#18 | **closed** (none open on `RaviTharuma/cmux`) |

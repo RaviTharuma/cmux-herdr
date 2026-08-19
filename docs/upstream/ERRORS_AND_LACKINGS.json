@@ -257,5 +257,7 @@
     "Fork drafts #12-#18 closed superseded",
     "Herdr-beyond-tmux CLI added on cmux-herdr (this PR)"
   ],
-  "updated_at": "2026-08-19T07:24:37Z"
+  "updated_at": "2026-08-19T07:24:37Z",
+  "progress_since_freeze": {},
+  "progress_note": "size-authority native wire shipping 2026-08-19"
 }

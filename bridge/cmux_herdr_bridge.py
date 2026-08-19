@@ -2132,6 +2132,41 @@ def diagnose_install() -> Dict[str, Any]:
         }
     )
 
+    try:
+        from .cmux_herdr_mirror import (
+            SIZE_AUTHORITY_ENV,
+            read_size_authority,
+            size_authority_path,
+        )
+    except ImportError:
+        from cmux_herdr_mirror import (
+            SIZE_AUTHORITY_ENV,
+            read_size_authority,
+            size_authority_path,
+        )
+    size_env = (os.environ.get(SIZE_AUTHORITY_ENV) or "").strip() or None
+    size_file = read_size_authority(fp) if fingerprint_complete else None
+    size_auth = size_env or size_file
+    if size_auth == "native" or (size_auth and size_auth.startswith("native:")):
+        size_detail = f"size-authority=native (plugin SIGWINCH no-op); value={size_auth}"
+    elif size_auth:
+        size_detail = f"size-authority pane={size_auth}"
+    else:
+        size_detail = "size-authority unset (first attach may claim)"
+    checks.append(
+        {
+            "name": "size_authority",
+            "ok": True,
+            "hard": False,
+            "size_authority": size_auth,
+            "size_authority_env": size_env,
+            "size_authority_path": (
+                size_authority_path(fp) if fingerprint_complete else None
+            ),
+            "detail": size_detail,
+        }
+    )
+
     launch = _launchagent_status()
     checks.append(
         {

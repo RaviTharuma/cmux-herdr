@@ -220,9 +220,17 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmd_lease(args: argparse.Namespace) -> int:
     """Show the shared plugin↔native writer lease for this host fingerprint."""
+    from bridge.cmux_herdr_mirror import (
+        SIZE_AUTHORITY_ENV,
+        read_size_authority,
+        size_authority_path,
+    )
+
     fp = collect_host_fingerprint()
     key = _parent_key(fp)
     decision = resolve_writer(key)
+    size_env = (os.environ.get(SIZE_AUTHORITY_ENV) or "").strip() or None
+    size_auth = size_env or read_size_authority(fp)
     payload = {
         "fingerprint": key,
         "writer": decision.writer,
@@ -232,6 +240,9 @@ def cmd_lease(args: argparse.Namespace) -> int:
         "lease_stale": decision.lease_stale,
         "force_plugin": decision.force_plugin,
         "env_native_live": decision.env_native_live,
+        "size_authority": size_auth,
+        "size_authority_path": size_authority_path(fp) if key else None,
+        "size_authority_env": size_env,
     }
     if decision.lease is not None:
         lease = decision.lease
@@ -250,6 +261,7 @@ def cmd_lease(args: argparse.Namespace) -> int:
         print(f"native_live : {decision.native_live}")
         print(f"plugin_live : {decision.plugin_live}")
         print(f"lease_stale : {decision.lease_stale}")
+        print(f"size_auth   : {size_auth or '(none)'}")
         if decision.force_plugin:
             print("force_plugin: True")
     return 0
