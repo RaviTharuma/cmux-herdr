@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- GitHub Actions `release` workflow: pushing tag `vX.Y.Z` runs tests and
+  publishes the GitHub Release from `CHANGELOG.md`
+  (`scripts/changelog_notes.py`).
+
 ## [0.3.4] - 2026-08-19
 
 ### Added

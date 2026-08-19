@@ -3,43 +3,18 @@
 This page is for the **owner** of `RaviTharuma/cmux-herdr`. Contributors should
 read [CONTRIBUTING.md](../CONTRIBUTING.md) instead.
 
-The GitHub repository is already **public**:
+The GitHub repository is **public**:
 https://github.com/RaviTharuma/cmux-herdr
 
 Public means anyone can clone, fork, open issues, and send pull requests.
-It does **not** mean GitHub magically knows the license or the topics until
-those files and settings exist. This repo now ships the files. A few clicks
-in GitHub Settings are still yours.
+License is MIT. CI runs on every push to `main` and every pull request.
+Pushing a `vX.Y.Z` tag publishes a GitHub Release automatically.
 
-## One-time GitHub Settings
-
-Open **https://github.com/RaviTharuma/cmux-herdr/settings** and:
-
-1. **General → Features**
-   - Keep **Issues** on.
-   - Turn **Wikis** off unless you actually use one (an empty wiki looks
-     unfinished).
-   - Discussions are optional (the cmux poll already lives upstream).
-2. **General → Social preview / description**
-   - Description (suggested): `macOS plugin that mirrors Herdr tabs, panes, and agent status into cmux.`
-   - Topics (suggested): `cmux`, `herdr`, `tmux`, `macos`, `cli`, `python`
-3. **Code security and analysis**
-   - Enable **Secret scanning** and **Push protection** (public repos get this;
-     turn the toggles on if they are off).
-   - Enable **Private vulnerability reporting**.
-4. **Branches → Branch protection** (optional but recommended for `main`)
-   - Require the `test` GitHub Actions check before merge.
-   - Do **not** allow force-pushes to `main`.
-
-You can also set description and topics from a machine with `gh`:
-
-```bash
-gh repo edit RaviTharuma/cmux-herdr \
-  --description "macOS plugin that mirrors Herdr tabs, panes, and agent status into cmux." \
-  --add-topic cmux --add-topic herdr --add-topic tmux \
-  --add-topic macos --add-topic cli --add-topic python \
-  --enable-secret-scanning --enable-secret-scanning-push-protection
-```
+Repository **administration** (topics, wiki toggle, secret-scanning org
+toggles) is not writable with the automation token this project uses.
+Public GitHub.com repos still get secret scanning from GitHub itself.
+Default issue labels (`bug`, `enhancement`, `documentation`, …) are already
+present.
 
 ## What each GitHub object is
 
@@ -51,7 +26,7 @@ gh repo edit RaviTharuma/cmux-herdr \
 | **Release** | A GitHub page built on a tag, with notes from `CHANGELOG.md`. |
 | **LICENSE** | Tells other people they may use, copy, and modify the code (MIT). |
 | **CODEOWNERS** | Asks GitHub to request a review from `@RaviTharuma` on every PR. |
-| **Actions** | CI. This repo runs `./scripts/test.sh` on Python 3.10–3.13. |
+| **Actions** | CI on Python 3.10–3.13; tag `vX.Y.Z` publishes a GitHub Release. |
 
 ## Cutting a release
 
@@ -59,8 +34,8 @@ Follow [RELEASE.md](../RELEASE.md). Short version:
 
 1. `VERSION` and `CHANGELOG.md` match.
 2. Merge to `main`.
-3. `git tag -a vX.Y.Z` and push the tag.
-4. Create the GitHub Release from that tag in the UI (or `gh release create`).
+3. `git tag -a vX.Y.Z` and `git push origin vX.Y.Z`.
+4. The `release` GitHub Action publishes the GitHub Release.
 
 ## Secrets and personal data
 

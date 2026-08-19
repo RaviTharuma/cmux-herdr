@@ -1,0 +1,38 @@
+# Publish a GitHub Release when a vX.Y.Z tag is pushed.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Run stdlib unittest suite
+        run: ./scripts/test.sh
+      - name: Tag must match VERSION
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          file_version="$(tr -d '[:space:]' < VERSION)"
+          test "v${file_version}" = "${tag}"
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          python3 scripts/changelog_notes.py "${tag}" > /tmp/notes.md
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release edit "${tag}" --title "${tag}" --notes-file /tmp/notes.md --latest
+          else
+            gh release create "${tag}" --title "${tag}" --notes-file /tmp/notes.md --latest
+          fi
