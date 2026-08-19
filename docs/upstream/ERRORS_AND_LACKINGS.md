@@ -44,7 +44,7 @@ Mirror sources **are present on `#10045` tip** (`RemoteHerdrWindowMirrorHost.swi
 | E-AUTH-UPSTREAM-WRITE | **ops** | Agents cannot vote/comment on upstream discussion / issues | Same 403 wall for `manaflow-ai/cmux` writes (poll [#10106](https://github.com/manaflow-ai/cmux/discussions/10106)). |
 | E-CI-MACOS | **gap** | No visible macOS / `swift test` / Xcode check on PR tips | Tip check-runs only Socket Security + neutral reviewers + skipped codesmith. Package tests / dogfood not proven CI-green on upstream. |
 | E-DOGFOOD | **gap** | macOS dogfood of native mirror unchecked | PR7 acceptance checkboxes still open (see §2 / PR7 doc). |
-| E-DOC-STALE | **hygiene** | Root [OPEN.md](../../OPEN.md) lagging live merge states | Still says `#8736` “mergeable/clean” and `#10045` “dirty”; live freeze: BLOCKED / UNSTABLE, CR threads 0. Prefer this freeze + STATUS.json. |
+| E-DOC-STALE | **hygiene** | Root [OPEN.md](../../OPEN.md) tip SHAs — refresh with STATUS.json (tip `b302316e66fe` as of follow-up) |
 
 CodeRabbit on both tips: **0 unresolved** threads (review noise cleared; merge still blocked/unstable).
 
