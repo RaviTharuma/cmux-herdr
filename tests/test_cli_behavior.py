@@ -139,6 +139,16 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("start-agent", result.stdout)
         self.assertIn("notify", result.stdout)
         self.assertIn("wait-output", result.stdout)
+        self.assertIn("agent-explain", result.stdout)
+        self.assertIn("agent-view", result.stdout)
+        self.assertIn("process-info", result.stdout)
+        self.assertIn("release-agent", result.stdout)
+        self.assertIn("clear-agent-authority", result.stdout)
+        self.assertIn("window-title", result.stdout)
+        self.assertIn("layout-apply", result.stdout)
+        self.assertIn("manifests", result.stdout)
+        self.assertIn("worktree", result.stdout)
+        self.assertIn("workspace-move", result.stdout)
 
     def test_unknown_command_is_argparse_error(self):
         result = self.run_cli("does-not-exist")

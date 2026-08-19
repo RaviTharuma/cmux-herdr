@@ -5,9 +5,9 @@
   "repo": "RaviTharuma/cmux-herdr",
   "tips": {
     "10045": {
-      "sha": "b02b8a954327eeb191783e6913db6d59910003f1",
-      "short": "b02b8a954327",
-      "message": "fix(herdr): run nested.topology socket tests off the main thread",
+      "sha": "40a2f842c43559ee0396a618a101f953c5f0e860",
+      "short": "40a2f842c435",
+      "message": "feat(herdr): add RemoteHerdrHandoff twin for plugin lease files (#19)",
       "committed_at": "2026-08-18T13:46:06Z",
       "mergeable": "MERGEABLE",
       "merge_state": "BLOCKED",
@@ -33,7 +33,7 @@
   "checks_on_tips": {
     "Socket Security: Pull Request Alerts": "success",
     "Socket Security: Project Report": "success",
-    "cubic · AI code reviewer": "neutral",
+    "cubic \u00b7 AI code reviewer": "neutral",
     "Vercel Agent Review": "neutral",
     "[code]smith": "skipped",
     "CodeRabbit (status context)": "success",
@@ -240,64 +240,22 @@
     "lackings_native": 10,
     "lackings_plugin": 8,
     "shared_contract_watches": 4,
-    "fork_prs_open": 6,
+    "fork_prs_open": 0,
     "upstream_design_artifacts_open": 5
   },
-  "fork_prs_open": [
-    {
-      "headRefName": "cursor/herdr-handoff-6e7a",
-      "isDraft": true,
-      "number": 18,
-      "title": "Add RemoteHerdrHandoff so native yields to the plugin lease",
-      "updatedAt": "2026-08-17T19:53:58Z",
-      "url": "https://github.com/RaviTharuma/cmux/pull/18"
-    },
-    {
-      "headRefName": "cursor/herdr-native-mirror-f1c1",
-      "isDraft": false,
-      "number": 17,
-      "title": "Add native Herdr window mirror (ssh-tmux parity counterpart)",
-      "updatedAt": "2026-08-18T08:12:53Z",
-      "url": "https://github.com/RaviTharuma/cmux/pull/17"
-    },
-    {
-      "headRefName": "cursor/herdr-live-machine-6e7a",
-      "isDraft": true,
-      "number": 16,
-      "title": "Add RemoteHerdr live apply machine",
-      "updatedAt": "2026-08-17T19:02:22Z",
-      "url": "https://github.com/RaviTharuma/cmux/pull/16"
-    },
-    {
-      "headRefName": "cursor/herdr-lifecycle-6e7a",
-      "isDraft": true,
-      "number": 14,
-      "title": "Add RemoteHerdrLifecycle",
-      "updatedAt": "2026-08-17T18:59:53Z",
-      "url": "https://github.com/RaviTharuma/cmux/pull/14"
-    },
-    {
-      "headRefName": "cursor/herdr-io-session-6e7a",
-      "isDraft": true,
-      "number": 13,
-      "title": "Add RemoteHerdr pane I/O and session apply",
-      "updatedAt": "2026-08-17T18:59:52Z",
-      "url": "https://github.com/RaviTharuma/cmux/pull/13"
-    },
-    {
-      "headRefName": "cursor/herdr-host-apply-6e7a",
-      "isDraft": true,
-      "number": 12,
-      "title": "Add RemoteHerdrHostApply",
-      "updatedAt": "2026-08-18T08:12:53Z",
-      "url": "https://github.com/RaviTharuma/cmux/pull/12"
-    }
-  ],
+  "fork_prs_open": [],
   "not_errors": [
     "CodeRabbit unresolved threads = 0 on both tips",
     "Socket Security success on both tips",
     "Fork tip SHA aligned with #10045",
     "No open plugin issues on cmux-herdr at freeze",
     "Intentional: no server.stop on host close; sidebar != ssh-tmux"
-  ]
+  ],
+  "resolved_since_freeze": [
+    "E-DOC-STALE fixed on main via #36",
+    "RemoteHerdrHandoff landed on #10045 tip via fork #19",
+    "Fork drafts #12-#18 closed superseded",
+    "Herdr-beyond-tmux CLI added on cmux-herdr (this PR)"
+  ],
+  "updated_at": "2026-08-19T07:24:37Z"
 }

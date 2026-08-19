@@ -7,6 +7,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- **Herdr-beyond-tmux CLI**: first-class commands for agent explain/view,
+  process-info, release/clear agent authority, window title, layout-apply,
+  agent manifests, worktrees, and workspace-move. See
+  [docs/upstream/HERDR_BEYOND_TMUX.md](./docs/upstream/HERDR_BEYOND_TMUX.md).
+
 ### Fixed
 
 - **Herdr 0.8 CLI/RPC contract**: CLI fallbacks now match

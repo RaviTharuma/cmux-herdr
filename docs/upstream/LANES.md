@@ -3,36 +3,27 @@
 Two chats are pushing Herdr ↔ cmux tmux-depth at the same time.
 **Read this before touching the cmux fork.**
 
-## Live ownership (2026-08-17)
+## Live ownership (2026-08-19)
 
 | Lane | Who | What they own | Do not touch |
 |---|---|---|---|
-| **A. #10045 review** | Other chat (CodeRabbit 1/5 at `f8d64f9f`, more coming) | Existing files on `cursor/nested-topology-herdr-v1-becf`: `HerdrNestedTopologyClient*`, coordinator, controller, AppDelegate, Workspace, xcstrings, review nits | New impose/host-apply files; do not rewrite the planner |
-| **B. Tmux-depth contract** | This chat (`bc-19886765-137b-4458-bb10-d6b48d0d6e7a`) | **New files only.** Plugin impose/host/io/session/control/**lifecycle**. Native twins on **separate** fork branches | Do **not** commit onto `cursor/nested-topology-herdr-v1-becf` until lane A finishes 5/5 |
+| **A. #10045 tip** | Shared / quiet after CR **0**/173 | Tip `cursor/nested-topology-herdr-v1-becf` @ `b02b8a954327` | Force-push without fetch; PLACEHOLDER recoveries only |
+| **B. Plugin + contracts** | `cmux-herdr` integration_ops | Plugin `main`, docs freeze, Herdr-beyond-tmux CLI, fork side PRs | Do not rewrite hot tip without a quiet tip + Actions fold |
+
+CodeRabbit on `#10045` / `#8736` is cleared (0 unresolved). Merge still needs maintainer approval (`BLOCKED` / `UNSTABLE`).
 
 ## Rules
 
-1. **Never push to `cursor/nested-topology-herdr-v1-becf` from lane B** while lane A is mid CodeRabbit series (`(N/5)` commits).
-2. Lane B opens fork PRs against that branch as **draft** and leaves them unmerged so lane A can rebase/pick after 5/5.
-3. Do not edit `AppDelegate.swift`, `NestedTopologyController.swift`, `Workspace*.swift`, `Localizable.xcstrings`, or `HerdrNestedTopologyClient*.swift` from lane B.
-4. Plugin `main` (`RaviTharuma/cmux-herdr`) is lane B’s merge target. Lane A should not need it.
-5. If you must fix a file the other lane just touched, **wait one fetch** and rebase — do not force-push shared history.
+1. Prefer side branches + one-shot Actions / MCP `push_files` when folding onto `#10045` tip.
+2. Plugin and native stay separate tracks (`#8736` vs `#10045`).
+3. Before editing hot `RemoteHerdr*` files, re-fetch tip SHA from [STATUS.json](./STATUS.json).
+4. Plugin `main` (`RaviTharuma/cmux-herdr`) is the merge target for userspace work.
+5. If you must fix a file another lane just touched, **wait one fetch** and rebase — do not force-push shared history.
 
 ## Current artifacts
 
-- Plugin impose planner: [cmux-herdr#21](https://github.com/RaviTharuma/cmux-herdr/pull/21) (merged)
-- Native impose planner: squash `aeb11e08` already on #10045 (landed before lane A’s 1/5)
-- Native host-apply twin: branch `cursor/herdr-host-apply-6e7a` (draft [RaviTharuma/cmux#12](https://github.com/RaviTharuma/cmux/pull/12), not merged into #10045)
-- Plugin I/O + session host: `bridge/cmux_herdr_io.py` + `bridge/cmux_herdr_session.py` ([cmux-herdr#23](https://github.com/RaviTharuma/cmux-herdr/pull/23), merged)
-- Native I/O + session twins: branch `cursor/herdr-io-session-6e7a` (draft [RaviTharuma/cmux#13](https://github.com/RaviTharuma/cmux/pull/13), not merged into #10045)
-- Plugin control-depth: `bridge/cmux_herdr_control.py` ([cmux-herdr#25](https://github.com/RaviTharuma/cmux-herdr/pull/25), merged)
-- Plugin attach/detach/restore/observability: `bridge/cmux_herdr_lifecycle.py` ([cmux-herdr#26](https://github.com/RaviTharuma/cmux-herdr/pull/26), merged)
-- Plugin live apply machine: `bridge/cmux_herdr_live.py` ([cmux-herdr#27](https://github.com/RaviTharuma/cmux-herdr/pull/27), merged)
-- Plugin ↔ native handoff: `bridge/cmux_herdr_handoff.py` (this slice; native twin is a new-file fork PR, not #10045)
-- Plugin Herdr control surface + SessionHost pump: `bridge/cmux_herdr_api.py` +
-  `bridge/cmux_herdr_pump.py` (plugin `main` only; do not stack onto #10045 / PR #17)
-- Plugin attach-pane I/O + watch gap resync: socket-first `pane.read` /
-  `pane.send_*` / `pane.resize`; subscribe death → snapshot (plugin `main`)
-- Plugin active-pane cwd → tab folder: this slice
-- Native lifecycle twin: draft [RaviTharuma/cmux#14](https://github.com/RaviTharuma/cmux/pull/14)
-- Native live apply twin: branch `cursor/herdr-live-apply-6e7a` (draft, not merged into #10045)
+- Plugin impose / I/O / control / lifecycle / live apply / handoff / SessionHost pump: on plugin `main`
+- Native twins mostly on `#10045` tip; `RemoteHerdrHandoff` twin still landing from fork [#18](https://github.com/RaviTharuma/cmux/pull/18)
+- Stacked fork drafts [#12](https://github.com/RaviTharuma/cmux/pull/12)–[#17](https://github.com/RaviTharuma/cmux/pull/17) are largely superseded by tip content — close after verifying
+- Errors/lackings freeze: [ERRORS_AND_LACKINGS.md](./ERRORS_AND_LACKINGS.md)
+- Herdr-beyond-tmux: [HERDR_BEYOND_TMUX.md](./HERDR_BEYOND_TMUX.md)

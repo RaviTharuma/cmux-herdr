@@ -161,3 +161,16 @@ Do **not** confuse [#8673](https://github.com/manaflow-ai/cmux/issues/8673) (Pi 
 When agents go idle or tip SHAs move, bump `freeze_*` + this file + `STATUS.json` on `cursor/agent-lanes-f1c1` (integration_ops lane). Do not rewrite hot product tips from this inventory.
 
 Human-only next steps for blockers: approving review + branch policy for merge; RaviTharuma PAT or logged-in browser for any remaining upstream writes; macOS dogfood of PR7 acceptance.
+
+---
+
+## 10. Progress since freeze (2026-08-19 follow-up)
+
+| Item | Status |
+|------|--------|
+| E-DOC-STALE | **fixed** on `cmux-herdr` main (#36) |
+| `RemoteHerdrHandoff` on `#10045` tip | **landed** via fork [#19](https://github.com/RaviTharuma/cmux/pull/19) → tip `40a2f842c435` |
+| Fork drafts #12–#18 | **closed** (superseded by tip) |
+| Herdr-beyond-tmux CLI | **shipping** — see [HERDR_BEYOND_TMUX.md](./HERDR_BEYOND_TMUX.md) |
+| E-MERGE-10045 / E-MERGE-8736 / E-NO-APPROVAL | **still open** (needs maintainer on `manaflow-ai/cmux`) |
+| E-CI-MACOS / E-DOGFOOD / plugin ceilings | **still open** (need AppKit / dogfood) |
