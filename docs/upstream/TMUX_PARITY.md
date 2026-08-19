@@ -25,10 +25,10 @@ Legend: **Yes** in the plugin column is shipped userspace. **Yes** in the Native
 | Split direction from tree (not alternate right/down) | Yes | n/a | Yes — `split-window` analogue = `pane.split` |
 | Divider **ratio** from assigned cells | `cmux set-ratio` via `RemoteHerdrImpose` fractions (tmux +1 cell) | n/a | Yes — `RemoteHerdrImpose.plan` → host `imposeDividerPlan()` |
 | User **divider drag** → inner `resize-pane` | Session model only (`begin`/`resolve`/`end`); no Bonsplit owner | n/a | Yes — same drag-end → `pane.resize` round trip |
-| Feed-forward sizing (claim size, inner mux owns grid) | SIGWINCH → `herdr pane resize` | n/a | Yes — copy tmux `updateClientSize` / `refresh-client -C` |
+| Feed-forward sizing (claim size, inner mux owns grid) | No one-shot claim: `pane.resize` is split-edge only; `terminal session --cols/--rows` is a live stream | n/a | Target: copy tmux `updateClientSize`; do not invent `pane.resize` cols/rows |
 | Event-driven reconcile + snapshot resync | Persistent `events.subscribe` + SessionHost pump (`watch --tmux-parity`) | `events.subscribe` | Yes — events + snapshot after gaps |
 | Output stream into the surface | Pump `pane.read` → isolated `route_read_snapshot` (never cross-pane; strip `ESC k` titles) | Read API later | Yes — `routeOutput(paneId, data)` into that Ghostty only |
-| Typed input → inner pane | `herdr pane send` (cbreak) + `route_input` (bound pane only) | Guarded later | Yes — `pane.send_*` from Ghostty input for that pane only |
+| Typed input → inner pane | `herdr pane send-text` (cbreak) + `route_input` (bound pane only) | Guarded later | Yes — `pane.send_*` from Ghostty input for that pane only |
 | Focus: inner active pane ↔ cmux pane | `--focus` / `--tmux-parity` + `project_focus` (provider never echoes) | `nested.node.focus` | Yes — `noteRemoteActivePane` + `select-pane` analogue |
 | Tab **order** follows inner numbers | `--order` / `--tmux-parity` + `session_actions` (`create_tab` / `close_tab` / `reorder_tabs`) | Virtual row order | Yes — `TabManager` order = Herdr tab numbers |
 | **Prune** gone panes (close surfaces) | `--prune` (default on `--tmux-parity`) | Event close | Yes — teardown panel like tmux reconcile |
@@ -146,9 +146,9 @@ cmux-herdr move-pane w2:p2 --tab w2:t2 --split right
 cmux-herdr focus-dir right
 cmux-herdr move-tab w2:t1 --index 0
 cmux-herdr rename-pane w2:p2 logs
-cmux-herdr start-agent w2:p3 --agent codex
+cmux-herdr start-agent reviewer --kind codex --pane w2:p3
 cmux-herdr notify "sync complete"
-cmux-herdr send-key <pane_id> C-Up       # named keys
+cmux-herdr send-key <pane_id> C-Up       # encodes to Herdr ctrl+up
 cmux-herdr observe --method pane_surfaces
 cmux-herdr attach-pane <pane_id>         # cbreak + SIGWINCH + ANSI read
 ```

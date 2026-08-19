@@ -1,6 +1,6 @@
 # cmux-herdr
 
-User-controlled **plugin bridge** between [Herdr](https://github.com/ogulcancelik/herdr) (inner agent terminal mux) and [cmux](https://github.com/manaflow-ai/cmux) (outer macOS terminal workspace).
+User-controlled **plugin bridge** between [Herdr](https://github.com/herdrdev/herdr) (inner agent terminal mux) and [cmux](https://github.com/manaflow-ai/cmux) (outer macOS terminal workspace).
 
 It works **today without any cmux upstream PR**. Current stopgap release target: **v0.1.0** (see [CHANGELOG.md](CHANGELOG.md), [RELEASE.md](RELEASE.md)).
 
@@ -117,7 +117,7 @@ cmux-herdr attach-pane w2:p34   # follow one pane in this terminal
 cmux-herdr associations   # hybrid pane/session association cache
 cmux-herdr lock-title w2:p34 --title Orchestrator
 cmux-herdr unlock-title w2:p34
-cmux-herdr send-key w2:p34 C-Up
+cmux-herdr send-key w2:p34 C-Up       # encodes to Herdr ctrl+up
 cmux-herdr observe --method pane_surfaces
 cmux-herdr attach         # live apply host (tmux attach analogue)
 cmux-herdr detach         # leaves the Herdr session running
@@ -127,7 +127,7 @@ cmux-herdr api pane.close --params '{"pane_id":"w2:p34"}'
 cmux-herdr new-tab --label logs
 cmux-herdr close-pane w2:p34          # --force if the agent is busy
 cmux-herdr send w2:p34 echo hello
-cmux-herdr agent-prompt w2:p34 "run tests" --until done
+cmux-herdr agent-prompt w2:p34 "run tests" --wait --until done
 cmux-herdr clear          # remove herdr:* status pills
 ```
 
@@ -149,7 +149,7 @@ cmux-herdr move-pane w2:p2 --tab w2:t2
 cmux-herdr focus-dir right
 cmux-herdr move-tab w2:t1 --index 0
 cmux-herdr rename-pane w2:p2 logs
-cmux-herdr start-agent w2:p3 --agent codex
+cmux-herdr start-agent reviewer --kind codex --pane w2:p3
 cmux-herdr notify "tests done" --body "all green"
 cmux-herdr json-dump
 ```
@@ -178,7 +178,7 @@ prune, layout tree, ratios, tab order, focus). Canonical matrix:
 | Extra panes in that tab | cmux splits from the Herdr layout tree (`horizontal` → right, `vertical` → down) |
 | Split ratios | `cmux set-ratio` from layout cell rects |
 | Focused pane | matching cmux surface (`--focus` / `--tmux-parity`) |
-| Pane contents | `cmux-herdr attach-pane` follower (`herdr pane read` + `pane send` + SIGWINCH resize) |
+| Pane contents | `cmux-herdr attach-pane` follower (`herdr pane read` + `pane send-text`) |
 
 Reconcile is **idempotent**: each pane is keyed `herdr-mirror:<pane_id>`, so a second `mirror` keeps existing surfaces and only creates/renames/prunes diffs.
 

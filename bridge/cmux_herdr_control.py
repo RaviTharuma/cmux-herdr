@@ -6,9 +6,10 @@ Gold standard: ``RemoteTmuxWindowMirror+ControlMutations``,
 ``RemoteTmuxMirrorTabActivity``, and host-close detach.
 
 This is the same *depth* cmux built for tmux, limited to methods Herdr
-actually has (``pane.send`` / ``send-keys``, ``pane.split``, ``pane.focus``,
-``pane.close``, ``pane.read``, ``agent_status``). SSH, ``tmux -CC``, and
-``respawn-pane`` are not copied — Herdr does not have them.
+actually has (``pane.send_text`` / ``pane.send_keys``, ``pane.split``,
+``agent.focus``, ``pane.focus_direction``, ``pane.close``, ``pane.read``,
+``agent_status``). There is no ``pane.focus`` method. SSH, ``tmux -CC``,
+and ``respawn-pane`` are not copied — Herdr does not have them.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ except ImportError:
     from cmux_herdr_layout import LayoutNode
 
 
-# Tmux ``RemoteTmuxKeyName`` bases. CSI is the pane.send fallback when
+# Tmux ``RemoteTmuxKeyName`` bases. CSI is the pane.send_text fallback when
 # pane.send_keys is unavailable.
 _NAMED_CSI: Dict[str, bytes] = {
     "Up": b"\x1b[A",
@@ -75,34 +76,124 @@ class ProviderInput:
         return len((self.text or "").encode("utf-8")) or 1
 
 
-def encode_named_key(pane_id: str, raw_name: str) -> Optional[ProviderInput]:
-    """Resolve a tmux-style key name (``C-Up``, ``F5``) for Herdr.
+_HERDR_SPECIAL = frozenset(
+    {
+        "up",
+        "down",
+        "left",
+        "right",
+        "enter",
+        "tab",
+        "esc",
+        "escape",
+        "backspace",
+        "minus",
+        "plus",
+        "backtick",
+        *(f"f{index}" for index in range(1, 13)),
+    }
+)
 
-    Prefers ``pane.send_keys`` via ``key``. ``csi`` is the ``pane.send``
-    fallback so arrows still work on builds that only accept text.
+_TMUX_BASE_TO_HERDR = {
+    "Up": "up",
+    "Down": "down",
+    "Left": "left",
+    "Right": "right",
+    "F1": "f1",
+    "F2": "f2",
+    "F3": "f3",
+    "F4": "f4",
+    "F5": "f5",
+    "F6": "f6",
+    "F7": "f7",
+    "F8": "f8",
+    "F9": "f9",
+    "F10": "f10",
+    "F11": "f11",
+    "F12": "f12",
+}
+
+_HERDR_BASE_TO_TMUX = {value: key for key, value in _TMUX_BASE_TO_HERDR.items()}
+
+
+def encode_named_key(pane_id: str, raw_name: str) -> Optional[ProviderInput]:
+    """Resolve a tmux-style or Herdr key name for ``pane.send_keys``.
+
+    Ghostty/cmux emit tmux names (``C-Up``, ``F5``). Herdr 0.8 wants combos
+    (``ctrl+up``, ``f5``). Legacy ``C-c`` is only for ctrl+letter, not arrows.
+    ``csi`` is the ``pane.send_text`` fallback for keys with no combo
+    (Home/End/Page) or when send-keys is unavailable.
 
     Args:
         pane_id: Bound Herdr pane.
-        raw_name: Tmux ``RemoteTmuxKeyName`` string.
+        raw_name: Tmux ``RemoteTmuxKeyName`` or Herdr combo string.
 
     Returns:
         Input, or None when the name is unknown (never invent a key).
     """
     if not raw_name or not pane_id:
         return None
-    parts = [part for part in raw_name.split("-") if part]
+    name = raw_name.strip()
+    if "+" in name or name.lower() in _HERDR_SPECIAL:
+        combo = name.lower()
+        return ProviderInput(
+            pane_id=pane_id,
+            kind="key",
+            key=combo,
+            csi=_csi_for_herdr_combo(combo),
+        )
+    parts = [part for part in name.split("-") if part]
     if not parts:
         return None
     base = parts[-1]
     mods = {part for part in parts[:-1] if part in {"C", "M", "S"}}
     csi = _NAMED_CSI.get(base)
+    herdr_base = _TMUX_BASE_TO_HERDR.get(base)
+    if csi is None and herdr_base is None:
+        return None
+    if mods and csi is not None:
+        csi = _csi_with_modifiers(base, csi, mods)
+    herdr_key = None
+    if herdr_base:
+        prefixes = []
+        if "C" in mods:
+            prefixes.append("ctrl")
+        if "M" in mods:
+            prefixes.append("alt")
+        if "S" in mods:
+            prefixes.append("shift")
+        herdr_key = "+".join(prefixes + [herdr_base])
+    return ProviderInput(pane_id=pane_id, kind="key", key=herdr_key, csi=csi)
+
+
+def _csi_for_herdr_combo(combo: str) -> Optional[bytes]:
+    """CSI bytes for a Herdr combo, or None when there is no sequence."""
+    parts = [part for part in combo.lower().split("+") if part]
+    if not parts:
+        return None
+    base = parts[-1]
+    mods: set = set()
+    for part in parts[:-1]:
+        if part in {"ctrl", "control", "c"}:
+            mods.add("C")
+        elif part in {"alt", "m"}:
+            mods.add("M")
+        elif part in {"shift", "s"}:
+            mods.add("S")
+    extra = {
+        "enter": b"\r",
+        "tab": b"\t",
+        "esc": b"\x1b",
+        "escape": b"\x1b",
+        "backspace": b"\x7f",
+    }
+    tmux_base = _HERDR_BASE_TO_TMUX.get(base)
+    csi = _NAMED_CSI.get(tmux_base) if tmux_base else extra.get(base)
     if csi is None:
         return None
-    if mods:
-        csi = _csi_with_modifiers(base, csi, mods)
-    return ProviderInput(
-        pane_id=pane_id, kind="key", key="-".join(list(sorted(mods)) + [base]), csi=csi
-    )
+    if mods and tmux_base:
+        return _csi_with_modifiers(tmux_base, csi, mods)
+    return csi
 
 
 def _csi_with_modifiers(base: str, csi: bytes, mods: set) -> bytes:
@@ -206,7 +297,7 @@ class FocusController:
     _next_id: int = 0
 
     def user_select(self, pane_id: str) -> FocusCommand:
-        """Project immediately and send ``pane.focus``. Unknown panes are a no-op."""
+        """Project immediately and send ``agent.focus``. Unknown panes are a no-op."""
         if pane_id not in self.live_pane_ids:
             return FocusCommand(pane_id=None, send_to_provider=False)
         if self.pending and self.pending.pane_id == pane_id:
@@ -226,7 +317,7 @@ class FocusController:
         return FocusCommand(pane_id=pane_id, send_to_provider=True, request_id=request_id)
 
     def command_rejected(self, request_id: str) -> FocusCommand:
-        """Roll back when Herdr rejects ``pane.focus``."""
+        """Roll back when Herdr rejects ``agent.focus``."""
         pending = self.pending
         if pending is None or pending.request_id != request_id:
             return FocusCommand(pane_id=self.active_pane_id, send_to_provider=False)

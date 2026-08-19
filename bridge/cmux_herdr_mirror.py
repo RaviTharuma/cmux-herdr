@@ -12,7 +12,8 @@ This is the plugin analogue of cmux ``ssh-tmux`` / ``RemoteTmuxWindowMirror``.
 - gone panes are pruned (tmux closes vanished panes by default)
 - zoom keeps mapped viewers; it does not destroy hidden pane surfaces
 - each mirrored surface runs ``cmux-herdr attach-pane`` (``pane read`` +
-  ``pane send`` + SIGWINCH resize)
+  ``pane send-text``). SIGWINCH cannot claim the inner grid: Herdr
+  ``pane.resize`` is split-edge only.
 
 It cannot steal Herdr PTYs into Ghostty (that needs native
 ``RemoteHerdrWindowMirror``). It *can* create extra cmux viewers of the live
@@ -24,7 +25,6 @@ from __future__ import annotations
 import json
 import os
 import select
-import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
@@ -1564,35 +1564,20 @@ def send_pane_text(pane_id: str, text: str) -> None:
         pass
     if not which("herdr"):
         raise BridgeError("herdr not found on PATH")
-    flag_attempts = (
-        ["herdr", "pane", "send", pane_id, "--text", text],
-        ["herdr", "pane", "send-keys", pane_id, text],
-    )
-    last_error = ""
-    for args in flag_attempts:
-        proc = run_cmd(args, timeout=5.0)
-        if proc.returncode == 0:
-            return
-        last_error = (proc.stderr or proc.stdout or str(proc.returncode)).strip()
-    stdin_args = ["herdr", "pane", "send", pane_id]
-    proc = subprocess.run(
-        stdin_args,
-        input=text,
-        capture_output=True,
-        text=True,
-        timeout=5.0,
-    )
+    proc = run_cmd(["herdr", "pane", "send-text", pane_id, text], timeout=5.0)
     if proc.returncode == 0:
         return
-    last_error = (proc.stderr or proc.stdout or last_error or str(proc.returncode)).strip()
-    raise BridgeError(last_error or f"herdr pane send failed for {pane_id}")
+    last_error = (proc.stderr or proc.stdout or str(proc.returncode)).strip()
+    raise BridgeError(last_error or f"herdr pane send-text failed for {pane_id}")
 
 
 def send_pane_named_key(pane_id: str, name: str) -> Dict[str, Any]:
-    """Send a tmux-style named key (``C-Up``, ``F5``) via ``pane.send_keys``.
+    """Send a tmux-style named key (``C-Up``, ``F5``) as a Herdr combo.
 
-    Falls back to CSI bytes on ``pane.send`` when send-keys is missing.
-    Unknown names fail closed — never invent a sequence.
+    Encodes to ``ctrl+up`` / ``f5`` and calls ``pane.send_keys``. Falls back
+    to CSI bytes on ``pane.send_text`` when send-keys is missing or the key
+    has no combo (Home/End/Page). Never types the key name as literal text.
+    Unknown names fail closed.
     """
     try:
         from .cmux_herdr_control import encode_named_key
@@ -1610,11 +1595,7 @@ def send_pane_named_key(pane_id: str, name: str) -> Dict[str, Any]:
             )
             return {"pane_id": pane_id, "key": item.key, "via": "send_keys"}
         except BridgeError:
-            try:
-                send_pane_text(pane_id, item.key)
-                return {"pane_id": pane_id, "key": item.key, "via": "send_keys"}
-            except BridgeError:
-                pass
+            pass
     if item.csi:
         send_pane_text(pane_id, item.csi.decode("latin-1"))
         return {"pane_id": pane_id, "key": item.key, "via": "csi"}
@@ -1717,26 +1698,17 @@ def read_pane_text(pane_id: str, *, lines: int = 200, ansi: bool = True) -> str:
 
 
 def resize_herdr_pane(pane_id: str, cols: int, rows: int) -> None:
-    """Tell Herdr the viewer size (plugin analogue of tmux client-size claim)."""
-    if cols <= 0 or rows <= 0:
+    """Viewer size hint. Herdr has no claim-size ``pane.resize``.
+
+    Official ``pane.resize`` is split-edge (``--direction`` + ``--amount``).
+    Feed-forward inner PTY size is ``herdr terminal session control|observe
+    --cols --rows``, a long-lived stream this plugin does not open. Calling
+    invented ``--cols/--rows`` flags (or socket params) is a no-op on 0.8
+    and is not attempted.
+    """
+    if cols <= 0 or rows <= 0 or not pane_id:
         return
-    try:
-        herdr_rpc(
-            "pane.resize",
-            {"pane_id": pane_id, "cols": cols, "rows": rows},
-        )
-        return
-    except BridgeError:
-        pass
-    attempts = (
-        ["herdr", "pane", "resize", pane_id, "--cols", str(cols), "--rows", str(rows)],
-        ["herdr", "pane", "resize", pane_id, str(cols), str(rows)],
-        ["herdr", "pane", "resize", pane_id, f"{cols}x{rows}"],
-    )
-    for args in attempts:
-        proc = run_cmd(args, timeout=3.0)
-        if proc.returncode == 0:
-            return
+    return
 
 
 def attach_pane_loop(
@@ -1760,8 +1732,8 @@ def attach_pane_loop(
     disappears or the user hits Ctrl-C.
 
     ``raw_tty`` puts stdin in cbreak so keystrokes forward immediately
-    (``send-keys`` analogue). ``follow_resize`` maps SIGWINCH to
-    ``herdr pane resize``.
+    (``send-keys`` analogue). ``follow_resize`` installs SIGWINCH only as
+    a size-authority lock; Herdr cannot be claimed via ``pane.resize``.
     """
     out = stdout or sys.stdout
     os.environ[ATTACH_ENV] = pane_id
@@ -1846,11 +1818,11 @@ def _drain_stdin_to_pane(pane_id: str) -> None:
 
 
 def _install_resize_handler(pane_id: str) -> None:
-    """Forward SIGWINCH to Herdr only when this viewer is the size authority.
+    """Forward SIGWINCH only when this viewer is the size authority.
 
-    Multiple attach-pane processes must not fight over ``herdr pane resize`` —
-    that stomps the inner grid (anti-parity). Mirror/watch elects one pane via
-    ``size-authority-<fingerprint>`` / ``CMUX_HERDR_SIZE_AUTHORITY``.
+    Multiple attach-pane processes must not fight over inner size.
+    Herdr 0.8 has no one-shot claim-size RPC, so this handler records
+    the election and otherwise no-ops (see ``resize_herdr_pane``).
     """
     try:
         import shutil

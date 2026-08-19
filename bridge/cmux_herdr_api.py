@@ -185,10 +185,30 @@ def extract_agent_status(payload: Any) -> Optional[str]:
     return None
 
 
+def _cli_pane_target(pane: str) -> List[str]:
+    """``--pane ID`` or ``--current`` (Herdr CLI, not a positional id)."""
+    if pane:
+        return ["--pane", pane]
+    return ["--current"]
+
+
+def _cli_timeout(params: Dict[str, Any]) -> List[str]:
+    """Map socket ``timeout_ms`` onto documented ``--timeout`` (milliseconds)."""
+    timeout = params.get("timeout_ms")
+    wait = params.get("wait")
+    if timeout is None and isinstance(wait, dict):
+        timeout = wait.get("timeout_ms")
+    if timeout is None:
+        return []
+    return ["--timeout", str(timeout)]
+
+
 def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Optional[List[str]]:
     """Map a socket method onto a documented ``herdr`` CLI argv (no binary).
 
-    Returns None when there is no safe CLI equivalent (socket-only).
+    Flags follow https://herdr.dev/docs/cli-reference/. Returns None when
+    there is no safe CLI equivalent (socket-only) or required params are
+    missing. Never invents verbs or flags.
     """
     params = dict(params or {})
     pane = _str(params.get("pane_id") or params.get("target"))
@@ -237,6 +257,9 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
         if workspace:
             argv.extend(["--workspace", workspace])
         return argv
+    if method == "tab.move":
+        # Socket-only: herdr CLI has no ``tab move`` wrapper.
+        return None
     if method == "pane.list":
         return ["pane", "list"]
     if method == "pane.get" and pane:
@@ -245,69 +268,60 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
         argv = ["pane", "current"]
         caller = _str(params.get("caller_pane_id"))
         if caller:
-            argv.append(caller)
+            argv.extend(["--pane", caller])
         return argv
     if method == "pane.close" and pane:
-        argv = ["pane", "close", pane]
-        if params.get("force"):
-            argv.append("--force")
-        return argv
+        return ["pane", "close", pane]
     if method == "pane.zoom":
         argv = ["pane", "zoom"]
         if pane:
             argv.append(pane)
         mode = _str(params.get("mode"))
-        if mode in {"on", "off"}:
+        if mode in {"on", "off", "toggle"}:
             argv.append(f"--{mode}")
         elif not pane:
             argv.append("--current")
         return argv
     if method == "pane.resize":
-        argv = ["pane", "resize"]
-        if pane:
-            argv.append(pane)
-        else:
-            argv.append("--current")
-        if direction:
-            argv.extend(["--direction", direction])
+        # Split-edge only. There is no ``--cols/--rows`` claim-size CLI.
+        if not direction:
+            return None
+        argv = ["pane", "resize", "--direction", direction]
+        argv.extend(_cli_pane_target(pane))
         amount = params.get("amount")
         if amount is not None:
             argv.extend(["--amount", str(amount)])
-        cols, rows = params.get("cols"), params.get("rows")
-        if cols is not None and rows is not None:
-            argv.extend(["--cols", str(cols), "--rows", str(rows)])
         return argv
     if method == "pane.swap":
-        argv = ["pane", "swap"]
         source = _str(params.get("source_pane_id") or pane)
         target = _str(params.get("target_pane_id"))
         if source and target:
-            argv.extend([source, target])
-            return argv
-        if source:
-            argv.append(source)
-        if direction:
-            argv.extend(["--direction", direction])
-        elif not source:
-            argv.append("--current")
+            return [
+                "pane",
+                "swap",
+                "--source-pane",
+                source,
+                "--target-pane",
+                target,
+            ]
+        if not direction:
+            return None
+        argv = ["pane", "swap", "--direction", direction]
+        argv.extend(_cli_pane_target(source))
         return argv
     if method == "pane.neighbor":
-        argv = ["pane", "neighbor"]
-        if pane:
-            argv.append(pane)
-        if direction:
-            argv.extend(["--direction", direction])
-        if not pane:
-            argv.append("--current")
+        if not direction:
+            return None
+        argv = ["pane", "neighbor", "--direction", direction]
+        argv.extend(_cli_pane_target(pane))
+        return argv
+    if method == "pane.edges":
+        argv = ["pane", "edges"]
+        argv.extend(_cli_pane_target(pane))
         return argv
     if method == "pane.layout":
         argv = ["pane", "layout"]
-        if pane:
-            argv.append(pane)
-        elif tab:
-            argv.extend(["--tab", tab])
-        else:
-            argv.append("--current")
+        argv.extend(_cli_pane_target(pane))
         return argv
     if method == "pane.split":
         argv = ["pane", "split"]
@@ -321,9 +335,12 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
             argv.extend(["--ratio", str(ratio)])
         return argv
     if method == "pane.focus_direction" and direction:
-        return ["pane", "focus", "--direction", direction]
+        argv = ["pane", "focus", "--direction", direction]
+        if pane:
+            argv.extend(["--pane", pane])
+        return argv
     if method == "pane.send_text" and pane and text:
-        return ["pane", "send", pane, "--text", text]
+        return ["pane", "send-text", pane, text]
     if method == "pane.send_keys" and pane:
         keys = _str(params.get("keys") or params.get("key") or text)
         if not keys:
@@ -340,13 +357,52 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
             argv.append("--ansi")
         return argv
     if method == "layout.export":
+        # CLI wrapper is ``pane layout``. Tab-id export is socket-only.
+        if tab and not pane:
+            return None
         argv = ["pane", "layout"]
-        if tab:
-            argv.extend(["--tab", tab])
-        elif pane:
-            argv.append(pane)
+        argv.extend(_cli_pane_target(pane))
+        return argv
+    if method == "pane.move" and pane:
+        dest = params.get("destination")
+        if not isinstance(dest, dict):
+            return None
+        dtype = _str(dest.get("type"))
+        argv = ["pane", "move", pane]
+        if dtype == "tab":
+            dest_tab = _str(dest.get("tab_id"))
+            split = _str(dest.get("split")) or "right"
+            if not dest_tab:
+                return None
+            argv.extend(["--tab", dest_tab, "--split", split])
+            target = _str(dest.get("target_pane_id"))
+            if target:
+                argv.extend(["--target-pane", target])
+            ratio = dest.get("ratio")
+            if ratio is not None:
+                argv.extend(["--ratio", str(ratio)])
+        elif dtype == "new_tab":
+            argv.append("--new-tab")
+            dest_ws = _str(dest.get("workspace_id"))
+            if dest_ws:
+                argv.extend(["--workspace", dest_ws])
+            dest_label = _str(dest.get("label"))
+            if dest_label:
+                argv.extend(["--label", dest_label])
+        elif dtype == "new_workspace":
+            argv.append("--new-workspace")
+            dest_label = _str(dest.get("label"))
+            if dest_label:
+                argv.extend(["--label", dest_label])
+            tab_label = _str(dest.get("tab_label"))
+            if tab_label:
+                argv.extend(["--tab-label", tab_label])
         else:
-            argv.append("--current")
+            return None
+        if params.get("focus") is False:
+            argv.append("--no-focus")
+        elif params.get("focus"):
+            argv.append("--focus")
         return argv
     if method == "agent.list":
         return ["agent", "list"]
@@ -369,22 +425,27 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
         until = _str(params.get("until"))
         if isinstance(wait, dict):
             until = until or _str(wait.get("until"))
+        wants_wait = bool(wait) or bool(until) or params.get("wait") is True
+        if wants_wait:
+            argv.append("--wait")
         if until:
             argv.extend(["--until", until])
+        argv.extend(_cli_timeout(params))
         return argv
     if method == "agent.wait" and pane:
         argv = ["agent", "wait", pane]
-        until = _str(params.get("until")) or "done"
-        argv.extend(["--until", until])
-        timeout_ms = params.get("timeout_ms")
-        if timeout_ms is not None:
-            argv.extend(["--timeout-ms", str(timeout_ms)])
+        until = _str(params.get("until"))
+        if until:
+            argv.extend(["--until", until])
+        argv.extend(_cli_timeout(params))
         return argv
-    if method == "agent.start" and pane:
-        argv = ["agent", "start", pane]
-        agent = _str(params.get("agent"))
-        if agent:
-            argv.extend(["--agent", agent])
+    if method == "agent.start":
+        name = _str(params.get("name"))
+        kind = _str(params.get("kind") or params.get("agent"))
+        if not (name and kind and pane):
+            return None
+        argv = ["agent", "start", name, "--kind", kind, "--pane", pane]
+        argv.extend(_cli_timeout(params))
         return argv
     if method == "agent.send_keys" and pane:
         keys = _str(params.get("keys") or params.get("key") or text)
@@ -393,28 +454,24 @@ def build_cli_argv(method: str, params: Optional[Dict[str, Any]] = None) -> Opti
         return ["agent", "send-keys", pane, keys]
     if method == "agent.rename" and pane and label:
         return ["agent", "rename", pane, label]
-    if method == "tab.move" and tab:
-        argv = ["tab", "move", tab]
-        index = params.get("index")
-        if index is not None:
-            argv.extend(["--index", str(index)])
-        dest = _str(params.get("workspace_id"))
-        if dest:
-            argv.extend(["--workspace", dest])
-        return argv
     if method == "pane.rename" and pane and label:
         return ["pane", "rename", pane, label]
     if method == "pane.wait_for_output" and pane:
-        argv = ["pane", "wait", pane]
-        pattern = _str(params.get("pattern") or params.get("needle"))
-        if pattern:
-            argv.extend(["--pattern", pattern])
-        timeout_ms = params.get("timeout_ms")
-        if timeout_ms is not None:
-            argv.extend(["--timeout-ms", str(timeout_ms)])
+        match = _str(params.get("pattern") or params.get("needle") or params.get("match"))
+        regex = _str(params.get("regex"))
+        if not match and not regex:
+            return None
+        argv = ["pane", "wait-output", pane]
+        if regex:
+            argv.extend(["--regex", regex])
+        else:
+            argv.extend(["--match", match])
+        argv.extend(_cli_timeout(params))
         return argv
-    if method == "pane.process_info" and pane:
-        return ["pane", "process-info", pane]
+    if method == "pane.process_info":
+        argv = ["pane", "process-info"]
+        argv.extend(_cli_pane_target(pane))
+        return argv
     if method == "notification.show":
         title = _str(params.get("title"))
         if not title:

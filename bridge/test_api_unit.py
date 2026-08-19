@@ -76,9 +76,15 @@ class AllowlistTests(unittest.TestCase):
         ):
             self.assertEqual(assert_method_allowed(method), method)
 
+        self.assertNotIn("pane.focus", ALLOWED_METHODS)
+        self.assertIn("agent.focus", ALLOWED_METHODS)
+        self.assertIn("pane.focus_direction", ALLOWED_METHODS)
+
     def test_unknown_method_is_rejected(self) -> None:
         with self.assertRaises(ApiError):
             assert_method_allowed("not.a.method")
+        with self.assertRaises(ApiError):
+            assert_method_allowed("pane.focus")
 
 
 class ExtractorTests(unittest.TestCase):
@@ -106,7 +112,7 @@ class CliArgvTests(unittest.TestCase):
         )
         self.assertEqual(
             build_cli_argv("pane.close", {"pane_id": "w1:p1", "force": True}),
-            ["pane", "close", "w1:p1", "--force"],
+            ["pane", "close", "w1:p1"],
         )
         self.assertEqual(
             build_cli_argv(
@@ -116,9 +122,10 @@ class CliArgvTests(unittest.TestCase):
             [
                 "pane",
                 "resize",
-                "w1:p1",
                 "--direction",
                 "right",
+                "--pane",
+                "w1:p1",
                 "--amount",
                 "0.1",
             ],
@@ -126,6 +133,10 @@ class CliArgvTests(unittest.TestCase):
         self.assertEqual(
             build_cli_argv("agent.wait", {"pane_id": "w1:p1", "until": "done"}),
             ["agent", "wait", "w1:p1", "--until", "done"],
+        )
+        self.assertEqual(
+            build_cli_argv("agent.wait", {"pane_id": "w1:p1"}),
+            ["agent", "wait", "w1:p1"],
         )
         self.assertIsNone(build_cli_argv("layout.set_split_ratio", {"ratio": 0.5}))
 
@@ -220,14 +231,124 @@ class HerdrApiCallTests(unittest.TestCase):
             self.assertIn("agent focus denied", str(ctx.exception))
             self.assertEqual(run_cmd.call_count, 1)
 
-    def test_tab_move_and_pane_rename_map_to_cli(self) -> None:
-        self.assertEqual(
-            build_cli_argv("tab.move", {"tab_id": "w2:t1", "index": 2}),
-            ["tab", "move", "w2:t1", "--index", "2"],
-        )
+    def test_tab_move_is_socket_only_and_pane_rename_maps(self) -> None:
+        self.assertIsNone(build_cli_argv("tab.move", {"tab_id": "w2:t1", "index": 2}))
         self.assertEqual(
             build_cli_argv("pane.rename", {"pane_id": "w2:p1", "label": "logs"}),
             ["pane", "rename", "w2:p1", "logs"],
+        )
+
+    def test_cli_argv_matches_herdr_0_8_reference(self) -> None:
+        self.assertEqual(
+            build_cli_argv("pane.send_text", {"pane_id": "w1:p1", "text": "hi"}),
+            ["pane", "send-text", "w1:p1", "hi"],
+        )
+        self.assertEqual(
+            build_cli_argv(
+                "pane.current", {"caller_pane_id": "w1:p1"}
+            ),
+            ["pane", "current", "--pane", "w1:p1"],
+        )
+        self.assertEqual(
+            build_cli_argv(
+                "pane.swap",
+                {"source_pane_id": "w1:p1", "target_pane_id": "w1:p2"},
+            ),
+            [
+                "pane",
+                "swap",
+                "--source-pane",
+                "w1:p1",
+                "--target-pane",
+                "w1:p2",
+            ],
+        )
+        self.assertEqual(
+            build_cli_argv(
+                "pane.neighbor",
+                {"pane_id": "w1:p1", "direction": "right"},
+            ),
+            ["pane", "neighbor", "--direction", "right", "--pane", "w1:p1"],
+        )
+        self.assertEqual(
+            build_cli_argv("layout.export", {"pane_id": "w1:p1"}),
+            ["pane", "layout", "--pane", "w1:p1"],
+        )
+        self.assertIsNone(build_cli_argv("layout.export", {"tab_id": "w1:t1"}))
+        self.assertIsNone(
+            build_cli_argv("pane.resize", {"pane_id": "w1:p1", "cols": 80, "rows": 24})
+        )
+        self.assertEqual(
+            build_cli_argv(
+                "agent.start",
+                {"name": "reviewer", "kind": "codex", "pane_id": "w1:p2"},
+            ),
+            [
+                "agent",
+                "start",
+                "reviewer",
+                "--kind",
+                "codex",
+                "--pane",
+                "w1:p2",
+            ],
+        )
+        self.assertIsNone(build_cli_argv("agent.start", {"pane_id": "w1:p2"}))
+        self.assertEqual(
+            build_cli_argv(
+                "agent.prompt",
+                {"pane_id": "w1:p1", "text": "go", "until": "done", "timeout_ms": 120000},
+            ),
+            [
+                "agent",
+                "prompt",
+                "w1:p1",
+                "go",
+                "--wait",
+                "--until",
+                "done",
+                "--timeout",
+                "120000",
+            ],
+        )
+        self.assertEqual(
+            build_cli_argv(
+                "pane.wait_for_output",
+                {"pane_id": "w1:p1", "pattern": "ok", "timeout_ms": 5000},
+            ),
+            [
+                "pane",
+                "wait-output",
+                "w1:p1",
+                "--match",
+                "ok",
+                "--timeout",
+                "5000",
+            ],
+        )
+        self.assertEqual(
+            build_cli_argv(
+                "pane.move",
+                {
+                    "pane_id": "w1:p2",
+                    "destination": {
+                        "type": "tab",
+                        "tab_id": "w1:t2",
+                        "split": "right",
+                    },
+                    "focus": False,
+                },
+            ),
+            [
+                "pane",
+                "move",
+                "w1:p2",
+                "--tab",
+                "w1:t2",
+                "--split",
+                "right",
+                "--no-focus",
+            ],
         )
 
 

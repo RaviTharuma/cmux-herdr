@@ -377,7 +377,7 @@ class LivePump:
         )
 
     def _route_focus(self, host: Any, pane_id: str, body: Dict[str, Any]) -> PumpResult:
-        """Provider focus: project locally, never echo pane.focus."""
+        """Provider focus: project locally, never echo agent.focus."""
         target = pane_id or event_string(body, "focused_pane_id", "active_pane_id")
         if not target:
             tab_id = event_string(body, "tab_id")

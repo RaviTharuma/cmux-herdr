@@ -98,6 +98,31 @@ def _die(msg: str, code: int = 1) -> None:
     raise SystemExit(code)
 
 
+def _timeout_ms_from_args(args: argparse.Namespace) -> Optional[int]:
+    """Prefer ``--timeout``; accept ``--timeout-ms`` as an alias."""
+    timeout = getattr(args, "timeout", None)
+    if timeout is not None:
+        return int(timeout)
+    timeout_ms = getattr(args, "timeout_ms", None)
+    if timeout_ms is not None:
+        return int(timeout_ms)
+    return None
+
+
+def _add_timeout_flags(parser: argparse.ArgumentParser) -> None:
+    """Herdr waits use ``--timeout MS``. Keep ``--timeout-ms`` as an alias."""
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        help="timeout in milliseconds (Herdr --timeout)",
+    )
+    parser.add_argument(
+        "--timeout-ms",
+        type=int,
+        help=argparse.SUPPRESS,
+    )
+
+
 def _ensure_herdr() -> None:
     if not herdr_available():
         _die(
@@ -1055,7 +1080,7 @@ def cmd_close_pane(args: argparse.Namespace) -> int:
         return _run_api(
             args,
             "pane.close",
-            {"pane_id": args.pane_id, "force": bool(args.force)},
+            {"pane_id": args.pane_id},
             line=f"closed pane {args.pane_id}",
         )
     except (ApiError, BridgeError) as exc:
@@ -1199,12 +1224,21 @@ def cmd_rename_agent(args: argparse.Namespace) -> int:
 
 
 def cmd_start_agent(args: argparse.Namespace) -> int:
-    """Start an agent in a pane (``agent.start``)."""
-    params: dict = {"pane_id": args.pane_id, "target": args.pane_id}
-    if args.agent:
-        params["agent"] = args.agent
+    """Start an agent in an existing shell pane (``agent.start``)."""
+    kind = args.kind or args.agent
+    if not kind:
+        _die("start-agent: --kind is required (Herdr agent kind, e.g. codex)")
+    params: dict = {
+        "name": args.name,
+        "kind": kind,
+        "pane_id": args.pane,
+        "target": args.pane,
+    }
+    timeout_ms = _timeout_ms_from_args(args)
+    if timeout_ms is not None:
+        params["timeout_ms"] = timeout_ms
     return _run_api(
-        args, "agent.start", params, line=f"started agent on {args.pane_id}"
+        args, "agent.start", params, line=f"started {args.name} on {args.pane}"
     )
 
 
@@ -1218,9 +1252,19 @@ def cmd_notify(args: argparse.Namespace) -> int:
 
 def cmd_wait_output(args: argparse.Namespace) -> int:
     """Wait for pane output (``pane.wait_for_output``)."""
-    params: dict = {"pane_id": args.pane_id, "pattern": args.pattern}
-    if args.timeout_ms is not None:
-        params["timeout_ms"] = args.timeout_ms
+    match = args.match or args.pattern
+    regex = args.regex
+    if not match and not regex:
+        _die("wait-output: pass --match TEXT or --regex PATTERN")
+    params: dict = {"pane_id": args.pane_id}
+    if regex:
+        params["regex"] = regex
+    else:
+        params["pattern"] = match
+        params["match"] = match
+    timeout_ms = _timeout_ms_from_args(args)
+    if timeout_ms is not None:
+        params["timeout_ms"] = timeout_ms
     return _run_api(
         args,
         "pane.wait_for_output",
@@ -1234,21 +1278,30 @@ def cmd_agent_prompt(args: argparse.Namespace) -> int:
     params: dict = {"target": args.target, "prompt": " ".join(args.prompt)}
     # Herdr also accepts pane_id; send both so CLI fallback can resolve.
     params["pane_id"] = args.target
-    if args.until:
-        wait: dict = {"until": args.until}
-        if args.timeout_ms is not None:
-            wait["timeout_ms"] = args.timeout_ms
-        params["wait"] = wait
-        params["until"] = args.until
+    timeout_ms = _timeout_ms_from_args(args)
+    if args.wait or args.until:
+        wait: dict = {}
+        if args.until:
+            wait["until"] = args.until
+            params["until"] = args.until
+        if timeout_ms is not None:
+            wait["timeout_ms"] = timeout_ms
+        params["wait"] = wait or True
+    if timeout_ms is not None:
+        params["timeout_ms"] = timeout_ms
     return _run_api(args, "agent.prompt", params, line=f"prompted {args.target}")
 
 
 def cmd_agent_wait(args: argparse.Namespace) -> int:
     """Wait for semantic agent state (``agent.wait``)."""
-    params = {"target": args.target, "pane_id": args.target, "until": args.until}
-    if args.timeout_ms is not None:
-        params["timeout_ms"] = args.timeout_ms
-    return _run_api(args, "agent.wait", params, line=f"wait {args.until} {args.target}")
+    params: dict = {"target": args.target, "pane_id": args.target}
+    if args.until:
+        params["until"] = args.until
+    timeout_ms = _timeout_ms_from_args(args)
+    if timeout_ms is not None:
+        params["timeout_ms"] = timeout_ms
+    line = f"wait {args.until or 'settled'} {args.target}"
+    return _run_api(args, "agent.wait", params, line=line)
 
 
 def _add_read_flags(sp: argparse.ArgumentParser, *, include_raw: bool) -> None:
@@ -1768,9 +1821,15 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_rename_agent)
 
-    s = sub.add_parser("start-agent", help="Start an agent in a pane (agent.start)")
-    s.add_argument("pane_id")
-    s.add_argument("--agent", help="agent id / manifest name")
+    s = sub.add_parser(
+        "start-agent",
+        help="Start a named agent in an existing shell pane (agent.start)",
+    )
+    s.add_argument("name", help="unique live agent name")
+    s.add_argument("--kind", help="Herdr agent kind (codex, claude, ...)")
+    s.add_argument("--agent", help="alias of --kind")
+    s.add_argument("--pane", required=True, help="existing shell pane id")
+    _add_timeout_flags(s)
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_start_agent)
 
@@ -1784,26 +1843,36 @@ def build_parser() -> argparse.ArgumentParser:
         "wait-output", help="Wait for pane output (pane.wait_for_output)"
     )
     s.add_argument("pane_id")
-    s.add_argument("pattern")
-    s.add_argument("--timeout-ms", type=int)
+    s.add_argument("pattern", nargs="?", help="literal match (alias of --match)")
+    s.add_argument("--match", help="literal substring")
+    s.add_argument("--regex", help="Rust regular expression")
+    _add_timeout_flags(s)
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_wait_output)
 
     s = sub.add_parser(
         "agent-prompt",
-        help="Submit an agent prompt (optional --until wait)",
+        help="Submit an agent prompt (optional --wait / --until)",
     )
     s.add_argument("target", help="pane id or agent label")
     s.add_argument("prompt", nargs="+")
-    s.add_argument("--until", help="wait until this agent_status")
-    s.add_argument("--timeout-ms", type=int)
+    s.add_argument(
+        "--wait",
+        action="store_true",
+        help="wait for settled idle|done|blocked (required with --until)",
+    )
+    s.add_argument("--until", help="wait until this agent_status (implies --wait)")
+    _add_timeout_flags(s)
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_agent_prompt)
 
     s = sub.add_parser("agent-wait", help="Wait for semantic agent state")
     s.add_argument("target", help="pane id or agent label")
-    s.add_argument("--until", default="done")
-    s.add_argument("--timeout-ms", type=int)
+    s.add_argument(
+        "--until",
+        help="status to wait for (default: settled idle|done|blocked)",
+    )
+    _add_timeout_flags(s)
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=cmd_agent_wait)
 

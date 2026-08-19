@@ -26,7 +26,7 @@ This matrix distinguishes three things: the plugin stopgap, native **sidebar** n
 | Focus | focused IDs | `%window-pane-changed` | `--focus` + reverse click | `nested.node.focus` | tmux-style project + send |
 | Titles/labels | tab/pane fields | window title | tab-root title | Provider labels | Window title rule |
 | Read output | `pane.read` | `%output` → surface | `attach-pane` poll | Later | Push into `TerminalPanel` |
-| Send input | `pane.send_*` | `send-keys` | cbreak → `pane send` | Later/guarded | Ghostty → `pane.send_*` |
+| Send input | `pane.send_text` / `pane.send_keys` | `send-keys` | cbreak → `pane send-text` | Later/guarded | Ghostty → `pane.send_*` |
 | Split pane | `pane.split` | `split-window` | `cmux split` from layout | Later | User split → provider |
 | Resize/layout | `pane.resize` | `resize-pane` + claim | SIGWINCH + impose `set-ratio` | Later | `RemoteHerdrImpose` + divider drag |
 | Close inner node | `*.close` | kill-pane | `--prune` | Later | Reconcile teardown |
@@ -36,7 +36,8 @@ This matrix distinguishes three things: the plugin stopgap, native **sidebar** n
 
 | Action | Herdr method | Native sidebar (#10045) | Native mirror (PR7) |
 |---|---|---|---|
-| Focus workspace/tab/pane/agent | `*.focus` / `agent.focus` | Yes | Yes (plus Bonsplit selection) |
+| Focus workspace/tab/agent | `workspace.focus` / `tab.focus` / `agent.focus` | Yes | Yes (plus Bonsplit selection) |
+| Focus neighboring pane | `pane.focus_direction` (no `pane.focus` method) | Yes | Yes |
 | Rename | `*.rename` | User-initiated | Tab title from provider |
 | Send text/keys | `pane.send_*` | Later/guarded | **Yes** |
 | Split pane | `pane.split` | Later | **Yes** |

@@ -182,7 +182,7 @@ class PumpApplyTests(unittest.TestCase):
         self.assertEqual(flushed, 1)
         self.assertEqual(transport.sent[0][0], "key")
         self.assertEqual(transport.sent[0][1], "w2:p1")
-        self.assertIn("Up", transport.sent[0][2])
+        self.assertEqual(transport.sent[0][2], "up")
 
     def test_paint_read_seeds_then_applies_delta(self) -> None:
         host = self._host()

@@ -7,8 +7,8 @@ cmux ssh-tmux treats a window layout as a cell-grid tree:
 - ``horizontal`` — children left → right (cmux split ``right``)
 - ``vertical`` — children top → bottom (cmux split ``down``)
 
-Herdr publishes the same idea via ``session.snapshot`` layouts, ``herdr layout``
-CLI, or per-pane geometry. This module parses those shapes, reconstructs a
+Herdr publishes the same idea via ``session.snapshot`` layouts, ``herdr pane layout``,
+or per-pane geometry. This module parses those shapes, reconstructs a
 binary tree from rects when only geometry is present, and emits a sequential
 split plan the userspace mirror can apply with ``cmux split`` / ``set-ratio``.
 """

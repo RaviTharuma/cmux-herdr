@@ -11,7 +11,7 @@ The **pure reconcile engine + impose planner** live in `Packages/macOS/CmuxNeste
 - `RemoteHerdrLayoutNode` / `RemoteHerdrWindow` / `RemoteHerdrWindowMirror` / `RemoteHerdrSessionMirror`
 - `RemoteHerdrSizing` (feed-forward client grid)
 - `RemoteHerdrImpose` / `RemoteHerdrImposePlan` — tmux `imposeDividerPlan` contract (binary tree, leaf expand/remove, `plan(w) <= w`, drag hold)
-- `RemoteHerdrPaneIO` on `HerdrNestedTopologyClient` (`pane.send` / `split` / `resize` / `close` / `read`)
+- `RemoteHerdrPaneIO` on `HerdrNestedTopologyClient` (`pane.send_text` / `split` / `resize` / `close` / `read`)
 - `RemoteHerdrOutput` (incremental `pane.read` delta)
 - `RemoteHerdrHostApply` / `RemoteHerdrPaneRoute` / `RemoteHerdrSessionApply` (draft fork files; not on #10045 yet)
 - `RemoteHerdrLifecycle` (draft; attach/detach/restore/`remote.herdr.*`)
@@ -50,9 +50,9 @@ RemoteHerdrWindowMirror
         ├─ bonsplitController                  (imposeDividerPlan)
         ├─ routeOutput(paneId, data)           (tmux %output)
         ├─ sendKeys → pane.send_*              (tmux send-keys)
-        ├─ focus → pane.focus / agent.focus
+        ├─ focus → agent.focus (id) / pane.focus_direction
         ├─ split  → pane.split
-        ├─ resize → pane.resize  (drag-end)
+        ├─ resize → pane.resize  (drag-end; direction + amount)
         └─ close  → pane.close   (gone from snapshot)
 ```
 
@@ -88,15 +88,17 @@ Required for mirror v1 (capability-gated; disable chrome if missing):
 - `session.snapshot` (tabs, panes, **layouts**, focused ids)
 - `events.subscribe` (tab/pane/layout/focus)
 - `pane.read` or output push
-- `pane.send` / `pane.send_keys`
-- `pane.focus` or `agent.focus`
+- `pane.send_text` / `pane.send_keys`
+- `agent.focus` (pane id / agent name) and `pane.focus_direction` (compass)
+  — there is no `pane.focus` method; the live event is `pane.focused`
 - `pane.split`
 - `pane.resize`
 - `pane.close` (user-initiated only; host close still detaches)
 
 ## Tests (must land with the PR)
 
-- Layout JSON round-trip against plugin fixtures (`horizontal`/`vertical`/`pane`).
+- Layout JSON round-trip against plugin fixtures (`horizontal`/`vertical`/`pane`
+  and official Herdr BSP `type: split` / `direction: right|down`).
 - Reconcile: new pane creates a panel; gone pane closes it; geometry-only does not bump structure version.
 - Zoom: visible tree is one leaf; `panelsByPaneId` still has every base pane.
 - Focus: snapshot focused id → Bonsplit selection; user click → provider focus (no loop).

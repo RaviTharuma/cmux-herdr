@@ -30,7 +30,7 @@ HERDR_SOCKET_PATH=~/.config/herdr/herdr.sock
 CMUX_SURFACE_ID=<uuid>
 CMUX_TAB_ID=<uuid>
 CMUX_WORKSPACE_ID=<uuid>   # may be stale when nested — prefer cmux-herdr resolve
-CMUX_SOCKET_PATH=~/.local/state/cmux/cmux-501.sock
+CMUX_SOCKET_PATH=/tmp/cmux.sock          # default; override if needed
 CMUX_BUNDLE_ID=com.cmuxterm.app
 ```
 

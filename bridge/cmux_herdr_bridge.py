@@ -429,13 +429,12 @@ def fetch_layouts_raw() -> Any:
     """Best-effort Herdr layout payload (tab trees or session.snapshot).
 
     Returns the raw JSON object so the mirror can parse multiple shapes.
-    Missing CLI verbs are not an error — older Herdr builds simply have no
-    layout command.
+    Prefers ``herdr api snapshot`` (``session.snapshot``) then
+    ``herdr pane layout --current``. There is no ``herdr layout list``.
     """
     for args in (
-        ["layout", "list"],
-        ["tab", "layout"],
-        ["session", "snapshot"],
+        ["api", "snapshot"],
+        ["pane", "layout", "--current"],
     ):
         try:
             data = herdr_json(args)
@@ -450,8 +449,9 @@ def fetch_snapshot() -> Snapshot:
     """Fetch Herdr topology, preferring a live Unix-socket snapshot.
 
     Socket-first avoids CLI fan-out every watch tick (tmux-parity). Falls
-    back to ``herdr pane|tab|workspace|layout`` CLI verbs when the socket
-    is missing or returns an unusable payload.
+    back to ``herdr pane|tab|workspace`` CLI verbs plus ``api snapshot`` /
+    ``pane layout --current`` when the socket is missing or returns an
+    unusable payload.
     """
     sock_snap = fetch_snapshot_via_socket()
     if sock_snap is not None:
