@@ -173,3 +173,6 @@ Human-only next steps for blockers: approving review + branch policy for merge; 
 | Herdr-beyond-tmux CLI | **shipping** — see [HERDR_BEYOND_TMUX.md](./HERDR_BEYOND_TMUX.md) |
 | E-MERGE-10045 / E-MERGE-8736 / E-NO-APPROVAL | **still open** (needs maintainer on `manaflow-ai/cmux`) |
 | E-CI-MACOS / E-DOGFOOD / plugin ceilings | **still open** (need AppKit / dogfood) |
+
+| Native claims plugin lease files | **landed** tip `5e33880b165b` via fork [#20](https://github.com/RaviTharuma/cmux/pull/20) — `RemoteHerdrController` → `RemoteHerdrHandoff.claimNative` |
+| Plugin OSS v0.3.4 | **released** (MIT, CI, community files) |
