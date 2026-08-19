@@ -1,0 +1,160 @@
+{
+  "updated_at": "2026-08-19T06:55:56Z",
+  "errors": [
+    {
+      "id": "E-MERGE-10045",
+      "severity": "blocker",
+      "item": "#10045 merge BLOCKED",
+      "sha": "b02b8a954327eeb191783e6913db6d59910003f1"
+    },
+    {
+      "id": "E-MERGE-8736",
+      "severity": "blocker",
+      "item": "#8736 merge UNSTABLE",
+      "sha": "2f483ad94f0dc8a2d7e05afba2bd2bbbd28a6f70"
+    },
+    {
+      "id": "E-AUTH-REPLY",
+      "severity": "ops",
+      "item": "Cannot reply/resolve on manaflow-ai/cmux (403)"
+    },
+    {
+      "id": "E-AUTH-PR",
+      "severity": "ops",
+      "item": "Cannot create/merge PRs on cmux-herdr via gh integration"
+    },
+    {
+      "id": "E-CI-MACOS",
+      "severity": "gap",
+      "item": "No visible macOS/swift test check on upstream tip"
+    },
+    {
+      "id": "E-DOGFOOD",
+      "severity": "gap",
+      "item": "macOS dogfood of native mirror still open"
+    }
+  ],
+  "lackings_native": [
+    {
+      "id": "L-OUTPUT-STREAM",
+      "severity": "major",
+      "item": "No Herdr %output; poll pane.read"
+    },
+    {
+      "id": "L-SIZING-CLAIM",
+      "severity": "major",
+      "item": "Feed-forward client size claim incomplete vs tmux"
+    },
+    {
+      "id": "L-TMUX-HELPERS",
+      "severity": "minor",
+      "item": "Not all RemoteTmuxWindowMirror+* helpers ported"
+    },
+    {
+      "id": "L-ACCEPT-PR7",
+      "severity": "major",
+      "item": "PR7 acceptance / dogfood checkboxes open"
+    },
+    {
+      "id": "L-PROVIDER-UUID",
+      "severity": "major",
+      "item": "No durable Herdr server UUID in ping"
+    },
+    {
+      "id": "L-EVENT-CURSOR",
+      "severity": "major",
+      "item": "No resumable event cursor"
+    },
+    {
+      "id": "L-CAP-TABLE",
+      "severity": "minor",
+      "item": "Protocol 17 lacks method inventory"
+    },
+    {
+      "id": "L-MOBILE",
+      "severity": "wontfix-v1",
+      "item": "Mobile/remote not in v1"
+    }
+  ],
+  "lackings_plugin": [
+    {
+      "id": "L-PLUGIN-PTY",
+      "severity": "ceiling",
+      "item": "No PTY theft"
+    },
+    {
+      "id": "L-PLUGIN-OUTPUT",
+      "severity": "ceiling",
+      "item": "Poll pane.read only"
+    },
+    {
+      "id": "L-PLUGIN-BONSPLIT",
+      "severity": "ceiling",
+      "item": "No Bonsplit divider drag"
+    },
+    {
+      "id": "L-PLUGIN-FLAT",
+      "severity": "ceiling",
+      "item": "Flat status projection"
+    },
+    {
+      "id": "L-PLUGIN-SURFACE",
+      "severity": "ceiling",
+      "item": "In-memory surfaces until native panels"
+    }
+  ],
+  "review": {
+    "10045_unresolved": 0,
+    "8736_unresolved": 0
+  },
+  "fork_prs_open": [
+    {
+      "headRefName": "cursor/herdr-handoff-6e7a",
+      "isDraft": true,
+      "number": 18,
+      "title": "Add RemoteHerdrHandoff so native yields to the plugin lease",
+      "updatedAt": "2026-08-17T19:53:58Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/18"
+    },
+    {
+      "headRefName": "cursor/herdr-native-mirror-f1c1",
+      "isDraft": false,
+      "number": 17,
+      "title": "Add native Herdr window mirror (ssh-tmux parity counterpart)",
+      "updatedAt": "2026-08-18T08:12:53Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/17"
+    },
+    {
+      "headRefName": "cursor/herdr-live-machine-6e7a",
+      "isDraft": true,
+      "number": 16,
+      "title": "Add RemoteHerdr live apply machine",
+      "updatedAt": "2026-08-17T19:02:22Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/16"
+    },
+    {
+      "headRefName": "cursor/herdr-lifecycle-6e7a",
+      "isDraft": true,
+      "number": 14,
+      "title": "Add RemoteHerdrLifecycle",
+      "updatedAt": "2026-08-17T18:59:53Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/14"
+    },
+    {
+      "headRefName": "cursor/herdr-io-session-6e7a",
+      "isDraft": true,
+      "number": 13,
+      "title": "Add RemoteHerdr pane I/O and session apply",
+      "updatedAt": "2026-08-17T18:59:52Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/13"
+    },
+    {
+      "headRefName": "cursor/herdr-host-apply-6e7a",
+      "isDraft": true,
+      "number": 12,
+      "title": "Add RemoteHerdrHostApply",
+      "updatedAt": "2026-08-18T08:12:53Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/12"
+    }
+  ]
+}

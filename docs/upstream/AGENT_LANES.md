@@ -56,3 +56,7 @@ If you need to contribute to those topics, rebase onto their tip and open a foll
 | #8736 plugin | `2f483ad94f0d` | 0 | UNSTABLE |
 
 Idle/side branches are listed in `STATUS.json` → `idle_or_side_branches`. Refresh that file when agents go idle; leave hot tips alone unless you own the lane.
+
+## Errors & lackings
+
+Frozen inventory: [`ERRORS_AND_LACKINGS.md`](./ERRORS_AND_LACKINGS.md) / [`ERRORS_AND_LACKINGS.json`](./ERRORS_AND_LACKINGS.json).

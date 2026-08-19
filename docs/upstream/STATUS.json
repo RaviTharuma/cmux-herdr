@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-19T06:53:25Z",
+  "updated_at": "2026-08-19T06:55:56Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active.",
   "tracks": {
     "native_10045": {
@@ -156,5 +156,12 @@
       "branch": "cursor/herdr-api-doc-fixes-b5e6",
       "lane": "docs"
     }
-  ]
+  ],
+  "errors_and_lackings": {
+    "md": "docs/upstream/ERRORS_AND_LACKINGS.md",
+    "json": "docs/upstream/ERRORS_AND_LACKINGS.json",
+    "error_count": 6,
+    "lacking_native_count": 8,
+    "lacking_plugin_count": 5
+  }
 }
