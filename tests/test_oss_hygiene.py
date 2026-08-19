@@ -65,6 +65,22 @@ class OssHygieneTests(unittest.TestCase):
         self.assertNotIn("Current stopgap release target: **v0.1.0**", readme)
         self.assertIn("MIT", readme)
 
+    def test_readme_presents_as_released_plugin(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("cmux-herdr", readme)
+        self.assertIn("A cmux plugin for Herdr", readme)
+        self.assertIn("## Features", readme)
+        self.assertIn("## Install", readme)
+        self.assertIn("## Quick start", readme)
+        self.assertNotIn("user plugin, no upstream PR", readme)
+        self.assertNotIn("## Two-path strategy", readme)
+        self.assertNotIn("## Why", readme.split("## Features")[0])
+
+    def test_german_overview_names_the_plugin(self) -> None:
+        text = (ROOT / "docs" / "de" / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Ein cmux-Plugin für Herdr", text)
+        self.assertIn("cmux-herdr", text)
+
 
 if __name__ == "__main__":
     unittest.main()

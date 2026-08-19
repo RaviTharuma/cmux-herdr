@@ -2,9 +2,10 @@
 
 ## Cursor Cloud specific instructions
 
-`cmux-herdr` is a **pure-Python (stdlib-only) CLI plugin** — no pip/npm dependencies, no
-build step, no compiled artifacts. It needs only a Python 3.10+ interpreter (the VM ships
-3.12). There is nothing to install to develop or test it.
+`cmux-herdr` is a **cmux plugin for Herdr**: a pure-Python (stdlib-only) CLI plus
+an optional sidebar and agent skill — no pip/npm dependencies, no build step, no
+compiled artifacts. It needs only a Python 3.10+ interpreter (the VM ships 3.12).
+There is nothing to install to develop or test it.
 
 ### Lint / test / build / run
 
@@ -16,7 +17,7 @@ build step, no compiled artifacts. It needs only a Python 3.10+ interpreter (the
   (e.g. `--version`, `--help`, `doctor`). `scripts/install.sh` only copies the CLI into
   `~/.local/bin` and is not required for development.
 - Standard dev/verify commands are already documented in `README.md`
-  ("Development and verification") and `bin/cmux-herdr --help`.
+  ("Development") and `bin/cmux-herdr --help`.
 
 ### Non-obvious runtime caveat (important for exercising core flows)
 

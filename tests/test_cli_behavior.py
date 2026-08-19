@@ -109,6 +109,8 @@ class CliBehaviorTests(unittest.TestCase):
         self.assertIn("sync", result.stdout)
         self.assertIn("json-dump", result.stdout)
         self.assertIn("doctor", result.stdout)
+        self.assertIn("cmux plugin for Herdr", result.stdout)
+        self.assertNotIn("no upstream PR", result.stdout)
         self.assertIn("read-pane", result.stdout)
         self.assertIn("read-agent", result.stdout)
         self.assertIn("focus-workspace", result.stdout)

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""cmux-herdr — user-controlled bridge CLI (no cmux upstream PR required).
+"""cmux-herdr — cmux plugin for Herdr.
 
-Expose herdr tabs/panes/agents to cmux via status pills + local control.
+Mirror nested Herdr tabs, panes, and agents into cmux: status pills,
+tab/pane surfaces, and a local control CLI.
 """
 
 from __future__ import annotations
@@ -1518,7 +1519,7 @@ def _add_read_flags(sp: argparse.ArgumentParser, *, include_raw: bool) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cmux-herdr",
-        description="Bridge herdr agent/tab state into cmux (user plugin, no upstream PR).",
+        description="cmux plugin for Herdr — status pills, tab/pane mirroring, and inner-mux control.",
     )
     p.add_argument(
         "--version",
@@ -1533,7 +1534,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser(
         "doctor",
-        help="Diagnose third-party install (herdr, socket, fingerprint, LaunchAgent, sidebar)",
+        help="Diagnose plugin install (herdr, socket, fingerprint, LaunchAgent, sidebar)",
     )
     s.add_argument("--json", action="store_true", help="Also print raw JSON report")
     s.set_defaults(func=cmd_doctor)

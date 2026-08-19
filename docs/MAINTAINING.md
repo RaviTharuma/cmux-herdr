@@ -1,7 +1,17 @@
-# Maintaining this repository (first public project)
+# Maintaining this repository
 
-This page is for the **owner** of `RaviTharuma/cmux-herdr`. Contributors should
-read [CONTRIBUTING.md](../CONTRIBUTING.md) instead.
+This page is for the **owner** of the **cmux-herdr** plugin
+(`RaviTharuma/cmux-herdr`). Contributors should read
+[CONTRIBUTING.md](../CONTRIBUTING.md) instead.
+
+## GitHub About (cannot be set by the automation token)
+
+Paste this into the repo **About** box on github.com so the listing matches the
+README:
+
+- **Description:** `cmux plugin for Herdr — live status pills, tab/pane mirroring, and a CLI for nested agents`
+- **Topics:** `cmux`, `herdr`, `plugin`, `tmux`, `macos`, `cli`, `python`
+- **Website:** leave empty, or `https://github.com/RaviTharuma/cmux-herdr`
 
 The GitHub repository is **public**:
 https://github.com/RaviTharuma/cmux-herdr
@@ -67,4 +77,4 @@ Follow [RELEASE.md](../RELEASE.md). Short version:
 | [RaviTharuma/cmux](https://github.com/RaviTharuma/cmux) | Your fork for native PRs |
 
 Keep native Swift work on the cmux fork. This repository stays the
-**userspace plugin**.
+**cmux-herdr plugin** (CLI, sidebar, skill).

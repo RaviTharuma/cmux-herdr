@@ -1,17 +1,20 @@
 # Plugin design: cmux-herdr
 
+**cmux-herdr** is the cmux plugin for nested Herdr. Product overview:
+[README.md](../README.md).
+
 ## Problem
 
-When **Herdr runs nested inside cmux**, outer cmux users and agents only see one surface titled roughly `herdr`, while the real multi-agent topology (tabs/panes/statuses) lives inside Herdr. Without a bridge, cmux sidebars and automation are blind to inner agents.
+When **Herdr runs nested inside cmux**, outer cmux users and agents only see one surface titled roughly `herdr`, while the real multi-agent topology (tabs/panes/statuses) lives inside Herdr. Without this plugin, cmux sidebars and automation are blind to inner agents.
 
 ## Two-path strategy
 
 | Path | What | When |
 |------|------|------|
-| **Plugin (now)** | User-controlled repo: CLI + bridge + optional sidebar + agent skill | Works today, **no cmux upstream PR** |
-| **Upstream (later)** | Native cmux awareness of nested herdr (first-class tree/status) | Requires cmux changes; plugin stays as fallback/compat |
+| **This plugin** | Released pack: CLI + bridge + sidebar + agent skill + LaunchAgent | Install today; no cmux source patch |
+| **Upstream native** | First-class nested topology inside cmux.app | Requires cmux changes; plugin stays as fallback |
 
-This repo implements the plugin path only. It must not depend on unmerged cmux patches.
+This repository implements the plugin. It must not depend on unmerged cmux patches.
 
 ## Architecture
 

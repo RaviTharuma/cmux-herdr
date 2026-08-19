@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- README and German overview rewritten as a plugin landing page (product title,
+  tagline, features, install-first, command table). CLI `--help` now describes
+  **cmux-herdr** as the cmux plugin for Herdr.
+
 ### Added
 
 - README release badge and public topic links (`cmux`, `herdr`, `tmux`,

@@ -1,9 +1,11 @@
 ---
 name: cmux-herdr
-description: Navigate dual hierarchy when herdr runs nested inside cmux. Use herdr for inner tabs/panes/agents and cmux for outer window/workspace/surface. Bridge state with cmux-herdr CLI.
+description: cmux-herdr plugin — navigate dual hierarchy when Herdr runs nested inside cmux. Use herdr for inner tabs/panes/agents, cmux for outer window/workspace/surface, and cmux-herdr to sync pills and mirror tabs.
 ---
 
-# cmux-herdr
+# cmux-herdr plugin
+
+Use this skill when Herdr is nested inside cmux. The plugin CLI is `cmux-herdr`.
 
 ## When this skill applies
 

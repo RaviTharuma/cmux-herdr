@@ -1,8 +1,9 @@
-# Open items and stopgap limitations
+# Open items and plugin limitations
 
-This repo is the **plugin / stopgap** path. It works today without cmux accepting any PR.
-Native first-class nested topology is tracked upstream; this file records what the plugin
-does **not** claim to solve, and what is still open on each path.
+**cmux-herdr** is the released cmux plugin for Herdr. It works today without a
+cmux source patch. Native first-class nested topology is tracked upstream; this
+file records what the plugin does **not** claim to solve, and what is still
+open on each path.
 
 As of **2026-08-19** (errors/lackings freeze live).
 
@@ -71,10 +72,10 @@ Cross-links: PR and issue reference each other; both point back here as the fall
    bindings (issue [#2](https://github.com/RaviTharuma/cmux-herdr/issues/2)); full nested
    hierarchy remains [#8737](https://github.com/manaflow-ai/cmux/issues/8737).
 
-5. **No upstream install channel.**
-   Install is `./scripts/install.sh` from this repo (or a tagged clone). There is no Homebrew
-   formula, cmux plugin registry entry, or signed app bundle. Fine for a user-controlled
-   stopgap; see [RELEASE.md](./RELEASE.md) for tag-based install.
+5. **Install is from this repo.**
+   Install is `./scripts/install.sh` from a clone or tagged release. There is no Homebrew
+   formula, cmux plugin registry entry, or signed app bundle yet. See
+   [RELEASE.md](./RELEASE.md) for tag-based install.
 
 6. **Statuses depend on Herdr `agent_status`.**
    Pills only mirror what Herdr reports. Ordinary shell panes without an agent are skipped;

@@ -1,6 +1,6 @@
-# GitHub für dieses Projekt (Deutsch)
+# GitHub für das cmux-herdr Plugin (Deutsch)
 
-Kurzer Leitfaden, weil das hier das erste öffentliche Repo sein kann.
+Kurzer Leitfaden für das öffentliche Plugin-Repo.
 Die Oberfläche von GitHub ist auf Englisch; die Begriffe unten reichen zum
 Arbeiten.
 
