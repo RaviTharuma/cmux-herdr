@@ -1,6 +1,6 @@
 # Agent lanes (parallel-safe)
 
-Updated: `2026-08-19T06:47:03Z`
+Updated: `2026-08-19T06:52:54Z`
 
 Multiple agents run at once (this cloud environment **and** a MacBook). Treat this file as the traffic rules. Prefer additive work on your own branch. Never force-push another lane's tip.
 
@@ -46,3 +46,13 @@ Recently fetched on `cmux-herdr` / related work:
 - `feat/herdr-native-mvp` — **shared** upstream tip for `#8736` (hot)
 
 If you need to contribute to those topics, rebase onto their tip and open a follow-up PR; do not rewrite history.
+
+
+## Freshness (2026-08-19T06:52:54Z)
+
+| Track | Tip SHA | Unresolved | Merge |
+|-------|---------|------------|-------|
+| #10045 native | `b02b8a954327` | 0 | BLOCKED |
+| #8736 plugin | `2f483ad94f0d` | 0 | UNSTABLE |
+
+Idle/side branches are listed in `STATUS.json` → `idle_or_side_branches`. Refresh that file when agents go idle; leave hot tips alone unless you own the lane.

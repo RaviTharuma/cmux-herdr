@@ -1,43 +1,137 @@
 {
-  "updated_at": "2026-08-19T06:47:03Z",
-  "maintainer_note": "Multiple Cursor agents (this cloud pod + MacBook) work in parallel. Respect AGENT_LANES.md. Do not force-push shared tips.",
+  "updated_at": "2026-08-19T06:53:13Z",
+  "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active.",
   "tracks": {
     "native_10045": {
+      "number": 10045,
+      "title": "Add native Herdr integration (counterpart to native nest. TMUX)",
       "url": "https://github.com/manaflow-ai/cmux/pull/10045",
+      "state": "OPEN",
       "head": "cursor/nested-topology-herdr-v1-becf",
       "sha": "b02b8a954327eeb191783e6913db6d59910003f1",
       "updated_at": "2026-08-18T13:47:29Z",
+      "mergeable": "MERGEABLE",
+      "merge_state": "BLOCKED",
       "review_threads": 173,
       "unresolved": 0,
-      "merge_state": "BLOCKED",
-      "owner_lane": "native_integration"
+      "commit_status": "success",
+      "check_conclusions": {
+        "neutral": 2,
+        "success": 2,
+        "skipped": 1
+      },
+      "owner_lane": "native_integration",
+      "hot": true
     },
     "plugin_8736": {
+      "number": 8736,
+      "title": "Add Herdr CLI compatibility shim (Step toward native Herdr )",
       "url": "https://github.com/manaflow-ai/cmux/pull/8736",
+      "state": "OPEN",
       "head": "feat/herdr-native-mvp",
       "sha": "2f483ad94f0dc8a2d7e05afba2bd2bbbd28a6f70",
       "updated_at": "2026-08-18T13:50:42Z",
+      "mergeable": "MERGEABLE",
+      "merge_state": "UNSTABLE",
       "review_threads": 14,
       "unresolved": 0,
-      "merge_state": "UNSTABLE",
-      "owner_lane": "plugin_compat"
+      "commit_status": "success",
+      "check_conclusions": {
+        "neutral": 2,
+        "success": 2,
+        "skipped": 1
+      },
+      "owner_lane": "plugin_compat",
+      "hot": true
     }
   },
-  "running_agents_observed": [
+  "idle_or_side_branches": [
     {
-      "name": "Herdr CMUX knowledge acquisition",
-      "bcId": "bc-2d33091f-9bbd-4b73-9fa4-08483a4bf64c",
-      "lane": "knowledge"
+      "branch": "cursor/plugin-polish-6e7a",
+      "sha": "4ac2de351b",
+      "date": "2026-08-18T08:23:46Z",
+      "msg": "Reuse one Herdr RPC session and surface real CLI errors",
+      "status": "idle_branch"
     },
     {
-      "name": "Cmux herdr docs",
-      "bcId": "bc-1d4073e3-8a28-494e-94ca-7ccbb995b5e6",
-      "lane": "docs"
+      "branch": "cursor/tmux-gap-inventory-6e7a",
+      "sha": "499b214568",
+      "date": "2026-08-17T17:15:05Z",
+      "msg": "Document honest tmux-vs-Herdr gaps (contract is not live AppKit)",
+      "status": "idle_branch"
     },
     {
-      "name": "Herdr cmux integration poll (this agent)",
-      "bcId": "bc-57027a20-617a-4342-bf4f-56b0005ef1c1",
-      "lane": "integration_ops"
+      "branch": "cursor/tmux-impose-depth-6e7a",
+      "sha": "1d38601989",
+      "date": "2026-08-17T16:28:55Z",
+      "msg": "Add Bonsplit impose planner for tmux-depth parity",
+      "status": "idle_branch"
+    },
+    {
+      "branch": "cursor/pr10045-coderabbit-replies-f1c1",
+      "sha": "89401ebf9e",
+      "date": "2026-08-18T08:10:38Z",
+      "msg": "chore(upstream): stage CodeRabbit round-4 fixes + reply templates for #10045",
+      "status": "idle_branch"
+    },
+    {
+      "branch": "cursor/agent-lanes-f1c1",
+      "sha": "67c00c3887",
+      "date": "2026-08-19T06:47:17Z",
+      "msg": "docs(upstream): add agent lanes + live status for parallel Herdr work",
+      "status": "idle_branch"
+    },
+    {
+      "branch": "cursor/herdr-api-doc-fixes-b5e6",
+      "sha": "73a2dde511",
+      "date": "2026-08-19T06:50:49Z",
+      "msg": "Fix tests for Herdr key combos and send-text CLI fallback",
+      "status": "idle_branch",
+      "lane_hint": "docs"
+    }
+  ],
+  "open_fork_prs_cmux": [
+    {
+      "headRefName": "cursor/herdr-handoff-6e7a",
+      "number": 18,
+      "title": "Add RemoteHerdrHandoff so native yields to the plugin lease",
+      "updatedAt": "2026-08-17T19:53:58Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/18"
+    },
+    {
+      "headRefName": "cursor/herdr-native-mirror-f1c1",
+      "number": 17,
+      "title": "Add native Herdr window mirror (ssh-tmux parity counterpart)",
+      "updatedAt": "2026-08-18T08:12:53Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/17"
+    },
+    {
+      "headRefName": "cursor/herdr-live-machine-6e7a",
+      "number": 16,
+      "title": "Add RemoteHerdr live apply machine",
+      "updatedAt": "2026-08-17T19:02:22Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/16"
+    },
+    {
+      "headRefName": "cursor/herdr-lifecycle-6e7a",
+      "number": 14,
+      "title": "Add RemoteHerdrLifecycle",
+      "updatedAt": "2026-08-17T18:59:53Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/14"
+    },
+    {
+      "headRefName": "cursor/herdr-io-session-6e7a",
+      "number": 13,
+      "title": "Add RemoteHerdr pane I/O and session apply",
+      "updatedAt": "2026-08-17T18:59:52Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/13"
+    },
+    {
+      "headRefName": "cursor/herdr-host-apply-6e7a",
+      "number": 12,
+      "title": "Add RemoteHerdrHostApply",
+      "updatedAt": "2026-08-18T08:12:53Z",
+      "url": "https://github.com/RaviTharuma/cmux/pull/12"
     }
   ]
 }
