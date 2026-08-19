@@ -1,6 +1,7 @@
 # cmux-herdr
 
 [![CI](https://github.com/RaviTharuma/cmux-herdr/actions/workflows/ci.yml/badge.svg)](https://github.com/RaviTharuma/cmux-herdr/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/RaviTharuma/cmux-herdr)](https://github.com/RaviTharuma/cmux-herdr/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
@@ -20,6 +21,13 @@ the sources and runs stdlib `unittest`. See [docs/ARCHITECTURE.md](docs/ARCHITEC
 Documentation index: [docs/README.md](docs/README.md).
 How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md).
 License: [MIT](LICENSE).
+
+**Topics:** [cmux](https://github.com/topics/cmux) ·
+[herdr](https://github.com/topics/herdr) ·
+[tmux](https://github.com/topics/tmux) ·
+[macos](https://github.com/topics/macos) ·
+[cli](https://github.com/topics/cli) ·
+[python](https://github.com/topics/python)
 
 ## Why
 

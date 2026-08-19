@@ -9,6 +9,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- README release badge and public topic links (`cmux`, `herdr`, `tmux`,
+  `macos`, `cli`, `python`).
+
 - GitHub Actions `release` workflow: pushing tag `vX.Y.Z` runs tests and
   publishes the GitHub Release from `CHANGELOG.md`
   (`scripts/changelog_notes.py`).
