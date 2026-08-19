@@ -1,0 +1,43 @@
+{
+  "updated_at": "2026-08-19T06:47:03Z",
+  "maintainer_note": "Multiple Cursor agents (this cloud pod + MacBook) work in parallel. Respect AGENT_LANES.md. Do not force-push shared tips.",
+  "tracks": {
+    "native_10045": {
+      "url": "https://github.com/manaflow-ai/cmux/pull/10045",
+      "head": "cursor/nested-topology-herdr-v1-becf",
+      "sha": "b02b8a954327eeb191783e6913db6d59910003f1",
+      "updated_at": "2026-08-18T13:47:29Z",
+      "review_threads": 173,
+      "unresolved": 0,
+      "merge_state": "BLOCKED",
+      "owner_lane": "native_integration"
+    },
+    "plugin_8736": {
+      "url": "https://github.com/manaflow-ai/cmux/pull/8736",
+      "head": "feat/herdr-native-mvp",
+      "sha": "2f483ad94f0dc8a2d7e05afba2bd2bbbd28a6f70",
+      "updated_at": "2026-08-18T13:50:42Z",
+      "review_threads": 14,
+      "unresolved": 0,
+      "merge_state": "UNSTABLE",
+      "owner_lane": "plugin_compat"
+    }
+  },
+  "running_agents_observed": [
+    {
+      "name": "Herdr CMUX knowledge acquisition",
+      "bcId": "bc-2d33091f-9bbd-4b73-9fa4-08483a4bf64c",
+      "lane": "knowledge"
+    },
+    {
+      "name": "Cmux herdr docs",
+      "bcId": "bc-1d4073e3-8a28-494e-94ca-7ccbb995b5e6",
+      "lane": "docs"
+    },
+    {
+      "name": "Herdr cmux integration poll (this agent)",
+      "bcId": "bc-57027a20-617a-4342-bf4f-56b0005ef1c1",
+      "lane": "integration_ops"
+    }
+  ]
+}
