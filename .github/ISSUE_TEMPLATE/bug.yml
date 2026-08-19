@@ -1,0 +1,51 @@
+name: Plugin bug
+description: Something in cmux-herdr is wrong on your machine
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This tracker is for **this plugin** (`cmux-herdr`).
+        Please do not paste API keys, `.env` files, or a live `cmux tree` from a personal session.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: One or two sentences. What did you run, and what went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Prefer `cmux-herdr doctor` output with personal paths redacted.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `cmux-herdr --version`, plus herdr/cmux if you have them (`herdr --version`, `cmux --version`).
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options:
+        - macOS (product use)
+        - Linux (tests / doctor only)
+        - Other
+    validations:
+      required: true

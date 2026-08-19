@@ -2,7 +2,7 @@
 
 ## Problem
 
-On this machine, **herdr runs nested inside cmux**. Outer cmux users/agents only see one surface titled roughly `herdr`, while the real multi-agent topology (tabs/panes/statuses) lives inside herdr. Without a bridge, cmux sidebars and automation are blind to inner agents.
+When **Herdr runs nested inside cmux**, outer cmux users and agents only see one surface titled roughly `herdr`, while the real multi-agent topology (tabs/panes/statuses) lives inside Herdr. Without a bridge, cmux sidebars and automation are blind to inner agents.
 
 ## Two-path strategy
 

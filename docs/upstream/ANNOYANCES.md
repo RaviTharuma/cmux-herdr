@@ -1,12 +1,12 @@
-> **Canonical source of truth is GitHub**, not this draft.
+> **This file is a historical engineering diary**, not product documentation.
+> It is blunt and dated. Prefer live GitHub issues/PRs if they disagree.
 >
 > - Community poll: https://github.com/manaflow-ai/cmux/discussions/10106
 > - Full nested topology: https://github.com/manaflow-ai/cmux/issues/8737
 > - Nested topology v1: https://github.com/manaflow-ai/cmux/pull/10045
 > - Hidden compat MVP: https://github.com/manaflow-ai/cmux/pull/8736
-> - Update GitHub first when trackers move; then sync this file if still useful.
 >
-> This file is a paste-ready / design package kept for dual-path history. Prefer the live issue/PR over local text if they diverge.
+> To **use** the plugin, start at the [root README](../../README.md).
 
 # Annoyances, thrash, and hard-won lessons
 

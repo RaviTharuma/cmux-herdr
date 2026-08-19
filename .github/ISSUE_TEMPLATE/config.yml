@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Herdr (inner mux) issues
+    url: https://github.com/herdrdev/herdr/issues
+    about: Bugs in Herdr itself, not this plugin.
+  - name: cmux (outer macOS app) issues
+    url: https://github.com/manaflow-ai/cmux/issues
+    about: Bugs in cmux.app, sidebars, or native ssh-tmux.
+  - name: Native Herdr-in-cmux design
+    url: https://github.com/manaflow-ai/cmux/issues/8737
+    about: First-class nested topology inside cmux (not this plugin).

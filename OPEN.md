@@ -16,7 +16,7 @@ As of **2026-08-19** (errors/lackings freeze live).
 | Community poll (native Herdr vs plugin) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open; **1 upvote / 0 comments** |
 | Errors & lackings freeze | [docs/upstream/ERRORS_AND_LACKINGS.md](./docs/upstream/ERRORS_AND_LACKINGS.md) | Freeze `freeze-2026-08-19T065836Z` |
 | Herdr beyond tmux | [docs/upstream/HERDR_BEYOND_TMUX.md](./docs/upstream/HERDR_BEYOND_TMUX.md) | Agent/worktree/manifest CLI (no tmux analogue) |
-| This plugin | https://github.com/RaviTharuma/cmux-herdr | Advanced tmux-parity on `main` (v0.2.0); stopgap until native lands |
+| This plugin | https://github.com/RaviTharuma/cmux-herdr | Implemented; latest tag on `main` (see `VERSION`) |
 | Thrash / annoyance report | [docs/upstream/ANNOYANCES.md](./docs/upstream/ANNOYANCES.md) | Living doc |
 
 Cross-links: PR and issue reference each other; both point back here as the fallback.
@@ -163,8 +163,8 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       [docs/upstream/HERDR_BEYOND_TMUX.md](docs/upstream/HERDR_BEYOND_TMUX.md).
 - [x] **Host-apply verb list** (`bridge/cmux_herdr_host.py`): ordered
       create→tree→impose→focus (tmux `makePanel` before rebuild). Fake host
-      proves the order. Native twin stays on a **separate** fork branch —
-      do not land on #10045 while the other chat is mid CodeRabbit. See
+      proves the order. Native twin stays on a **separate** cmux-fork branch —
+      do not land it on #10045 from this plugin. See
       [docs/upstream/LANES.md](docs/upstream/LANES.md).
 - [x] **Cmux-tmux control depth** (`bridge/cmux_herdr_control.py`):
       named keys, input budget, focus rollback, adjacent pane, user
@@ -172,12 +172,12 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] **I/O + session host** (`bridge/cmux_herdr_io.py` /
       `bridge/cmux_herdr_session.py`): isolated `route_output` /
       `route_input`, provider-vs-user focus (no echo loop), session
-      create/close/reorder verbs. Native twins stay off #10045 until
-      CodeRabbit 5/5.
+      create/close/reorder verbs. Native twins stay off #10045 until that
+      PR's review is idle.
 
 ### B. Native MVP PR (#8736) — open, merge UNSTABLE
 
-Owned by the CMUX-Herdr Integration chat / worktree `cmux-herdr-native`.
+Owned on the native cmux fork / worktree `cmux-herdr-native`, not in this plugin repo.
 As of 2026-08-19 the PR tip is **open**, CR threads **0**, `mergeStateStatus=UNSTABLE` (hidden `__herdr-compat`).
 Needs maintainer approving review / merge — not more missing-PATH work.
 
@@ -200,8 +200,8 @@ Two native layers (do not collapse them):
 
 1. **Sidebar nested topology** — [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (open, dirty). Virtual rows + `nested.node.focus`. **Not** ssh-tmux.
 2. **Window mirror (PR7)** — live AppKit host is
-   [RaviTharuma/cmux#17](https://github.com/RaviTharuma/cmux/pull/17) (other
-   chat; do not stack onto that branch). Plugin `--tmux-parity` is the
+   [RaviTharuma/cmux#17](https://github.com/RaviTharuma/cmux/pull/17) (native
+   fork track; do not stack plugin work onto that branch). Plugin `--tmux-parity` is the
    userspace stand-in and is at ceiling: socket RPC + SessionHost pump +
    attach-pane followers. Remaining depth is Ghostty `TerminalPanel` /
    Bonsplit, which this repo cannot do.
@@ -214,10 +214,10 @@ Matrix: [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
 
 | Track | Owner | Do not thrash |
 |---|---|---|
-| Plugin + dual-path design | This repo / Integration chat | — |
-| PR #8736 polish / land | Integration chat (`w2:t17`) | Sibling chats: review-only unless asked |
-| Issue #8737 design | Integration chat | No implementation until signal |
-| Herdr chat/task titles | Title worktrees / title owners | Integration stays out of rename policy |
+| Plugin + dual-path design | This repository | — |
+| PR #8736 polish / land | Native cmux fork | Review-only from this plugin unless asked |
+| Issue #8737 design | Native cmux fork | No Swift implementation in this repo |
+| Herdr chat/task titles | Herdr title tracks | This plugin only *reads* titles |
 
 ## Quick verify (plugin)
 
@@ -240,7 +240,7 @@ cmux-herdr sync
 ### this plugin (`RaviTharuma/cmux-herdr`)
 - https://github.com/RaviTharuma/cmux-herdr/issues/1 — LaunchAgent for `watch` (**closed**; sample + `install-watch-service.sh` shipped)
 - https://github.com/RaviTharuma/cmux-herdr/issues/2 — multi-parent binding collisions (**closable** when host-fingerprint PR merges; prep for 0.2)
-- https://github.com/RaviTharuma/cmux-herdr/issues/3 — no tagged release (close after tagging v0.1.0 per [RELEASE.md](./RELEASE.md))
+- https://github.com/RaviTharuma/cmux-herdr/issues/3 — no tagged release (**closed**; tags through v0.3.x, see [RELEASE.md](./RELEASE.md))
 - https://github.com/RaviTharuma/cmux-herdr/issues/4 — upstream draft drift (**closed**; canonical banners added)
 - https://github.com/RaviTharuma/cmux-herdr/issues/5 — PR #8736 missing-PATH residual (**done on PR tip**; docs closed — not a plugin runtime gap)
 - https://github.com/RaviTharuma/cmux-herdr/issues/6 — unittest vs pytest docs (**closed**; `test.sh` + README note)
