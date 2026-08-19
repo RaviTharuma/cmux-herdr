@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-19T08:13:49Z",
+  "updated_at": "2026-08-19T08:21:38Z",
   "freeze_id": "freeze-2026-08-19T065836Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active. Errors/lackings freeze: docs/upstream/ERRORS_AND_LACKINGS.md",
   "tracks": {
@@ -9,9 +9,9 @@
       "url": "https://github.com/manaflow-ai/cmux/pull/10045",
       "state": "OPEN",
       "head": "cursor/nested-topology-herdr-v1-becf",
-      "sha": "3c9f5ac9748aae8c6ab5eec652c14f8a79644f8d",
-      "tip_message": "feat(herdr): claim size-authority so plugin SIGWINCH yields (#21)",
-      "updated_at": "2026-08-19T08:05:06Z",
+      "sha": "5fe182483a5439dd07ec0fd84e7341defaa15f96",
+      "tip_message": "fix(herdr): heartbeat native lease while mirrors are live (#22)",
+      "updated_at": "2026-08-19T08:21:38Z",
       "mergeable": "MERGEABLE",
       "merge_state": "BLOCKED",
       "review_decision": null,
@@ -125,6 +125,6 @@
     "lacking_plugin_count": 8,
     "shared_contract_watches": 4
   },
-  "notes": "Native lease heartbeat shipping (controller ~15s + heartbeat_native_writer). Tip still 3c9f5ac until heartbeat fold. Upstream merge BLOCKED.",
+  "notes": "Native tip 5fe18248 heartbeats lease+size-authority ~15s while live. Plugin heartbeat_native_writer on main (#46). Upstream merge still BLOCKED.",
   "plugin_release": "v0.3.4"
 }
