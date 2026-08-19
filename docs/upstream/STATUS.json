@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-19T06:53:13Z",
+  "updated_at": "2026-08-19T06:53:25Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active.",
   "tracks": {
     "native_10045": {
@@ -132,6 +132,29 @@
       "title": "Add RemoteHerdrHostApply",
       "updatedAt": "2026-08-18T08:12:53Z",
       "url": "https://github.com/RaviTharuma/cmux/pull/12"
+    }
+  ],
+  "running_agents_observed": [
+    {
+      "name": "Herdr CMUX knowledge acquisition",
+      "bcId": "bc-2d33091f-9bbd-4b73-9fa4-08483a4bf64c",
+      "status": "RUNNING",
+      "lane": "knowledge"
+    },
+    {
+      "name": "Herdr cmux integration poll (this)",
+      "bcId": "bc-57027a20-617a-4342-bf4f-56b0005ef1c1",
+      "status": "RUNNING",
+      "lane": "integration_ops"
+    }
+  ],
+  "idle_agents_notable": [
+    {
+      "name": "Cmux herdr docs",
+      "bcId": "bc-1d4073e3-8a28-494e-94ca-7ccbb995b5e6",
+      "status": "IDLE",
+      "branch": "cursor/herdr-api-doc-fixes-b5e6",
+      "lane": "docs"
     }
   ]
 }
