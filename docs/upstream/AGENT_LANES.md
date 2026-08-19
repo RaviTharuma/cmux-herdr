@@ -48,7 +48,7 @@ Recently fetched on `cmux-herdr` / related work:
 If you need to contribute to those topics, rebase onto their tip and open a follow-up PR; do not rewrite history.
 
 
-## Freshness (2026-08-19T06:52:54Z)
+## Freshness (2026-08-19T06:58:36Z)
 
 | Track | Tip SHA | Unresolved | Merge |
 |-------|---------|------------|-------|
@@ -59,4 +59,6 @@ Idle/side branches are listed in `STATUS.json` → `idle_or_side_branches`. Refr
 
 ## Errors & lackings
 
-Frozen inventory: [`ERRORS_AND_LACKINGS.md`](./ERRORS_AND_LACKINGS.md) / [`ERRORS_AND_LACKINGS.json`](./ERRORS_AND_LACKINGS.json).
+**Freeze:** `freeze-2026-08-19T065836Z`  
+Canonical inventory: [`ERRORS_AND_LACKINGS.md`](./ERRORS_AND_LACKINGS.md) / [`ERRORS_AND_LACKINGS.json`](./ERRORS_AND_LACKINGS.json).  
+Counts at freeze: **9** errors, **10** native lackings, **8** plugin ceilings, **4** shared-contract watches.
