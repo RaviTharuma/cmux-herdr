@@ -318,7 +318,7 @@ class LiveWindowMirror:
             self.tab_cwd = path
 
     def user_focus(self, pane_id: str) -> Optional[str]:
-        """User click: optimistic select, send ``pane.focus`` once."""
+        """User click: optimistic select, send ``agent.focus`` once."""
         if pane_id not in self.surfaces:
             return None
         command = self.focus.user_select(pane_id)

@@ -29,7 +29,7 @@ This repo implements the plugin path only. It must not depend on unmerged cmux p
 ┌───────┼─────────────────────────────────────┐
 │ herdr (inner)                               │
 │  workspace → tab → pane → agent             │
-│  herdr pane list / pane read / pane send    │
+│  herdr pane list / pane read / pane send-text    │
 └─────────────────────────────────────────────┘
 ```
 

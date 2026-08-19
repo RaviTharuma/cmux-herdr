@@ -71,7 +71,7 @@ To spawn parallel agents **without breaking the outer cmux layout**:
    # or
    herdr pane split --current --direction down
    ```
-3. Start/attach the agent in the new pane (`herdr agent start …` or your usual launcher).
+3. Start/attach the agent in the new pane (`herdr agent start reviewer --kind codex --pane …` or your usual launcher).
 4. Refresh outer visibility:
    ```bash
    cmux-herdr sync

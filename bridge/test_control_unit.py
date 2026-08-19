@@ -65,17 +65,33 @@ class NamedKeyTests(unittest.TestCase):
         self.assertIsNotNone(item)
         assert item is not None
         self.assertEqual(item.kind, "key")
-        self.assertEqual(item.key, "Up")
+        self.assertEqual(item.key, "up")
         self.assertEqual(item.csi, b"\x1b[A")
 
     def test_ctrl_up_uses_xterm_modifier(self) -> None:
         item = encode_named_key("w2:p1", "C-Up")
         self.assertIsNotNone(item)
         assert item is not None
-        self.assertEqual(item.key, "C-Up")
+        self.assertEqual(item.key, "ctrl+up")
         self.assertEqual(item.csi, b"\x1b[1;5A")
 
-    def test_unknown_key_is_none(self) -> None:
+    def test_herdr_combo_passthrough(self) -> None:
+        item = encode_named_key("w2:p1", "ctrl+up")
+        self.assertIsNotNone(item)
+        assert item is not None
+        self.assertEqual(item.key, "ctrl+up")
+        self.assertEqual(item.csi, b"\x1b[1;5A")
+        f5 = encode_named_key("w2:p1", "F5")
+        self.assertIsNotNone(f5)
+        assert f5 is not None
+        self.assertEqual(f5.key, "f5")
+
+    def test_page_key_is_csi_only(self) -> None:
+        item = encode_named_key("w2:p1", "PPage")
+        self.assertIsNotNone(item)
+        assert item is not None
+        self.assertIsNone(item.key)
+        self.assertEqual(item.csi, b"\x1b[5~")
         self.assertIsNone(encode_named_key("w2:p1", "NotAKey"))
         self.assertIsNone(encode_named_key("w2:p1", ""))
 

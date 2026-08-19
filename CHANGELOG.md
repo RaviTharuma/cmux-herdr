@@ -7,6 +7,25 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- **Herdr 0.8 CLI/RPC contract**: CLI fallbacks now match
+  [herdr.dev/docs/cli-reference](https://herdr.dev/docs/cli-reference/).
+  `pane.send_text` maps to `herdr pane send-text` (not `pane send --text`).
+  `agent.start` is `herdr agent start <name> --kind <kind> --pane <id>`.
+  Waits use `--timeout` (not `--timeout-ms`); `pane.wait_for_output` is
+  `herdr pane wait-output --match/--regex`; `pane.swap` uses
+  `--source-pane`/`--target-pane`; `pane.current`/`neighbor`/`layout` use
+  `--pane`/`--current`. `agent.wait` no longer invents `--until done`.
+  `agent.prompt --until` implies `--wait`. `tab.move` is socket-only.
+  Plugin `--force` on `close-pane` stays a local busy-close gate and is
+  not forwarded to Herdr. Named keys (`C-Up`, `F5`) encode to Herdr
+  combos (`ctrl+up`, `f5`). User focus talks `agent.focus`; there is no
+  `pane.focus` method (the event remains `pane.focused`). Claim-size
+  `pane.resize --cols/--rows` is not a Herdr API and is no longer sent.
+  README Herdr repo URL is `herdrdev/herdr`. Default cmux socket example
+  is `/tmp/cmux.sock`.
+
 ### Added
 
 - **SessionHost watch ceiling**: subscribe gap (or periodic 10× interval)

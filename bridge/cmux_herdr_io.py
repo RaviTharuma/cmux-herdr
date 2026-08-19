@@ -4,7 +4,7 @@
 Gold standard: ``RemoteTmuxWindowMirror.routeOutput``, ``connectionSendKeys``,
 and ``setActivePane(fromTmux:)``. A byte written for pane A must never appear
 on pane B. Typed input reaches only the bound pane. Provider focus never
-echoes ``pane.focus`` back (that loop is how a second client fights the first).
+echoes ``agent.focus`` back (that loop is how a second client fights the first).
 
 AppKit/Ghostty stay native. This module is the userspace contract plus an
 in-memory router that proves isolation without a PTY.
@@ -273,7 +273,7 @@ class PaneIORouter:
     def note_remote_active(self, pane_id: str) -> FocusProjection:
         """Provider focus (tmux ``noteRemoteActivePane`` / ``fromTmux: true``).
 
-        Always projects locally. Never sends ``pane.focus`` (echo-loop gate).
+        Always projects locally. Never sends ``agent.focus`` (echo-loop gate).
         Unknown panes are tolerated — the matching layout may still be pending.
 
         Args:
@@ -297,7 +297,7 @@ class PaneIORouter:
     def user_focus(self, pane_id: str) -> FocusProjection:
         """User click (tmux ``setActivePane(fromTmux: false)``).
 
-        Requires a live BASE pane. Sends ``pane.focus`` unless this pane is
+        Requires a live BASE pane. Sends ``agent.focus`` unless this pane is
         already the in-flight user request (provider echo not yet back).
 
         Args:

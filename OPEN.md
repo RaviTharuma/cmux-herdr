@@ -45,8 +45,9 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 
 1. **No Ghostty PTY theft.**
    `mirror --tmux-parity` creates extra cmux tabs/splits that *follow* Herdr
-   panes via `attach-pane` (poll `herdr pane read`, forward `pane send`,
-   SIGWINCH resize). It does not insert Herdr PTYs into Bonsplit the way native
+   panes via `attach-pane` (poll `herdr pane read`, forward `pane send-text`).
+   SIGWINCH cannot claim the inner grid (`pane.resize` is split-edge only).
+   It does not insert Herdr PTYs into Bonsplit the way native
    `ssh-tmux` / PR7 `RemoteHerdrWindowMirror` does. See
    [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
 

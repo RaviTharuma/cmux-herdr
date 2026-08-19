@@ -63,7 +63,7 @@ elif command == ["pane", "get"]:
 elif command == ["pane", "zoom"]:
     print("zoom should not be used as focus", file=sys.stderr)
     raise SystemExit(9)
-elif command == ["pane", "send"] or command == ["pane", "send-keys"]:
+elif command == ["pane", "send-text"] or command == ["pane", "send"] or command == ["pane", "send-keys"]:
     print(json.dumps({"result": {"sent": True}}))
     raise SystemExit(0)
 elif command == ["tab", "create"]:
@@ -456,7 +456,7 @@ raise SystemExit(9)
             path, env = self._lifecycle_env(tmp, fake_bin)
             result = self.run_cli("send-key", "p1", "C-Up", path=path, env_extra=env)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("C-Up", result.stdout)
+        self.assertIn("ctrl+up", result.stdout)
         self.assertIn("p1", result.stdout)
 
     def test_send_key_unknown_fails_closed(self):
