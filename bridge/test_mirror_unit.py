@@ -435,11 +435,22 @@ class ParseAndAttachTests(unittest.TestCase):
         with mock.patch.object(
             mirror, "herdr_rpc", side_effect=BridgeError("socket down")
         ), mock.patch.object(mirror, "which", return_value="/mock/herdr"), mock.patch.object(
-            mirror, "run_cmd", return_value=fail
-        ), mock.patch.object(mirror.subprocess, "run", return_value=ok) as sp_run:
+            mirror, "run_cmd", return_value=ok
+        ) as run_cmd:
             send_pane_text("w2:p1", "x")
-            sp_run.assert_called_once()
-            self.assertEqual(sp_run.call_args.kwargs.get("input"), "x")
+            run_cmd.assert_called_once()
+            self.assertEqual(
+                list(run_cmd.call_args[0][0]),
+                ["herdr", "pane", "send-text", "w2:p1", "x"],
+            )
+
+        with mock.patch.object(
+            mirror, "herdr_rpc", side_effect=BridgeError("socket down")
+        ), mock.patch.object(mirror, "which", return_value="/mock/herdr"), mock.patch.object(
+            mirror, "run_cmd", return_value=fail
+        ):
+            with self.assertRaises(BridgeError):
+                send_pane_text("w2:p1", "x")
 
 
 class AdvancedParityTests(unittest.TestCase):
