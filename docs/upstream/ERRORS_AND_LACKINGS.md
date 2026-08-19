@@ -169,5 +169,5 @@ Human-only next steps for blockers: approving review + branch policy for merge; 
 | Plugin OSS v0.3.4 | **released** (MIT, CI, community files) |
 | Native claims size-authority | **landed** tip `3c9f5ac9748a` via fork [#21](https://github.com/RaviTharuma/cmux/pull/21) + plugin [#44](https://github.com/RaviTharuma/cmux-herdr/pull/44) |
 | Native lease heartbeat while live | **landed** tip `5fe182483a54` via fork [#22](https://github.com/RaviTharuma/cmux/pull/22) + plugin [#46](https://github.com/RaviTharuma/cmux-herdr/pull/46) |
-| Native title-lock association file | **shipping** — `RemoteHerdrAssociationStore` + NestedPluginWriterHandoff TTL |
+| Native title-lock association file | **landed** — `RemoteHerdrAssociationStore` + NestedPluginWriterHandoff TTL (`b302316e` / #23) |
 | Fork drafts #12–#18 | **closed** (none open on `RaviTharuma/cmux`) |
