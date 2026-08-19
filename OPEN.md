@@ -11,8 +11,8 @@ As of **2026-08-19** (errors/lackings freeze live).
 
 | Artifact | URL | Status |
 |---|---|---|
-| Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open; CR **0**/14; `mergeStateStatus=UNSTABLE`; tip `2f483ad94f0d` — needs maintainer approval |
-| Nested topology Herdr v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open; CR **0**; tip `5e33880b165b` (RemoteHerdrHandoff lease wire); merge **BLOCKED** |
+| Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open; CR **0**/14; tip `2f483ad94f0d` — needs maintainer approval |
+| Nested topology Herdr v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open; CR **0**; tip `b302316e66fe` (lease + size-authority + heartbeat + title-lock assoc); merge **BLOCKED** (no approving review) |
 | Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open (native work on cmux fork / #10045) |
 | Community poll (native Herdr vs plugin) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open; **1 upvote / 0 comments** |
 | Errors & lackings freeze | [docs/upstream/ERRORS_AND_LACKINGS.md](./docs/upstream/ERRORS_AND_LACKINGS.md) | Freeze `freeze-2026-08-19T065836Z` |
@@ -199,13 +199,11 @@ Remaining for that PR is maintainer review / merge — not more missing-PATH wor
 
 Two native layers (do not collapse them):
 
-1. **Sidebar nested topology** — [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (open, dirty). Virtual rows + `nested.node.focus`. **Not** ssh-tmux.
-2. **Window mirror (PR7)** — live AppKit host is
-   [RaviTharuma/cmux#17](https://github.com/RaviTharuma/cmux/pull/17) (native
-   fork track; do not stack plugin work onto that branch). Plugin `--tmux-parity` is the
+1. **Sidebar nested topology** — [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (open, merge **BLOCKED**; tip `b302316e66fe`). Virtual rows + `nested.node.focus` + PR7 host mirror on tip. **Not** full ssh-tmux until dogfood/acceptance closes.
+2. **Window mirror (PR7)** — live AppKit host is on `#10045` tip (`RemoteHerdrWindowMirrorHost*`); earlier fork drafts #12–#18 are closed. Plugin `--tmux-parity` is the
    userspace stand-in and is at ceiling: socket RPC + SessionHost pump +
    attach-pane followers. Remaining depth is Ghostty `TerminalPanel` /
-   Bonsplit, which this repo cannot do.
+   Bonsplit ownership, which this repo cannot do.
 
 Matrix: [docs/upstream/TMUX_PARITY.md](./docs/upstream/TMUX_PARITY.md).
 

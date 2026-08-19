@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-19T09:16:59Z",
+  "updated_at": "2026-08-19T09:21:34Z",
   "freeze_id": "freeze-2026-08-19T065836Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active. Errors/lackings freeze: docs/upstream/ERRORS_AND_LACKINGS.md",
   "tracks": {
@@ -125,6 +125,6 @@
     "lacking_plugin_count": 8,
     "shared_contract_watches": 4
   },
-  "notes": "Title-lock association wire landed (native associations-*.json + nested handoff TTL). Tip b302316e (#23). Upstream merge BLOCKED.",
+  "notes": "OPEN.md tip refresh. Native tip b302316e (title-lock assoc #23). Upstream merge still BLOCKED.",
   "plugin_release": "v0.3.4"
 }
