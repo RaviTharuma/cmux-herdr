@@ -36,11 +36,10 @@ dst.write_text(text)
 print(f"  wrote {dst}")
 PY
 
-# Prefer modern bootstrap; fall back to load.
-if launchctl print "${DOMAIN}/${LABEL}" >/dev/null 2>&1; then
-  launchctl bootout "${DOMAIN}/${LABEL}" 2>/dev/null || \
-    launchctl unload "${PLIST_DST}" 2>/dev/null || true
-fi
+# Boot out this plist only. Tests and alternate HOME installs must not evict a
+# same-label agent loaded from another path in the real user domain.
+launchctl bootout "${DOMAIN}" "${PLIST_DST}" 2>/dev/null || \
+  launchctl unload "${PLIST_DST}" 2>/dev/null || true
 
 if launchctl bootstrap "${DOMAIN}" "${PLIST_DST}" 2>/dev/null; then
   launchctl enable "${DOMAIN}/${LABEL}" 2>/dev/null || true
