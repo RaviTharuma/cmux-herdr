@@ -212,6 +212,59 @@ class InstallScriptTests(unittest.TestCase):
             self.assertIn("cmux-herdr plugin install", install.stdout)
             self.assertIn("Plugin installed.", install.stdout)
 
+    def test_watch_service_install_does_not_replace_loaded_real_home_agent(self):
+        script = ROOT / "scripts" / "install-watch-service.sh"
+        syntax = subprocess.run(
+            ["bash", "-n", str(script)], capture_output=True, text=True, check=False
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            home = tmp_path / "home"
+            fake_bin = tmp_path / "bin"
+            home.mkdir()
+            fake_bin.mkdir()
+            cli = home / ".local" / "bin" / "cmux-herdr"
+            cli.parent.mkdir(parents=True)
+            cli.write_text("#!/bin/sh\n", encoding="utf-8")
+            cli.chmod(0o755)
+            launchctl_log = tmp_path / "launchctl.log"
+            launchctl = fake_bin / "launchctl"
+            launchctl.write_text(
+                "#!/bin/sh\n"
+                f"printf '%s\\n' \"$*\" >> {launchctl_log!s}\n"
+                "case \"$1\" in\n"
+                "  print) exit 0 ;;\n"
+                "  bootstrap) exit 0 ;;\n"
+                "esac\n"
+                "exit 0\n",
+                encoding="utf-8",
+            )
+            launchctl.chmod(0o755)
+            env = os.environ.copy()
+            env["HOME"] = str(home)
+            env["PATH"] = f"{fake_bin}:{env['PATH']}"
+            install = subprocess.run(
+                ["bash", str(script)],
+                cwd=ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(install.returncode, 0, install.stderr)
+            calls = launchctl_log.read_text(encoding="utf-8")
+            self.assertIn(
+                f"bootout gui/{os.getuid()} {home}/Library/LaunchAgents/"
+                "com.cmux-herdr.watch.plist",
+                calls,
+            )
+            self.assertNotIn(
+                f"bootout gui/{os.getuid()}/com.cmux-herdr.watch",
+                calls,
+            )
+
 
 class ParentWorkspaceBindingTests(unittest.TestCase):
     def test_plain_unknown_shell_is_not_an_agent(self):
@@ -811,4 +864,3 @@ class DoctorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
