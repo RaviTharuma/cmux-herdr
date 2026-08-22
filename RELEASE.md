@@ -4,7 +4,7 @@ After a version PR is on `main`, **push an annotated tag**. GitHub Actions
 (`.github/workflows/release.yml`) runs the test suite and publishes the
 GitHub Release from `CHANGELOG.md`. You do not need the GitHub UI.
 
-Current tagged line: **v0.3.4**. `VERSION` has no `v` prefix; the git tag does.
+Current tagged line: **v0.4.0**. `VERSION` has no `v` prefix; the git tag does.
 
 ## Preconditions
 
