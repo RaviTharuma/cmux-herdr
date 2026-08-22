@@ -31,7 +31,7 @@ collapses into one cmux tab titled roughly `herdr`. With it, each pane gets a
 status pill, each tab can become a real cmux surface, and you drive both layers
 from one CLI: `cmux-herdr`.
 
-This is a released plugin (**v0.3.4**), not a patch to `cmux.app`. Python 3.10+,
+This is a released plugin (**v0.4.0**), not a patch to `cmux.app`. Python 3.10+,
 standard library only — no `pip`, no `npm`, no compile step.
 
 ## Features
@@ -49,7 +49,7 @@ standard library only — no `pip`, no `npm`, no compile step.
 ## Install
 
 ```bash
-git clone --branch v0.3.4 --depth 1 \
+git clone --branch v0.4.0 --depth 1 \
   https://github.com/RaviTharuma/cmux-herdr.git
 cd cmux-herdr
 ./scripts/install.sh

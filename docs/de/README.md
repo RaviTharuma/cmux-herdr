@@ -31,12 +31,12 @@ Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
 Es braucht **kein Compiling**: reines Python 3.10+ (Standardbibliothek), kein
 `pip`, kein `npm`, kein Xcode-Build.
 
-Aktuelle Version: **v0.3.4**.
+Aktuelle Version: **v0.4.0**.
 
 ## Installation
 
 ```bash
-git clone --branch v0.3.4 --depth 1 \
+git clone --branch v0.4.0 --depth 1 \
   https://github.com/RaviTharuma/cmux-herdr.git
 cd cmux-herdr
 ./scripts/install.sh

@@ -7,20 +7,29 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-22
+
 ### Changed
 
 - README and German overview rewritten as a plugin landing page (product title,
   tagline, features, install-first, command table). CLI `--help` now describes
   **cmux-herdr** as the cmux plugin for Herdr.
+- Plugin sizing yields while native cmux owns size authority.
 
 ### Added
 
 - README release badge and public topic links (`cmux`, `herdr`, `tmux`,
   `macos`, `cli`, `python`).
-
 - GitHub Actions `release` workflow: pushing tag `vX.Y.Z` runs tests and
   publishes the GitHub Release from `CHANGELOG.md`
   (`scripts/changelog_notes.py`).
+- Native-writer lease heartbeat, title-lock diagnostics, and association-wire
+  status in `doctor`.
+
+### Fixed
+
+- LaunchAgent installs replace only their own plist, so alternate `HOME`
+  installs and tests cannot evict a same-label real-user agent.
 
 ## [0.3.4] - 2026-08-19
 
@@ -322,7 +331,8 @@ Works today without any cmux upstream merge.
 - Native nested topology ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)) is
   intentionally out of scope for the plugin.
 
-[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.3.4...v0.4.0
 [0.3.4]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.3.4
 [0.3.3]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.3.3
 [0.2.0]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.2.0
