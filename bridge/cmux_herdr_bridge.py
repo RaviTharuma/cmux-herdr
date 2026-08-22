@@ -1999,10 +1999,7 @@ def diagnose_install() -> Dict[str, Any]:
     socket_info = _socket_stat_info(socket_path)
     socket_info["from_env"] = bool(env_socket)
     socket_info["default_path"] = default_socket
-    # Socket presence is advisory here; hard fails come from herdr-on-PATH /
-    # nested fingerprint completeness. Still mark ok=False when the env socket
-    # is explicitly set but missing on disk.
-    socket_check_ok = bool(socket_info["exists"]) if env_socket else True
+    socket_check_ok = bool(socket_info["exists"])
     checks.append(
         {
             "name": "herdr_socket",
@@ -2017,7 +2014,7 @@ def diagnose_install() -> Dict[str, Any]:
                 else (
                     f"HERDR_SOCKET_PATH set but missing: {socket_path}"
                     if env_socket
-                    else f"default socket absent: {socket_path} (ok if unused)"
+                    else f"default socket absent: {socket_path}"
                 )
             ),
         }
@@ -2031,7 +2028,9 @@ def diagnose_install() -> Dict[str, Any]:
     except ImportError:
         from cmux_herdr_api import HerdrApi
     try:
-        ping = HerdrApi().call("ping")
+        ping = HerdrApi(socket_path=socket_path, timeout=2.0).call(
+            "ping", socket_only=True
+        )
         api_ok = bool(ping.ok)
         api_via = ping.via
         api_detail = f"ping via {ping.via}"
