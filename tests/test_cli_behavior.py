@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+import importlib.machinery
+import importlib.util
+import io
 import json
 import os
 import stat
@@ -12,9 +15,19 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "bin" / "cmux-herdr"
+
+
+def load_cli_module():
+    loader = importlib.machinery.SourceFileLoader("cmux_herdr_cli", str(CLI))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
 
 FAKE_HERDR_FULL = r'''#!/usr/bin/env python3
 import json
@@ -87,6 +100,17 @@ def write_executable(path: Path, content: str) -> None:
 
 
 class CliBehaviorTests(unittest.TestCase):
+    def test_watch_error_deduplicator_resets_after_success(self):
+        errors = load_cli_module()._ErrorDeduplicator()
+
+        with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            errors.report("same failure")
+            errors.report("same failure")
+            errors.success()
+            errors.report("same failure")
+
+        self.assertEqual(stderr.getvalue().splitlines(), ["same failure", "same failure"])
+
     def run_cli(self, *args: str, path: str | None = None, env_extra: dict | None = None):
         env = os.environ.copy()
         if path is not None:

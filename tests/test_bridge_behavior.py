@@ -850,6 +850,30 @@ class DoctorTests(unittest.TestCase):
             self.assertFalse(by_name["dry_sync"]["dry_sync"]["skipped"])
             self.assertEqual(by_name["dry_sync"]["dry_sync"]["agent_count"], 1)
 
+    def test_doctor_marks_stale_socket_api_unhealthy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            sock = Path(tmp) / "stale.sock"
+            sock.write_text("", encoding="utf-8")
+            os.chmod(sock, 0o600)
+            env = {
+                "HOME": tmp,
+                "XDG_STATE_HOME": str(Path(tmp) / "state"),
+                "HERDR_SOCKET_PATH": str(sock),
+            }
+            with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(
+                bridge, "which", side_effect=lambda cmd: "/mock/herdr" if cmd == "herdr" else None
+            ), mock.patch.object(
+                bridge, "_herdr_cli_version", return_value="herdr 0.8.0"
+            ), mock.patch.object(
+                bridge, "herdr_available", return_value=False
+            ):
+                report = bridge.diagnose_install()
+
+        by_name = {check["name"]: check for check in report["checks"]}
+        self.assertTrue(by_name["herdr_socket"]["ok"])
+        self.assertFalse(by_name["herdr_api"]["ok"])
+        self.assertIn("ping failed", by_name["herdr_api"]["detail"])
+
     def test_doctor_does_not_invent_fingerprint_hosts(self):
         with mock.patch.object(bridge, "which", return_value="/mock/herdr"), mock.patch.object(
             bridge, "_herdr_cli_version", return_value="herdr 0.8.0"

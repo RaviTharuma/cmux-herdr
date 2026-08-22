@@ -83,6 +83,19 @@ from bridge.cmux_herdr_socket import HerdrEventSession  # noqa: E402
 __version__ = "0.4.0"
 
 
+class _ErrorDeduplicator:
+    def __init__(self) -> None:
+        self.last = ""
+
+    def success(self) -> None:
+        self.last = ""
+
+    def report(self, text: str) -> None:
+        if text != self.last:
+            print(text, file=sys.stderr)
+            self.last = text
+
+
 def _read_version() -> str:
     """Return package version from VERSION (source of truth) with a safe fallback."""
     version_file = _ROOT / "VERSION"
@@ -355,6 +368,8 @@ def cmd_watch(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
     watch_note = {"text": ""}
+    errors = _ErrorDeduplicator()
+
     if getattr(args, "tmux_parity", False):
         live_host = _watch_reconcile_host(args, live_host, watch_note)
         if live_host is not None:
@@ -411,11 +426,12 @@ def cmd_watch(args: argparse.Namespace) -> int:
                         last_resync = time.time()
                 else:
                     _watch_project(args)
+                errors.success()
             except BridgeError as exc:
-                print(f"cmux-herdr: {exc}", file=sys.stderr)
+                errors.report(f"cmux-herdr: {exc}")
                 initial = False
             except Exception as exc:  # noqa: BLE001
-                print(f"cmux-herdr: unexpected: {exc}", file=sys.stderr)
+                errors.report(f"cmux-herdr: unexpected: {exc}")
                 initial = False
             if want_events:
                 continue
