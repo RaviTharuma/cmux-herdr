@@ -5,14 +5,14 @@ cmux source patch. Native first-class nested topology is tracked upstream; this
 file records what the plugin does **not** claim to solve, and what is still
 open on each path.
 
-As of **2026-08-19** (errors/lackings freeze live).
+As of **2026-08-23** (errors/lackings freeze live).
 
 ## Live upstream artifacts
 
 | Artifact | URL | Status |
 |---|---|---|
-| Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open; CR **0**/14; tip `2f483ad94f0d` — needs maintainer approval |
-| Nested topology Herdr v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open; CR **0**; tip `b302316e66fe` (lease + size-authority + heartbeat + title-lock assoc); merge **BLOCKED** (no approving review) |
+| Native MVP PR (hidden `__herdr-compat` dispatcher) | https://github.com/manaflow-ai/cmux/pull/8736 | Open; CR **0**/14; tip `ba9afc32ba45`; current and mergeable — maintainer merge permission required |
+| Nested topology Herdr v1 PR | https://github.com/manaflow-ai/cmux/pull/10045 | Open; CR **0**/173; tip `95044b3777d0`; current and mergeable — maintainer merge permission required |
 | Full nested-topology design issue | https://github.com/manaflow-ai/cmux/issues/8737 | Open (native work on cmux fork / #10045) |
 | Community poll (native Herdr vs plugin) | https://github.com/manaflow-ai/cmux/discussions/10106 | Open; **1 upvote / 0 comments** |
 | Errors & lackings freeze | [docs/upstream/ERRORS_AND_LACKINGS.md](./docs/upstream/ERRORS_AND_LACKINGS.md) | Freeze `freeze-2026-08-19T065836Z` |
@@ -179,7 +179,7 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 ### B. Native MVP PR (#8736) — open, merge UNSTABLE
 
 Owned on the native cmux fork / worktree `cmux-herdr-native`, not in this plugin repo.
-As of 2026-08-19 the PR tip is **open**, CR threads **0**, `mergeStateStatus=UNSTABLE` (hidden `__herdr-compat`).
+As of 2026-08-23 the PR tip is **open**, CR threads **0**, `mergeStateStatus=UNSTABLE` (hidden `__herdr-compat`).
 Needs maintainer approving review / merge — not more missing-PATH work.
 
 | Review item | Status on PR tip |
@@ -199,7 +199,7 @@ Remaining for that PR is maintainer review / merge — not more missing-PATH wor
 
 Two native layers (do not collapse them):
 
-1. **Sidebar nested topology** — [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (open, merge **BLOCKED**; tip `b302316e66fe`). Virtual rows + `nested.node.focus` + PR7 host mirror on tip. **Not** full ssh-tmux until dogfood/acceptance closes.
+1. **Sidebar nested topology** — [PR #10045](https://github.com/manaflow-ai/cmux/pull/10045) (open and mergeable; tip `95044b3777d0`). Virtual rows + `nested.node.focus` + PR7 host mirror on tip. **Not** full ssh-tmux until dogfood/acceptance closes.
 2. **Window mirror (PR7)** — live AppKit host is on `#10045` tip (`RemoteHerdrWindowMirrorHost*`); earlier fork drafts #12–#18 are closed. Plugin `--tmux-parity` is the
    userspace stand-in and is at ceiling: socket RPC + SessionHost pump +
    attach-pane followers. Remaining depth is Ghostty `TerminalPanel` /
