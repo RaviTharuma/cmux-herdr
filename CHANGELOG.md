@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- Refreshed the live upstream status for cmux PRs #8736 and #10045 after both
+  branches were updated to current `main`.
+
 ## [0.4.0] - 2026-08-22
 
 ### Changed

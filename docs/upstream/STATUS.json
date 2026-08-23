@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-19T09:21:34Z",
+  "updated_at": "2026-08-23T17:32:38Z",
   "freeze_id": "freeze-2026-08-19T065836Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active. Errors/lackings freeze: docs/upstream/ERRORS_AND_LACKINGS.md",
   "tracks": {
@@ -9,11 +9,11 @@
       "url": "https://github.com/manaflow-ai/cmux/pull/10045",
       "state": "OPEN",
       "head": "cursor/nested-topology-herdr-v1-becf",
-      "sha": "b302316e66fe9b4df0f42ba16b8b0cf37a9725e9",
-      "tip_message": "feat(herdr): share title locks via associations file + handoff TTL (#23)",
-      "updated_at": "2026-08-19T09:16:59Z",
+      "sha": "95044b3777d0a471548e485e9acd2728fc6c386b",
+      "tip_message": "Merge current upstream main into nested topology branch",
+      "updated_at": "2026-08-23T17:32:38Z",
       "mergeable": "MERGEABLE",
-      "merge_state": "BLOCKED",
+      "merge_state": "UNSTABLE",
       "review_decision": null,
       "review_threads": 173,
       "unresolved": 0,
@@ -34,9 +34,9 @@
       "url": "https://github.com/manaflow-ai/cmux/pull/8736",
       "state": "OPEN",
       "head": "feat/herdr-native-mvp",
-      "sha": "2f483ad94f0dc8a2d7e05afba2bd2bbbd28a6f70",
-      "tip_message": "Reject alias-local --json and load Herdr-compat strings from the app bundle",
-      "updated_at": "2026-08-18T13:50:42Z",
+      "sha": "ba9afc32ba458677a7499e3d520e14237ce5a473",
+      "tip_message": "Merge current upstream main into Herdr compatibility branch",
+      "updated_at": "2026-08-23T16:56:58Z",
       "mergeable": "MERGEABLE",
       "merge_state": "UNSTABLE",
       "review_decision": null,
@@ -125,6 +125,6 @@
     "lacking_plugin_count": 8,
     "shared_contract_watches": 4
   },
-  "notes": "OPEN.md tip refresh. Native tip b302316e (title-lock assoc #23). Upstream merge still BLOCKED.",
-  "plugin_release": "v0.3.4"
+  "notes": "Both upstream PRs are current, mergeable, and have zero unresolved review threads. Fork author merge attempts are denied by upstream permissions.",
+  "plugin_release": "v0.4.0"
 }
