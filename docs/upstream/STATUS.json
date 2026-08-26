@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-23T17:32:38Z",
+  "updated_at": "2026-08-26T20:23:13Z",
   "freeze_id": "freeze-2026-08-19T065836Z",
   "maintainer_note": "Keep non-running lanes fresh via STATUS.json. Do not force-push hot tips (#10045 / #8736) while other agents are active. Errors/lackings freeze: docs/upstream/ERRORS_AND_LACKINGS.md",
   "tracks": {
@@ -9,9 +9,9 @@
       "url": "https://github.com/manaflow-ai/cmux/pull/10045",
       "state": "OPEN",
       "head": "cursor/nested-topology-herdr-v1-becf",
-      "sha": "95044b3777d0a471548e485e9acd2728fc6c386b",
+      "sha": "44a3e25eae7e7e0107bfd829dbdcc413bbb48939",
       "tip_message": "Merge current upstream main into nested topology branch",
-      "updated_at": "2026-08-23T17:32:38Z",
+      "updated_at": "2026-08-26T20:01:24Z",
       "mergeable": "MERGEABLE",
       "merge_state": "UNSTABLE",
       "review_decision": null,
@@ -34,11 +34,11 @@
       "url": "https://github.com/manaflow-ai/cmux/pull/8736",
       "state": "OPEN",
       "head": "feat/herdr-native-mvp",
-      "sha": "ba9afc32ba458677a7499e3d520e14237ce5a473",
-      "tip_message": "Merge current upstream main into Herdr compatibility branch",
-      "updated_at": "2026-08-23T16:56:58Z",
-      "mergeable": "MERGEABLE",
-      "merge_state": "UNSTABLE",
+      "sha": "57a3fda07eb7e259e86df441c8a1b657aa5cbb44",
+      "tip_message": "Austin follow-up: isolate Herdr execution environment and PATH lookup",
+      "updated_at": "2026-08-26T20:01:27Z",
+      "mergeable": "CONFLICTING",
+      "merge_state": "DIRTY",
       "review_decision": null,
       "review_threads": 14,
       "unresolved": 0,
@@ -49,7 +49,7 @@
         "skipped": 1,
         "macos_swift": "absent"
       },
-      "owner_lane": "plugin_compat",
+      "owner_lane": "austin_maintainer_followup",
       "hot": true
     }
   },
@@ -125,6 +125,6 @@
     "lacking_plugin_count": 8,
     "shared_contract_watches": 4
   },
-  "notes": "Both upstream PRs are current, mergeable, and have zero unresolved review threads. Fork author merge attempts are denied by upstream permissions.",
+  "notes": "#10045 is current, mergeable, and has zero unresolved review threads. #8736 has Austin's direct follow-up fixes and now needs a maintainer-owned refresh. Fork author merge attempts are denied by upstream permissions.",
   "plugin_release": "v0.4.0"
 }
