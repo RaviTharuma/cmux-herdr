@@ -29,7 +29,7 @@ class NativeSidebarContractTests(unittest.TestCase):
     def test_sidebar_file_exists_and_is_a_view_expression(self) -> None:
         self.assertTrue(SIDEBAR.is_file())
         self.assertGreater(len(self.source), 200)
-        self.assertNotRegex(self.source, r"^\s*struct\s+\w+", flags=re.M)
+        self.assertIsNone(re.search(r"^\s*struct\s+\w+", self.source, flags=re.M))
         self.assertNotIn("@State", self.source)
         self.assertIn("ScrollView", self.source)
 
