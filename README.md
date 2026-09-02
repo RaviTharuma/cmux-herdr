@@ -1,7 +1,7 @@
 <h1 align="center">cmux-herdr</h1>
 <p align="center"><strong>A cmux plugin for Herdr</strong></p>
 <p align="center">
-  cmux is the official UI of Herdr. Herdr is the engine.
+  cmux becomes the official UI of Herdr. Herdr is the engine.
   Native cmux chrome — mouse, Reorderable, tabs, and panes —
   not a boxed-in Herdr window.
 </p>
