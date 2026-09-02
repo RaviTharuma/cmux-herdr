@@ -90,6 +90,7 @@ Outer cmux still shows one (or few) surfaces hosting herdr; inner topology is wh
 - Colors: working=orange, idle=gray, done=green, blocked=red, unknown=gray
 - Progress: `working / (working+idle+done+blocked)` via `cmux set-progress`
 - Stale keys for gone panes are cleared on each sync
+- The `herdr` custom sidebar binds live cmux workspaces, statuses, agents, and tabs. It does not invent a team roster.
 
 ## Common pitfalls
 
