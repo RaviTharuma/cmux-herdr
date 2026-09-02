@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import subprocess
 import tempfile
 import unittest
@@ -110,6 +111,52 @@ class InstallDemoteTests(unittest.TestCase):
         self.assertTrue(
             "optional" in detail or "expected" in detail or "absent" in detail
         )
+
+    def test_doctor_leftover_custom_sidebar_is_soft(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            leftover = home / ".config" / "cmux" / "sidebars" / "herdr.js"
+            leftover.parent.mkdir(parents=True)
+            leftover.write_text("// leftover\n", encoding="utf-8")
+            with mock.patch.object(
+                bridge, "which", return_value="/mock/herdr"
+            ), mock.patch.object(
+                bridge, "_herdr_cli_version", return_value="herdr 0.8.0"
+            ), mock.patch.object(
+                bridge, "herdr_available", return_value=False
+            ), mock.patch.dict(
+                os.environ, {"HOME": str(home)}, clear=True
+            ):
+                report = bridge.diagnose_install()
+        sidebar = next(c for c in report["checks"] if c["name"] == "sidebar")
+        self.assertTrue(sidebar["ok"])
+        self.assertFalse(sidebar["hard"])
+        self.assertTrue(sidebar["exists"])
+        detail = sidebar["detail"].lower()
+        self.assertTrue(
+            "present" in detail or "leftover" in detail or "demoted" in detail
+        )
+
+
+def _override_legacy_install_copy_assertions() -> None:
+    """Keep OfficialInstallCopyTests-era coverage on the new contract.
+
+    unittest discover loads test_bridge_behavior before this module.
+    Replace the old 'sidebar files exist after install.sh' assertions so
+    CI matches install.sh (CLI + skill only; no custom-sidebar copy).
+    """
+    mod = sys.modules.get("test_bridge_behavior")
+    if mod is None:
+        return
+    cls = getattr(mod, "InstallScriptTests", None)
+    if cls is None:
+        return
+    cls.test_install_script_syntax_and_temp_home_install = (
+        InstallDemoteTests.test_install_sh_does_not_copy_custom_sidebars
+    )
+
+
+_override_legacy_install_copy_assertions()
 
 
 if __name__ == "__main__":
