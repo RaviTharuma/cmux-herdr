@@ -47,16 +47,16 @@ def release_notes(tag: str, changelog_text: str | None = None) -> str:
         f"---\n\n"
         f"Install:\n\n"
         f"```bash\n"
-        f"mkdir -p ~/.config/cmux/sidebars\n"
-        f"cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js\n"
-        f"cmux sidebar validate herdr --json\n"
-        f"cmux sidebar open herdr\n"
         f"cmux sidebar plugin install "
         f"https://github.com/RaviTharuma/cmux-herdr.git\n"
         f"cmux sidebar plugin use cmux-herdr\n"
+        f"cmux-herdr doctor\n"
+        f"cmux-herdr watch\n"
         f"```\n\n"
-        f"In-app UI is the native Herdr sidebar (JS, mouse / Reorderable). "
-        f"Plugin-manager is the CLI checkout. `[build]` is chmod +x, not Cargo.\n"
+        f"Official install is the plugin manager plus the CLI. "
+        f"Custom `herdr.js`/`herdr.swift` sidebars are experimental leftovers, "
+        f"not the product. Native Herdr chrome is parent cmux. "
+        f"`[build]` is chmod +x, not Cargo.\n"
     )
 
 
