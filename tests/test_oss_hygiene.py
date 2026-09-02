@@ -55,6 +55,7 @@ class OssHygieneTests(unittest.TestCase):
             ".github/PULL_REQUEST_TEMPLATE.md",
             "docs/ARCHITECTURE.md",
             "docs/de/README.md",
+            "cmux-plugin.toml",
         ):
             path = ROOT / rel
             self.assertTrue(path.is_file(), f"missing {rel}")
@@ -71,6 +72,7 @@ class OssHygieneTests(unittest.TestCase):
         self.assertIn("A cmux plugin for Herdr", readme)
         self.assertIn("## Features", readme)
         self.assertIn("## Install", readme)
+        self.assertIn("cmux sidebar plugin install", readme)
         self.assertIn("## Quick start", readme)
         self.assertNotIn("user plugin, no upstream PR", readme)
         self.assertNotIn("## Two-path strategy", readme)

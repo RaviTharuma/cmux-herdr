@@ -5,9 +5,9 @@
   mirroring, and a CLI that treats nested Herdr agents as
   first-class cmux surfaces.
 </p>
+
 <p align="center">
-  <code>git clone --branch v0.4.0 --depth 1 https://github.com/RaviTharuma/cmux-herdr.git</code><br />
-  then <code>./scripts/install.sh</code>
+  <img src="docs/screenshot.png" alt="cmux-herdr sidebar plugin in cmux: lab workspaces and status pills next to a Ghostty terminal" />
 </p>
 
 <p align="center">
@@ -36,8 +36,32 @@ collapses into one cmux tab titled roughly `herdr`. With it, each pane gets a
 status pill in the cmux sidebar, each tab can become a real cmux surface, and you
 drive both layers from one CLI: `cmux-herdr`.
 
-This is a released plugin (**v0.4.0**), not a patch to `cmux.app`. Python 3.10+,
-standard library only — no `pip`, no `npm`, no compile step.
+This is a released plugin (**v0.5.0**), not a patch to `cmux.app`. Python 3.10+,
+standard library only — no `pip`, no `npm`, no Cargo binary.
+
+## Install
+
+Requires a cmux build that ships `cmux sidebar plugin`.
+
+```bash
+cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
+cmux sidebar plugin use cmux-herdr
+cmux sidebar plugin update cmux-herdr
+cmux sidebar plugin remove cmux-herdr
+```
+
+That clones the repo into the cmux plugin directory, reads `cmux-plugin.toml`
+(`kind = "sidebar"`, name `cmux-herdr`), runs the optional `[build]` (chmod +x
+on the Python sidebar wrapper — nothing is compiled), and verifies
+`bin/cmux-herdr-sidebar` is executable. `use` writes the resolved command into
+cmux-tui config.
+
+The sidebar TUI inherits the host Ghostty/cmux palette and lists **live
+workspaces from the cmux control socket** (`CMUX_TUI_SOCKET`, legacy
+`CMUX_MUX_SOCKET`). It does not invent a team.
+
+Contributor clone + symlink (not the user install): [CONTRIBUTING.md](CONTRIBUTING.md).
+Release notes: [RELEASE.md](RELEASE.md).
 
 ## Features
 
@@ -47,46 +71,17 @@ standard library only — no `pip`, no `npm`, no compile step.
 | **Tab and pane mirror** | `cmux-herdr mirror --tmux-parity` projects Herdr tabs into real cmux tabs and splits, with layout, focus, order, and prune. Same contract cmux gives tmux over SSH. |
 | **Live watch** | `cmux-herdr watch --tmux-parity` keeps pills and surfaces in sync. Prefers Herdr `events.subscribe`; otherwise polls. Optional LaunchAgent so it survives closing the pane. |
 | **One CLI** | Topology (`tree`, `agents`), control (`new-tab`, `send`, `agent-prompt`), attach/detach/restore, and the published Herdr socket API — never `server.stop`. |
-| **Custom sidebar** | Interpreted Swift sidebar `herdr` for cmux workspace navigation next to the pills the plugin writes. |
+| **Sidebar plugin** | Official plugin-manager TUI plus an optional interpreted Swift `herdr` sidebar for older custom-sidebar builds. |
 | **Agent skill** | Ships a `cmux-herdr` skill so coding agents learn the dual hierarchy instead of pretending Herdr is tmux. |
 | **Safe handoff** | Plugin and native cmux share one writer lease. If native nested topology is live, this plugin yields. If native dies, watch can resume. |
 
-## Install
+<p align="center">
+  <img src="docs/screenshot-pills.png" alt="Lab status pills in the cmux sidebar: working, idle, done, blocked" />
+</p>
 
-```bash
-git clone --branch v0.4.0 --depth 1 \
-  https://github.com/RaviTharuma/cmux-herdr.git
-cd cmux-herdr
-./scripts/install.sh
-```
-
-That installs:
-
-| Artifact | Path |
-|---|---|
-| CLI | `~/.local/bin/cmux-herdr` |
-| Sidebar | `~/.config/cmux/sidebars/herdr.swift` |
-| Agent skill | `~/.agents/skills/cmux-herdr/` (and/or `~/.pi/agent/skills/cmux-herdr/`) |
-
-From a clone you already have, `./scripts/install.sh` is enough (symlink, so
-edits in the repo go live). Put `~/.local/bin` on `PATH`.
-
-Optional background watch (LaunchAgent):
-
-```bash
-./scripts/install-watch-service.sh
-# plist → ~/Library/LaunchAgents/com.cmux-herdr.watch.plist
-# logs  → ~/Library/Logs/cmux-herdr-watch.{out,err}.log
-```
-
-Uninstall:
-
-```bash
-./scripts/uninstall-watch-service.sh   # if you installed the LaunchAgent
-./scripts/uninstall.sh
-```
-
-Tagged install notes: [RELEASE.md](RELEASE.md).
+<p align="center">
+  <img src="docs/screenshot-mirror.png" alt="Lab Herdr tabs mirrored into cmux splits beside the plugin sidebar" />
+</p>
 
 ## Quick start
 
@@ -101,13 +96,12 @@ cmux-herdr sync                # one-shot status pills
 cmux-herdr watch --tmux-parity # live pills + tabs/splits
 ```
 
-Open the sidebar (Settings → Beta features → Custom sidebars):
+After `cmux sidebar plugin use cmux-herdr`, focus the sidebar (`prefix S` in
+cmux-tui). The TUI reads live workspaces from the mux socket; `Esc` is ignored
+because cmux owns the focus escape chord.
 
-```bash
-cmux sidebar reload
-cmux sidebar validate herdr --json
-cmux sidebar open herdr
-```
+Older custom-sidebar builds can still load `herdr.swift` from Settings → Beta
+features → Custom sidebars, then `cmux sidebar reload`.
 
 ## Commands
 
@@ -141,6 +135,7 @@ tmux analogue: [docs/upstream/HERDR_BEYOND_TMUX.md](docs/upstream/HERDR_BEYOND_T
 ## Requirements
 
 - macOS with `cmux` and `herdr` on `PATH`
+- A cmux build that includes `cmux sidebar plugin`
 - Python 3.10+ (stdlib only; **not** on PyPI)
 - A working Herdr socket (usual when `HERDR_ENV=1`)
 - Herdr **0.8+** (agent name may live under `agent_session.agent`)
@@ -155,6 +150,7 @@ cmux.app  (outer windows, workspaces, tabs)
                  └── cmux-herdr
                        herdr CLI + Unix socket  →  snapshot
                        cmux CLI                 →  pills, tabs, splits
+                       CMUX_TUI_SOCKET          →  sidebar TUI workspaces
 ```
 
 `sync` and `watch` keep a user-owned cache under `$XDG_STATE_HOME/cmux-herdr/`
@@ -246,15 +242,14 @@ Inventory and open checklist: **[OPEN.md](OPEN.md)**.
 ## FAQ
 
 **Is this shipped inside cmux.app?**
-No. It is a user-installed plugin: CLI, custom sidebar, agent skill, optional
-LaunchAgent. You keep it when you upgrade cmux.
+No. It is a user-installed sidebar plugin. You keep it when you upgrade cmux.
 
 **How is this different from `herdr-plugin-cmux`?**
 [lachieh/herdr-plugin-cmux](https://github.com/lachieh/herdr-plugin-cmux) is a
 *Herdr* plugin (`herdr plugin install …`) that adds sidebar rows from the Herdr
-side. **cmux-herdr** is the *cmux* plugin pack: `cmux-herdr` CLI, `mirror`
-/`watch --tmux-parity`, interpreted sidebar, and agent skill. You can use one
-or both; they share the idea, not the install.
+side. **cmux-herdr** is the *cmux* plugin: official `cmux sidebar plugin`
+install, `cmux-herdr` CLI, `mirror` / `watch --tmux-parity`, and agent skill.
+You can use one or both; they share the idea, not the install.
 
 **Will native cmux nested topology replace this?**
 That work lives on [cmux#8737](https://github.com/manaflow-ai/cmux/issues/8737)
@@ -263,7 +258,7 @@ compatibility fallback. Plugin and native share a writer lease so they do not
 fight.
 
 **Does it need a cmux PR to work?**
-No. Install it and run it.
+No. Install it with the plugin manager and run it.
 
 ## Native cmux track
 
@@ -287,6 +282,7 @@ Not required to use the plugin. Design notes live in
 ./bin/cmux-herdr --version
 ./bin/cmux-herdr --help
 ./bin/cmux-herdr doctor
+./bin/cmux-herdr-sidebar --help
 ```
 
 There is no compile step. `python3 -m py_compile` inside `scripts/test.sh` only

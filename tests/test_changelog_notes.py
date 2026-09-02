@@ -51,9 +51,9 @@ class ChangelogNotesTests(unittest.TestCase):
 
     def test_release_notes_include_install(self) -> None:
         text = notes.release_notes("v0.3.4", self.SAMPLE)
-        self.assertIn("git clone --branch v0.3.4", text)
-        self.assertIn("./scripts/install.sh", text)
-        self.assertIn("No compile step", text)
+        self.assertIn("cmux sidebar plugin install", text)
+        self.assertIn("cmux sidebar plugin use cmux-herdr", text)
+        self.assertIn("chmod +x", text)
 
     def test_missing_section_fails(self) -> None:
         with self.assertRaises(ValueError):

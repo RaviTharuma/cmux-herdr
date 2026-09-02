@@ -47,13 +47,11 @@ def release_notes(tag: str, changelog_text: str | None = None) -> str:
         f"---\n\n"
         f"Install:\n\n"
         f"```bash\n"
-        f"git clone --branch {tag} --depth 1 "
+        f"cmux sidebar plugin install "
         f"https://github.com/RaviTharuma/cmux-herdr.git\n"
-        f"cd cmux-herdr\n"
-        f"./scripts/install.sh\n"
-        f"cmux-herdr --version\n"
+        f"cmux sidebar plugin use cmux-herdr\n"
         f"```\n\n"
-        f"Python 3.10+, stdlib only. No compile step.\n"
+        f"Python 3.10+, stdlib only. Plugin-manager `[build]` is chmod +x, not Cargo.\n"
     )
 
 

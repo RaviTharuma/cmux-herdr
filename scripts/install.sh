@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Install the cmux-herdr plugin (CLI, sidebar, agent skill). No root required.
+# Contributor/dev install (CLI symlink, optional Swift sidebar, agent skill).
+# End users should run: cmux sidebar plugin install <this-repo.git>
+# No root required.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

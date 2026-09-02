@@ -1,0 +1,11 @@
+[plugin]
+name = "cmux-herdr"
+kind = "sidebar"
+version = "0.5.0"
+description = "Sidebar TUI for nested Herdr: live cmux workspaces plus status pills"
+
+[run]
+command = ["bin/cmux-herdr-sidebar"]
+
+[build]
+command = ["chmod", "+x", "bin/cmux-herdr-sidebar"]

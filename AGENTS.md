@@ -14,8 +14,9 @@ There is nothing to install to develop or test it.
 - There is no separate lint or build step; `py_compile` inside `scripts/test.sh` is the
   compile check.
 - Run the CLI directly from the repo without installing: `./bin/cmux-herdr <command>`
-  (e.g. `--version`, `--help`, `doctor`). `scripts/install.sh` only copies the CLI into
-  `~/.local/bin` and is not required for development.
+ (e.g. `--version`, `--help`, `doctor`). User install is
+ `cmux sidebar plugin install`. `scripts/install.sh` is contributor-only
+ (symlink into `~/.local/bin`) and is not required for development.
 - Standard dev/verify commands are already documented in `README.md`
   ("Development") and `bin/cmux-herdr --help`.
 

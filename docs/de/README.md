@@ -7,10 +7,8 @@ und eine CLI, die verschachtelte Herdr-Agenten als vollwertige cmux-Flächen
 behandelt.
 
 ```bash
-git clone --branch v0.4.0 --depth 1 \
-  https://github.com/RaviTharuma/cmux-herdr.git
-cd cmux-herdr
-./scripts/install.sh
+cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
+cmux sidebar plugin use cmux-herdr
 ```
 
 Das GitHub-Projekt ist öffentlich:
@@ -37,28 +35,22 @@ ist das Plugin dazwischen:
 
 Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
 Es braucht **kein Compiling**: reines Python 3.10+ (Standardbibliothek), kein
-`pip`, kein `npm`, kein Xcode-Build.
+`pip`, kein `npm`, kein Cargo-Binary.
 
-Aktuelle Version: **v0.4.0**.
+Aktuelle Version: **v0.5.0**.
 
 ## Installation
 
+Offizielle Installation über den cmux Plugin-Manager:
+
 ```bash
-git clone --branch v0.4.0 --depth 1 \
-  https://github.com/RaviTharuma/cmux-herdr.git
-cd cmux-herdr
-./scripts/install.sh
-cmux-herdr --version
-cmux-herdr doctor
+cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
+cmux sidebar plugin use cmux-herdr
+cmux sidebar plugin update cmux-herdr
+cmux sidebar plugin remove cmux-herdr
 ```
 
-Das legt an:
-
-| Artefakt | Pfad |
-|---|---|
-| CLI | `~/.local/bin/cmux-herdr` |
-| Sidebar | `~/.config/cmux/sidebars/herdr.swift` |
-| Agent-Skill | `~/.agents/skills/cmux-herdr/` |
+`./scripts/install.sh` ist nur für Mitwirkende (siehe CONTRIBUTING).
 
 Schnellstart in einer Herdr-Pane *in* cmux:
 
@@ -99,7 +91,9 @@ Die echten PTYs bleiben bei Herdr.
 | `bin/cmux-herdr` | Das Kommandozeilenprogramm des Plugins |
 | `bridge/` | Die Logik (Python-Module) plus Unit-Tests |
 | `tests/` | Tests mit nachgemachtem `herdr`/`cmux` |
-| `scripts/` | Installieren, Deinstallieren, Test-Skript |
+| `cmux-plugin.toml` | Manifest für den offiziellen Plugin-Manager |
+| `bin/cmux-herdr-sidebar` | Sidebar-TUI |
+| `scripts/` | Entwickler-Install, Deinstallieren, Test-Skript |
 | `sidebars/` | Optionale cmux-Sidebar `herdr` |
 | `agent-skill/` | Skill für Coding-Agenten |
 | `docs/` | Diese Dokumentation |
