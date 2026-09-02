@@ -7,8 +7,9 @@ und eine CLI, die verschachtelte Herdr-Agenten als vollwertige cmux-Flächen
 behandelt.
 
 ```bash
-cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
-cmux sidebar plugin use cmux-herdr
+cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift
+cmux sidebar validate herdr --json
+cmux sidebar open herdr
 ```
 
 Das GitHub-Projekt ist öffentlich:
@@ -41,7 +42,18 @@ Aktuelle Version: **v0.5.0**.
 
 ## Installation
 
-Offizielle Installation über den cmux Plugin-Manager:
+Die Produkt-UI ist die native Swift-Sidebar `herdr` (Maus, Drag-and-drop,
+`Reorderable` über live cmux-Workspaces) — kein Tastatur-TUI.
+
+```bash
+mkdir -p ~/.config/cmux/sidebars
+cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift
+cmux sidebar reload
+cmux sidebar validate herdr --json
+cmux sidebar open herdr
+```
+
+CLI über den offiziellen Plugin-Manager:
 
 ```bash
 cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git

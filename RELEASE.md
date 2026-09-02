@@ -43,6 +43,17 @@ Optional live smoke (macOS, Herdr nested in cmux):
 
 ## Install from the tag
 
+Native sidebar (in-app UI):
+
+```bash
+mkdir -p ~/.config/cmux/sidebars
+cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift
+cmux sidebar validate herdr --json
+cmux sidebar open herdr
+```
+
+CLI checkout:
+
 ```bash
 cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
 cmux sidebar plugin use cmux-herdr

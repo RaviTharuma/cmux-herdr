@@ -11,21 +11,19 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
-- Official cmux plugin-manager install: `cmux-plugin.toml` (`kind = "sidebar"`,
-  name `cmux-herdr`) plus a stdlib sidebar TUI at `bin/cmux-herdr-sidebar`.
-  `[build]` only ensures the wrapper is executable — no Cargo binary is faked.
-  The TUI lists live workspaces from `CMUX_TUI_SOCKET` / `CMUX_MUX_SOCKET`
-  (`identify`, `list-workspaces`, `select-workspace`) and inherits the host
-  Ghostty/cmux palette.
-- README hero and feature screenshots (lab/mock chrome only).
-- Interpreted Swift sidebar binds live cmux workspaces and inherits
-  Ghostty/cmux theme tokens (no invented team; landed on main in #63).
+- Official cmux plugin-manager install for the CLI: `cmux-plugin.toml`
+  (`kind = "sidebar"`, name `cmux-herdr`). `[build]` is chmod +x, not Cargo.
+- README hero and feature screenshots of the **native** `herdr` sidebar
+  (lab/mock chrome only).
+- Interpreted Swift sidebar binds live cmux workspaces with `Reorderable`
+  mouse/DnD and Ghostty/cmux theme tokens (no invented team; #63).
 
 ### Changed
 
-- Documented install is the official plugin manager only:
-  `cmux sidebar plugin install` / `use` / `update` / `remove`.
-  `./scripts/install.sh` is contributor/dev (see CONTRIBUTING.md).
+- Documented user UI is the native sidebar: copy `sidebars/herdr.swift` to
+  `~/.config/cmux/sidebars`, then `cmux sidebar validate herdr` /
+  `cmux sidebar open herdr`. Plugin-manager install/use/update/remove remains
+  the official CLI checkout. `./scripts/install.sh` is contributor/dev.
 - Refreshed upstream status after Austin's direct #8736 follow-up fixes and
   the latest current-`main` update of #10045.
 
