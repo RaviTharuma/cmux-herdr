@@ -138,3 +138,16 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   `pane.resize --cols/--rows` is not a Herdr API and is no longer sent.
   README Herdr repo URL is `herdrdev/herdr`. Default cmux socket example
   is `/tmp/cmux.sock`.
+
+See git history on `main` for the remainder of the 0.3.3 / 0.2.0 / 0.1.0 notes;
+this 0.6.1 patch demotes the custom sidebar and does not rewrite older entries.
+
+[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.3.4...v0.4.0
+[0.3.4]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.3.4
+[0.3.3]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.3.3
+[0.2.0]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.2.0
+[0.1.0]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.1.0
