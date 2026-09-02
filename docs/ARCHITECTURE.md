@@ -24,7 +24,7 @@ Ghostty; that is native cmux work, tracked upstream.
 |---|---|
 | `make`, `cmake`, `xcodebuild` | Nothing. There are no compiled artifacts. |
 | `pip install` / `npm install` | Nothing. Standard library only. |
-| A `.app` or Homebrew formula | Install is `./scripts/install.sh` (symlink + copy). |
+| A `.app` or Homebrew formula | Users: `cmux sidebar plugin install`. Contributors: `./scripts/install.sh`. |
 | `python3 -m py_compile` | Syntax check used by tests, **not** a compiler producing binaries. |
 
 Develop against the clone:
@@ -34,9 +34,9 @@ Develop against the clone:
 ./scripts/test.sh
 ```
 
-`scripts/install.sh` only symlinks `bin/cmux-herdr` to `~/.local/bin` and copies
-the optional sidebar and agent skill. Edits in the clone show up immediately
-when the symlink is in place.
+The official install is `cmux sidebar plugin install` (see `cmux-plugin.toml`).
+`scripts/install.sh` is contributor-only: it symlinks `bin/cmux-herdr` to
+`~/.local/bin` and copies the optional Swift sidebar and agent skill.
 
 ## How the CLI is assembled
 
@@ -105,6 +105,8 @@ enough to catch Python regressions. Dogfood the product on a Mac.
 
 | Path | Role |
 |---|---|
+| `cmux-plugin.toml` | Plugin-manager manifest (`kind=sidebar`) |
+| `bin/cmux-herdr-sidebar` | Sidebar TUI the official manager runs |
 | `sidebars/herdr.swift` | cmux custom sidebar (live workspaces, statuses, agents, tabs; theme tokens) |
 | `agent-skill/SKILL.md` | Dual-hierarchy notes for coding agents |
 | `scripts/com.cmux-herdr.watch.plist` | LaunchAgent template (`/Users/PLACEHOLDER` is replaced on install) |

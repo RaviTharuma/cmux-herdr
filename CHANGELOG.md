@@ -7,12 +7,25 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-02
+
+### Added
+
+- Official cmux plugin-manager install: `cmux-plugin.toml` (`kind = "sidebar"`,
+  name `cmux-herdr`) plus a stdlib sidebar TUI at `bin/cmux-herdr-sidebar`.
+  `[build]` only ensures the wrapper is executable — no Cargo binary is faked.
+  The TUI lists live workspaces from `CMUX_TUI_SOCKET` / `CMUX_MUX_SOCKET`
+  (`identify`, `list-workspaces`, `select-workspace`) and inherits the host
+  Ghostty/cmux palette.
+- README hero and feature screenshots (lab/mock chrome only).
+
 ### Changed
 
+- Documented install is the official plugin manager only:
+  `cmux sidebar plugin install` / `use` / `update` / `remove`.
+  `./scripts/install.sh` is contributor/dev (see CONTRIBUTING.md).
 - Refreshed upstream status after Austin's direct #8736 follow-up fixes and
   the latest current-`main` update of #10045.
-- Refreshed the live upstream status for cmux PRs #8736 and #10045 after both
-  branches were updated to current `main`.
 
 ## [0.4.0] - 2026-08-22
 
@@ -338,7 +351,8 @@ Works today without any cmux upstream merge.
 - Native nested topology ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)) is
   intentionally out of scope for the plugin.
 
-[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.3.4...v0.4.0
 [0.3.4]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.3.4
 [0.3.3]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.3.3

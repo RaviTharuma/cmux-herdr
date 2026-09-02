@@ -9,6 +9,21 @@ A German overview of the project and of GitHub itself lives in
 [docs/MAINTAINING.md](docs/MAINTAINING.md). Architecture (what each file is
 for) is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## User install vs this clone
+
+End users install with the official cmux plugin manager (see the README).
+`./scripts/install.sh` is **contributor/dev only**: it symlinks
+`bin/cmux-herdr` into `~/.local/bin` and copies the optional Swift sidebar
+and agent skill so edits in this clone go live. It is not the documented
+user path and it does not replace `cmux sidebar plugin install`.
+
+```bash
+./scripts/install.sh
+./scripts/uninstall.sh
+```
+
+Optional LaunchAgent (also dev): `./scripts/install-watch-service.sh`.
+
 ## Before you start
 
 1. You need **Python 3.10+**. 3.12 is what CI uses in the matrix.
@@ -64,8 +79,10 @@ CI (GitHub Actions) runs the same `./scripts/test.sh` on Python 3.10–3.13.
 | `bridge/*.py` | Library: snapshot, mirror, socket RPC, handoff |
 | `bridge/test_*.py` | Unit tests next to the library |
 | `tests/` | CLI / behavior tests with fake binaries |
-| `scripts/` | install / uninstall / test / LaunchAgent |
-| `sidebars/herdr.swift` | Optional cmux custom sidebar |
+| `scripts/` | contributor install / uninstall / test / LaunchAgent |
+| `cmux-plugin.toml` | Official plugin-manager manifest |
+| `bin/cmux-herdr-sidebar` | Sidebar TUI the plugin manager runs |
+| `sidebars/herdr.swift` | Optional older custom-sidebar |
 | `agent-skill/` | Instructions for AI agents using the dual hierarchy |
 
 New library code belongs in `bridge/` with a matching `bridge/test_*_unit.py`.

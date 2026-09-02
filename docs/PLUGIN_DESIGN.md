@@ -48,7 +48,8 @@ This repository implements the plugin. It must not depend on unmerged cmux patch
 4. **`bridge/cmux_herdr_pump.py`** — SessionHost-style event pump into `LiveApplyHost`
 5. **`sidebars/herdr.swift`** — interpreted custom sidebar: live `workspaces` (reorder, select), host Ghostty/cmux theme tokens, `w.color` / git / progress, and live `statuses` / `agents` / tabs. No invented team. Agent pills still come from `cmux-herdr sync|watch`.
 6. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy
-7. **`scripts/install.sh` / `uninstall.sh`** — symlink CLI, install sidebar + skill
+7. **`cmux-plugin.toml` + `bin/cmux-herdr-sidebar`** — official plugin-manager install
+8. **`scripts/install.sh` / `uninstall.sh`** — contributor symlink CLI + optional Swift sidebar + skill
 
 ## Why status pills plus optional tab/pane mirror
 
