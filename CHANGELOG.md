@@ -18,6 +18,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   (`identify`, `list-workspaces`, `select-workspace`) and inherits the host
   Ghostty/cmux palette.
 - README hero and feature screenshots (lab/mock chrome only).
+- Interpreted Swift sidebar binds live cmux workspaces and inherits
+  Ghostty/cmux theme tokens (no invented team; landed on main in #63).
 
 ### Changed
 
