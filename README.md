@@ -27,7 +27,7 @@
 runs *inside* [cmux](https://github.com/manaflow-ai/cmux) — not a Herdr plugin. cmux is the outer
 macOS terminal. Herdr is the inner agent mux. Without this plugin, every agent
 collapses into one cmux tab titled roughly `herdr`. With it, each pane gets a
-status pill, each tab can become a real cmux surface, and you drive both layers
+status pill in the cmux sidebar, each tab can become a real cmux surface, and you drive both layers
 from one CLI: `cmux-herdr` for nested Herdr agents.
 
 This is a released plugin (**v0.4.0**), not a patch to `cmux.app`. Python 3.10+,
