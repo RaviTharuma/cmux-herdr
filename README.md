@@ -1,7 +1,13 @@
 <h1 align="center">cmux-herdr</h1>
-<p align="center"><strong>cmux sidebar plugin for Herdr nested agents</strong></p>
+<p align="center"><strong>A cmux plugin for Herdr</strong></p>
 <p align="center">
-  A cmux plugin (not a Herdr plugin): live status pills in the cmux sidebar, tab/pane mirroring with tmux-parity, and a CLI for nested Herdr agents.
+  Live status pills in the cmux sidebar, Herdr tab and pane
+  mirroring, and a CLI that treats nested Herdr agents as
+  first-class cmux surfaces.
+</p>
+<p align="center">
+  <code>git clone --branch v0.4.0 --depth 1 https://github.com/RaviTharuma/cmux-herdr.git</code><br />
+  then <code>./scripts/install.sh</code>
 </p>
 
 <p align="center">
@@ -23,12 +29,12 @@
   <a href="CHANGELOG.md">changelog</a>
 </p>
 
-**cmux-herdr** is the cmux sidebar plugin you install when [Herdr](https://github.com/herdrdev/herdr)
-runs *inside* [cmux](https://github.com/manaflow-ai/cmux) — not a Herdr plugin. cmux is the outer
+**cmux-herdr** is the plugin you install when [Herdr](https://github.com/herdrdev/herdr)
+runs *inside* [cmux](https://github.com/manaflow-ai/cmux). cmux is the outer
 macOS terminal. Herdr is the inner agent mux. Without this plugin, every agent
 collapses into one cmux tab titled roughly `herdr`. With it, each pane gets a
-status pill in the cmux sidebar, each tab can become a real cmux surface, and you drive both layers
-from one CLI: `cmux-herdr` for nested Herdr agents.
+status pill in the cmux sidebar, each tab can become a real cmux surface, and you
+drive both layers from one CLI: `cmux-herdr`.
 
 This is a released plugin (**v0.4.0**), not a patch to `cmux.app`. Python 3.10+,
 standard library only — no `pip`, no `npm`, no compile step.
