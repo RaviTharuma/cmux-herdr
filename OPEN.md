@@ -24,8 +24,9 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 
 ## What this plugin solves today
 
-- Mirror Herdr **tabs/panes into real cmux tabs/splits** (`cmux-herdr mirror`,
-  `--tmux-parity` for the ssh-tmux contract) with `attach-pane` followers.
+- Mirror Herdr **tabs/panes into real cmux tabs/splits** (`cmux-herdr watch`
+  defaults to the ssh-tmux contract; `mirror` is the one-shot tool) with
+  `attach-pane` followers.
 - Mirror Herdr agent state into cmux workspace **status pills** (`herdr:<pane_id>`) and progress.
 - CLI for topology and control: `status`, `doctor`, `tree`, `agents`, `sync`, `watch`,
   `mirror`, `attach-pane`, `send-key`, `observe`, `attach`, `detach`, `restore`,

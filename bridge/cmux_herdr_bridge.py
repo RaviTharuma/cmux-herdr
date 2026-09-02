@@ -1773,9 +1773,25 @@ def default_herdr_socket_path() -> str:
     return os.path.expanduser("~/.config/herdr/herdr.sock")
 
 
+def sidebar_install_paths() -> List[str]:
+    """Return preferred then fallback cmux custom-sidebar paths.
+
+    Official cmux docs: ``.js`` wins over ``.swift`` when both exist.
+    """
+    base = os.path.expanduser("~/.config/cmux/sidebars")
+    return [
+        os.path.join(base, "herdr.js"),
+        os.path.join(base, "herdr.swift"),
+    ]
+
+
 def sidebar_install_path() -> str:
-    """Return the optional cmux custom-sidebar install path."""
-    return os.path.expanduser("~/.config/cmux/sidebars/herdr.swift")
+    """Return the installed sidebar path, preferring ``herdr.js``."""
+    paths = sidebar_install_paths()
+    for path in paths:
+        if os.path.isfile(path):
+            return path
+    return paths[0]
 
 
 def _socket_stat_info(path: str) -> Dict[str, Any]:

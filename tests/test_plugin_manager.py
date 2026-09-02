@@ -174,10 +174,10 @@ class PluginManagerInstallSimulationTests(unittest.TestCase):
 
 
 class OfficialInstallCopyTests(unittest.TestCase):
-    """README leads with native herdr.swift, then official plugin-manager CLI."""
+    """README leads with native herdr.js, then official plugin-manager CLI."""
 
     NATIVE = (
-        "cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift",
+        "cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js",
         "cmux sidebar validate herdr --json",
         "cmux sidebar open herdr",
     )
@@ -202,19 +202,25 @@ class OfficialInstallCopyTests(unittest.TestCase):
         self.assertNotIn("./scripts/install.sh", install_section)
         self.assertNotIn("git clone --branch", install_section)
         hero = text.split("## Install", 1)[0]
-        self.assertIn("docs/screenshot.png", hero)
+        self.assertNotIn("docs/screenshot", hero)
+        self.assertNotIn("<img src=\"docs/", hero)
         self.assertIn("github/v/release/RaviTharuma/cmux-herdr", text)
-        self.assertIn("Native sidebar", text.split("## Features", 1)[1].split("## ", 1)[0])
+        features = text.split("## Features", 1)[1].split("## ", 1)[0]
+        self.assertIn("Native sidebar", features)
+        self.assertNotIn("docs/screenshot", features)
 
-    def test_hero_and_feature_screenshots_exist(self) -> None:
+    def test_readme_omits_generated_screenshots(self) -> None:
+        text = README.read_text(encoding="utf-8")
+        self.assertNotIn("docs/screenshot.png", text)
+        self.assertNotIn("docs/screenshot-pills.png", text)
+        self.assertNotIn("docs/screenshot-mirror.png", text)
+        self.assertNotIn("<img src=\"docs/", text)
         for rel in (
             "docs/screenshot.png",
             "docs/screenshot-pills.png",
             "docs/screenshot-mirror.png",
         ):
-            path = ROOT / rel
-            self.assertTrue(path.is_file(), rel)
-            self.assertGreater(path.stat().st_size, 8_000)
+            self.assertFalse((ROOT / rel).exists(), f"{rel} must not ship")
 
 
 if __name__ == "__main__":

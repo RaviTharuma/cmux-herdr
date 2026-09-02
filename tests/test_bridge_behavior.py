@@ -206,11 +206,26 @@ class InstallScriptTests(unittest.TestCase):
             )
             self.assertEqual(install.returncode, 0, install.stderr)
             target = Path(home) / ".local" / "bin" / "cmux-herdr"
-            sidebar = Path(home) / ".config" / "cmux" / "sidebars" / "herdr.swift"
+            sidebar_js = Path(home) / ".config" / "cmux" / "sidebars" / "herdr.js"
+            sidebar_swift = Path(home) / ".config" / "cmux" / "sidebars" / "herdr.swift"
             self.assertTrue(target.exists())
-            self.assertTrue(sidebar.exists())
+            self.assertTrue(sidebar_js.exists())
+            self.assertTrue(sidebar_swift.exists())
             self.assertIn("cmux-herdr plugin install", install.stdout)
             self.assertIn("Plugin installed.", install.stdout)
+
+    def test_sidebar_install_path_prefers_js_over_swift(self):
+        with tempfile.TemporaryDirectory() as home:
+            sidebars = Path(home) / ".config" / "cmux" / "sidebars"
+            sidebars.mkdir(parents=True)
+            js = sidebars / "herdr.js"
+            swift = sidebars / "herdr.swift"
+            with mock.patch.dict(os.environ, {"HOME": home}, clear=False):
+                self.assertTrue(bridge.sidebar_install_path().endswith("herdr.js"))
+                swift.write_text("// fallback\n", encoding="utf-8")
+                self.assertTrue(bridge.sidebar_install_path().endswith("herdr.swift"))
+                js.write_text("// product\n", encoding="utf-8")
+                self.assertTrue(bridge.sidebar_install_path().endswith("herdr.js"))
 
     def test_watch_service_install_does_not_replace_loaded_real_home_agent(self):
         script = ROOT / "scripts" / "install-watch-service.sh"

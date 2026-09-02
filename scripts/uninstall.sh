@@ -4,7 +4,8 @@ set -euo pipefail
 
 LOCAL_BIN="${HOME}/.local/bin"
 TARGET="${LOCAL_BIN}/cmux-herdr"
-SIDEBAR_DST="${HOME}/.config/cmux/sidebars/herdr.swift"
+SIDEBAR_JS_DST="${HOME}/.config/cmux/sidebars/herdr.js"
+SIDEBAR_SWIFT_DST="${HOME}/.config/cmux/sidebars/herdr.swift"
 
 echo "cmux-herdr plugin uninstall"
 
@@ -22,10 +23,12 @@ else
   echo "  cli not found at ${TARGET}"
 fi
 
-if [[ -f "${SIDEBAR_DST}" ]]; then
-  rm -f "${SIDEBAR_DST}"
-  echo "  removed ${SIDEBAR_DST}"
-fi
+for sidebar in "${SIDEBAR_JS_DST}" "${SIDEBAR_SWIFT_DST}"; do
+  if [[ -f "${sidebar}" ]]; then
+    rm -f "${sidebar}"
+    echo "  removed ${sidebar}"
+  fi
+done
 
 for d in \
   "${HOME}/.agents/skills/cmux-herdr" \

@@ -5,7 +5,6 @@ Product docs for **cmux-herdr**, the cmux plugin for Herdr.
 | Doc | Audience | What it is |
 |---|---|---|
 | [../README.md](../README.md) | Everyone | Plugin landing page: install, features, commands |
-| [screenshot.png](screenshot.png) | Everyone | Lab hero (Ghostty/cmux chrome; no PII) |
 | [de/README.md](de/README.md) | Deutsch | Produktüberblick |
 | [de/GITHUB.md](de/GITHUB.md) | Deutsch | Issues, PRs, Releases, Secrets |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Contributors | Layout, no-build model, macOS vs Linux |
