@@ -174,39 +174,55 @@ class PluginManagerInstallSimulationTests(unittest.TestCase):
 
 
 class OfficialInstallCopyTests(unittest.TestCase):
-    """README leads with native herdr.js, then official plugin-manager CLI."""
+    """README documents the plugin manager as the only product install path."""
 
-    NATIVE = (
-        "cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js",
-        "cmux sidebar validate herdr --json",
-        "cmux sidebar open herdr",
-    )
     PLUGIN_MANAGER = (
         "cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git",
         "cmux sidebar plugin use cmux-herdr",
         "cmux sidebar plugin update cmux-herdr",
         "cmux sidebar plugin remove cmux-herdr",
     )
+    DEMOTED = (
+        "cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js",
+        "cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift",
+        "mkdir -p ~/.config/cmux/sidebars",
+        "cmux sidebar open herdr",
+        "cmux sidebar select herdr",
+        "cmux sidebar validate herdr",
+    )
 
-    def test_readme_leads_with_native_sidebar_then_plugin_manager(self) -> None:
+    def test_readme_install_is_plugin_manager_only(self) -> None:
         text = README.read_text(encoding="utf-8")
         install_section = text.split("## Install", 1)[1].split("## Features", 1)[0]
-        native_at = min(install_section.find(line) for line in self.NATIVE)
-        plugin_at = min(install_section.find(line) for line in self.PLUGIN_MANAGER)
-        self.assertNotEqual(native_at, -1)
-        self.assertNotEqual(plugin_at, -1)
-        self.assertLess(native_at, plugin_at)
-        for line in self.NATIVE + self.PLUGIN_MANAGER:
+        for line in self.PLUGIN_MANAGER:
             self.assertIn(line, install_section)
-        self.assertIn("Reorderable", install_section)
         self.assertNotIn("./scripts/install.sh", install_section)
         self.assertNotIn("git clone --branch", install_section)
         hero = text.split("## Install", 1)[0]
         self.assertNotIn("docs/screenshot", hero)
         self.assertNotIn("<img src=\"docs/", hero)
         self.assertIn("github/v/release/RaviTharuma/cmux-herdr", text)
+
+    def test_readme_never_advertises_legacy_sidebar_copy(self) -> None:
+        text = README.read_text(encoding="utf-8")
+        for line in self.DEMOTED:
+            self.assertNotIn(
+                line,
+                text,
+                f"README still advertises the demoted path {line!r}",
+            )
+
+    def test_readme_labels_legacy_sidebar_files_as_not_the_product(self) -> None:
+        text = README.read_text(encoding="utf-8")
+        legacy = text.split("### Legacy sidebar files", 1)[1].split("## ", 1)[0]
+        self.assertIn("not the product", legacy)
+        self.assertIn("sidebars/herdr.js", legacy)
+        self.assertIn("sidebars/herdr.swift", legacy)
+
+    def test_readme_features_lead_with_plugin_manager_install(self) -> None:
+        text = README.read_text(encoding="utf-8")
         features = text.split("## Features", 1)[1].split("## ", 1)[0]
-        self.assertIn("Native sidebar", features)
+        self.assertIn("Plugin-manager install", features)
         self.assertNotIn("docs/screenshot", features)
 
     def test_readme_omits_generated_screenshots(self) -> None:

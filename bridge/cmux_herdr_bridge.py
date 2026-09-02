@@ -1773,10 +1773,25 @@ def default_herdr_socket_path() -> str:
     return os.path.expanduser("~/.config/herdr/herdr.sock")
 
 
-def sidebar_install_paths() -> List[str]:
-    """Return preferred then fallback cmux custom-sidebar paths.
+PLUGIN_NAME = "cmux-herdr"
 
-    Official cmux docs: ``.js`` wins over ``.swift`` when both exist.
+
+def plugin_checkout_path() -> str:
+    """Return the official cmux plugin-manager checkout path for this plugin.
+
+    ``cmux sidebar plugin install`` clones into
+    ``$XDG_DATA_HOME/cmux/mux-plugins/<name>`` (``~/.local/share`` default).
+    That checkout is the product install path.
+    """
+    base = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    return os.path.join(base, "cmux", "mux-plugins", PLUGIN_NAME)
+
+
+def legacy_sidebar_paths() -> List[str]:
+    """Return legacy ``~/.config/cmux/sidebars`` copies (contrib fallback only).
+
+    These are not the product install; the plugin manager mounts the sidebar
+    from its own checkout. Reported by ``doctor`` so stale copies are visible.
     """
     base = os.path.expanduser("~/.config/cmux/sidebars")
     return [
@@ -1785,13 +1800,9 @@ def sidebar_install_paths() -> List[str]:
     ]
 
 
-def sidebar_install_path() -> str:
-    """Return the installed sidebar path, preferring ``herdr.js``."""
-    paths = sidebar_install_paths()
-    for path in paths:
-        if os.path.isfile(path):
-            return path
-    return paths[0]
+def legacy_sidebar_installed() -> List[str]:
+    """Return the legacy sidebar copies that actually exist on this host."""
+    return [path for path in legacy_sidebar_paths() if os.path.isfile(path)]
 
 
 def _socket_stat_info(path: str) -> Dict[str, Any]:
@@ -2222,19 +2233,40 @@ def diagnose_install() -> Dict[str, Any]:
         }
     )
 
-    sidebar_path = sidebar_install_path()
-    sidebar_exists = os.path.isfile(sidebar_path)
+    checkout = plugin_checkout_path()
+    checkout_exists = os.path.isdir(checkout)
     checks.append(
         {
-            "name": "sidebar",
-            "ok": True,  # optional install
+            "name": "plugin_checkout",
+            "ok": True,  # runnable from any clone; this is the product path
             "hard": False,
-            "path": sidebar_path,
-            "exists": sidebar_exists,
+            "path": checkout,
+            "exists": checkout_exists,
             "detail": (
-                f"sidebar present: {sidebar_path}"
-                if sidebar_exists
-                else f"sidebar absent (optional): {sidebar_path}"
+                f"plugin-manager checkout present: {checkout}"
+                if checkout_exists
+                else (
+                    f"plugin-manager checkout absent: {checkout} "
+                    "(install with: cmux sidebar plugin install "
+                    "https://github.com/RaviTharuma/cmux-herdr.git)"
+                )
+            ),
+        }
+    )
+
+    legacy = legacy_sidebar_installed()
+    checks.append(
+        {
+            "name": "legacy_sidebar",
+            "ok": True,  # informational; legacy copies are not an error
+            "hard": False,
+            "paths": legacy,
+            "exists": bool(legacy),
+            "detail": (
+                "legacy sidebar copies found (not the product; remove them and "
+                f"use cmux sidebar plugin use cmux-herdr): {', '.join(legacy)}"
+                if legacy
+                else "no legacy ~/.config/cmux/sidebars copies"
             ),
         }
     )

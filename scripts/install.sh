@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Contributor/dev install (CLI symlink, optional Swift sidebar, agent skill).
-# End users should run: cmux sidebar plugin install <this-repo.git>
+# Contributor/dev install: CLI symlink + agent skill only.
+# The product install path is: cmux sidebar plugin install <this-repo.git>
 # No root required.
 set -euo pipefail
 
@@ -8,14 +8,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN_SRC="${ROOT}/bin/cmux-herdr"
 LOCAL_BIN="${HOME}/.local/bin"
 TARGET="${LOCAL_BIN}/cmux-herdr"
-SIDEBAR_JS_SRC="${ROOT}/sidebars/herdr.js"
-SIDEBAR_SWIFT_SRC="${ROOT}/sidebars/herdr.swift"
-SIDEBAR_DST_DIR="${HOME}/.config/cmux/sidebars"
-SIDEBAR_JS_DST="${SIDEBAR_DST_DIR}/herdr.js"
-SIDEBAR_SWIFT_DST="${SIDEBAR_DST_DIR}/herdr.swift"
 SKILL_SRC="${ROOT}/agent-skill"
 
-echo "cmux-herdr plugin install"
+echo "cmux-herdr contributor install (not the product install path)"
 echo "  repo: ${ROOT}"
 
 if [[ ! -f "${BIN_SRC}" ]]; then
@@ -39,20 +34,9 @@ fi
 # bin/cmux-herdr already adds repo root via Path(__file__).resolve().parent.parent
 # which works for symlinks. Also drop a thin path hint file if needed later.
 
-if [[ -f "${SIDEBAR_JS_SRC}" ]]; then
-  mkdir -p "${SIDEBAR_DST_DIR}"
-  cp "${SIDEBAR_JS_SRC}" "${SIDEBAR_JS_DST}"
-  echo "  sidebar: ${SIDEBAR_JS_DST}"
-else
-  echo "  sidebar: (js skipped, source missing)"
-fi
-if [[ -f "${SIDEBAR_SWIFT_SRC}" ]]; then
-  mkdir -p "${SIDEBAR_DST_DIR}"
-  cp "${SIDEBAR_SWIFT_SRC}" "${SIDEBAR_SWIFT_DST}"
-  echo "  sidebar: ${SIDEBAR_SWIFT_DST}"
-else
-  echo "  sidebar: (swift skipped, source missing)"
-fi
+# Sidebar files are NOT installed. `sidebars/herdr.js` / `herdr.swift` are a
+# legacy contrib fallback, not the product; the plugin manager mounts the
+# sidebar from its own checkout.
 
 install_skill_dir() {
   local dest="$1"
@@ -93,8 +77,10 @@ echo "       cmux-herdr doctor"
 echo "       cmux-herdr status"
 echo "       cmux-herdr sync"
 echo "       cmux-herdr watch"
-echo "  3. Enable custom sidebars in cmux Settings → Beta features,"
-echo "     then: cmux sidebar reload && cmux sidebar validate herdr"
+echo "  3. Product install (users, and to mount the sidebar):"
+echo "       cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git"
+echo "       cmux sidebar plugin use cmux-herdr"
+echo "       cmux sidebar plugin update cmux-herdr"
 echo "  4. Agents: skill installed as cmux-herdr (if skill dirs present)"
 echo
-echo "Plugin installed."
+echo "Contributor install done (CLI + skill; no sidebar files copied)."

@@ -7,6 +7,28 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-02
+
+### Changed
+
+- **The official cmux plugin manager is the only documented install path**:
+  `cmux sidebar plugin install|use|update|remove`. README, RELEASE, German
+  docs, `docs/PLUGIN_DESIGN.md`, `docs/ARCHITECTURE.md`, CONTRIBUTING, OPEN,
+  and the generated GitHub Release notes no longer advertise copying
+  `sidebars/herdr.*` into `~/.config/cmux/sidebars` or running
+  `cmux sidebar select|open herdr` — those replace the left rail or open a
+  pane and are not the product.
+- `sidebars/herdr.js` and `herdr.swift` stay in-tree as a clearly labeled
+  **legacy contrib fallback** for cmux builds without `cmux sidebar plugin`.
+- `scripts/install.sh` is contributor-only: it installs the CLI symlink and
+  agent skill and no longer copies sidebar files into `~/.config/cmux`. It
+  prints plugin-manager next steps instead. `scripts/uninstall.sh` still
+  sweeps legacy copies left by older versions.
+- `cmux-herdr doctor` reports the plugin-manager checkout
+  (`$XDG_DATA_HOME/cmux/mux-plugins/cmux-herdr`) as the product path and
+  flags stale `~/.config/cmux/sidebars` copies as legacy. The old `sidebar`
+  check is replaced by `plugin_checkout` + `legacy_sidebar`.
+
 ## [0.6.0] - 2026-09-02
 
 ### Changed
@@ -370,7 +392,8 @@ Works today without any cmux upstream merge.
 - Native nested topology ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)) is
   intentionally out of scope for the plugin.
 
-[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.3.4...v0.4.0

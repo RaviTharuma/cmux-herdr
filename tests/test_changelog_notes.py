@@ -49,13 +49,20 @@ class ChangelogNotesTests(unittest.TestCase):
         self.assertNotIn("0.3.3", body)
         self.assertTrue(body.startswith("## [0.3.4]"))
 
-    def test_release_notes_include_install(self) -> None:
+    def test_release_notes_install_is_plugin_manager_only(self) -> None:
         text = notes.release_notes("v0.3.4", self.SAMPLE)
-        self.assertIn("cmux sidebar validate herdr", text)
-        self.assertIn("cmux sidebar open herdr", text)
         self.assertIn("cmux sidebar plugin install", text)
         self.assertIn("cmux sidebar plugin use cmux-herdr", text)
+        self.assertIn("cmux sidebar plugin update cmux-herdr", text)
         self.assertIn("chmod +x", text)
+        for demoted in (
+            "cp sidebars/herdr",
+            "~/.config/cmux/sidebars",
+            "cmux sidebar open herdr",
+            "cmux sidebar select herdr",
+            "cmux sidebar validate herdr",
+        ):
+            self.assertNotIn(demoted, text)
 
     def test_missing_section_fails(self) -> None:
         with self.assertRaises(ValueError):

@@ -46,10 +46,10 @@ This repository implements the plugin. It must not depend on unmerged cmux patch
 2. **`bin/cmux-herdr`** — user CLI (`status`, `tree`, `sync`, `watch`, `api`, focus helpers, …)
 3. **`bridge/cmux_herdr_api.py`** — socket-first allowlisted Herdr RPC (never `server.stop`)
 4. **`bridge/cmux_herdr_pump.py`** — SessionHost-style event pump into `LiveApplyHost`
-5. **`sidebars/herdr.js`** (+ `herdr.swift` fallback) — interpreted custom sidebar named Herdr: live `workspaces` (reorder, select, context menu), host Ghostty/cmux theme tokens, and live statuses / tabs. `.js` wins for drag. No iframe, no CLI cheat-sheet. Agent pills still come from `cmux-herdr watch`.
+5. **`cmux-plugin.toml` + `bin/cmux-herdr-sidebar`** — the product install: `cmux sidebar plugin install|use|update|remove` mounts this as native cmux chrome from the manager's own checkout. Live `workspaces` (reorder, select, context menu), host Ghostty/cmux theme tokens, live statuses / tabs. No iframe, no CLI cheat-sheet. Agent pills still come from `cmux-herdr watch`.
 6. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy
-7. **`cmux-plugin.toml` + `bin/cmux-herdr-sidebar`** — official plugin-manager install
-8. **`scripts/install.sh` / `uninstall.sh`** — contributor symlink CLI + optional JS/Swift sidebar + skill
+7. **`sidebars/herdr.js` / `herdr.swift`** — legacy contrib fallback for cmux builds without `cmux sidebar plugin`. Copying them into `~/.config/cmux/sidebars` and running `cmux sidebar select|open herdr` replaces the left rail or opens a pane; that is **not** the product and is not supported.
+8. **`scripts/install.sh` / `uninstall.sh`** — contributor symlink of the CLI + agent skill (no sidebar files)
 
 ## Why status pills plus optional tab/pane mirror
 

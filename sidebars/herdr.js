@@ -1,3 +1,8 @@
+// LEGACY CONTRIB FALLBACK — NOT THE PRODUCT INSTALL.
+// The product path is: cmux sidebar plugin install|use|update cmux-herdr.
+// This file only exists for cmux builds without `cmux sidebar plugin`; copying
+// it to ~/.config/cmux/sidebars and running `cmux sidebar select|open herdr`
+// replaces the left rail or opens a pane and is unsupported.
 // Herdr sidebar for cmux (JS runtime — wins over herdr.swift for live drag).
 // Native cmux chrome: Reorderable, context menus, accent/primary/secondary/
 // tertiary tokens. Herdr is the product name. This is not an iframe, not a

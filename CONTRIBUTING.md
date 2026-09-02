@@ -11,11 +11,12 @@ for) is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## User install vs this clone
 
-End users install with the official cmux plugin manager (see the README).
-`./scripts/install.sh` is **contributor/dev only**: it symlinks
-`bin/cmux-herdr` into `~/.local/bin` and copies the optional JS/Swift sidebar
-and agent skill so edits in this clone go live. It is not the documented
-user path and it does not replace `cmux sidebar plugin install`.
+End users install with the official cmux plugin manager (see the README):
+`cmux sidebar plugin install|use|update`. `./scripts/install.sh` is
+**contributor/dev only**: it symlinks `bin/cmux-herdr` into `~/.local/bin` and
+copies the agent skill so edits in this clone go live. It installs no sidebar
+files, is not the documented user path, and does not replace
+`cmux sidebar plugin install`.
 
 ```bash
 ./scripts/install.sh
@@ -82,8 +83,8 @@ CI (GitHub Actions) runs the same `./scripts/test.sh` on Python 3.10–3.13.
 | `scripts/` | contributor install / uninstall / test / LaunchAgent |
 | `cmux-plugin.toml` | Official plugin-manager manifest |
 | `bin/cmux-herdr-sidebar` | Sidebar TUI the plugin manager runs |
-| `sidebars/herdr.js` | Product sidebar (native cmux chrome, named Herdr) |
-| `sidebars/herdr.swift` | Fallback interpreted Swift sidebar |
+| `sidebars/herdr.js` | Legacy contrib sidebar fallback — NOT the product |
+| `sidebars/herdr.swift` | Legacy contrib Swift fallback — NOT the product |
 | `agent-skill/` | Instructions for AI agents using the dual hierarchy |
 
 New library code belongs in `bridge/` with a matching `bridge/test_*_unit.py`.

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Contract tests for the native Herdr sidebar.
+"""Contract tests for the legacy contrib Herdr sidebar files.
 
-The sidebar cannot be mounted on this Linux VM (cmux is macOS). These tests
-lock the product rules: Herdr is the name, cmux is the chrome, live workspaces
-only, no iframe/bridge/CLI cheat-sheet.
+These files are NOT the product install path — `cmux sidebar plugin
+install|use|update` is. They stay in-tree as a fallback for cmux builds
+without `cmux sidebar plugin`, so these tests lock both the legacy label and
+the old UX rules: Herdr is the name, cmux is the chrome, live workspaces only,
+no iframe/bridge/CLI cheat-sheet.
 """
 
 from __future__ import annotations
@@ -45,7 +47,13 @@ class NativeSidebarContractTests(unittest.TestCase):
         self.js = _read(SIDEBAR_JS)
         self.swift = _read(SIDEBAR_SWIFT)
 
-    def test_js_is_the_product_sidebar_and_swift_is_fallback(self) -> None:
+    def test_files_are_labeled_legacy_contrib_not_the_product(self) -> None:
+        for source in (self.js, self.swift):
+            self.assertIn("LEGACY CONTRIB FALLBACK", source)
+            self.assertIn("NOT THE PRODUCT INSTALL", source)
+            self.assertIn("cmux sidebar plugin install", source)
+
+    def test_js_is_the_richer_fallback_and_swift_is_the_interpreted_one(self) -> None:
         self.assertTrue(SIDEBAR_JS.is_file())
         self.assertTrue(SIDEBAR_SWIFT.is_file())
         self.assertGreater(len(self.js), 200)

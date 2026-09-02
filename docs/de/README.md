@@ -7,9 +7,9 @@ Native cmux-Chrome — Maus, Reorderable, Tabs und Panes — kein
 eingerahmtes Herdr-Fenster.
 
 ```bash
-cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js
-cmux sidebar validate herdr --json
-cmux sidebar open herdr
+cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
+cmux sidebar plugin use cmux-herdr
+cmux sidebar plugin update cmux-herdr
 ```
 
 Das GitHub-Projekt ist öffentlich:
@@ -32,29 +32,19 @@ macht cmux zur Herdr-Oberfläche:
 - Agent-Status von Herdr → Status-Pills in der cmux-Sidebar
 - Herdr-Tabs und -Panes → echte cmux-Tabs und Splits (`watch`)
 - Eine CLI (`cmux-herdr`), um die Engine zu steuern
-- Native Custom-Sidebar, Agent-Skill und LaunchAgent
+- Offizieller Plugin-Manager-Install, Agent-Skill und LaunchAgent
 
 Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
 Es braucht **kein Compiling**: reines Python 3.10+ (Standardbibliothek), kein
 `pip`, kein `npm`, kein Cargo-Binary.
 
-Aktuelle Version: **v0.6.0**.
+Aktuelle Version: **v0.6.1**.
 
 ## Installation
 
-Die Produkt-UI ist die native Sidebar `herdr` (`herdr.js` gewinnt gegen
-`herdr.swift` beim Ziehen). Maus, Drag-and-drop, `Reorderable` über live
-cmux-Workspaces. Der Name Herdr bleibt sichtbar.
-
-```bash
-mkdir -p ~/.config/cmux/sidebars
-cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js
-cmux sidebar reload
-cmux sidebar validate herdr --json
-cmux sidebar open herdr
-```
-
-CLI über den offiziellen Plugin-Manager:
+Der Produkt-Installationsweg ist ausschließlich der **offizielle cmux
+Plugin-Manager**. Es wird nichts nach `~/.config/cmux` kopiert, und die linke
+Leiste wird nicht ersetzt.
 
 ```bash
 cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
@@ -63,7 +53,15 @@ cmux sidebar plugin update cmux-herdr
 cmux sidebar plugin remove cmux-herdr
 ```
 
-`./scripts/install.sh` ist nur für Mitwirkende (siehe CONTRIBUTING).
+`install` klont nach `~/.local/share/cmux/mux-plugins/cmux-herdr` (bzw.
+`$XDG_DATA_HOME/cmux/mux-plugins/cmux-herdr`); `use` bindet das Plugin als
+native cmux-Chrome ein.
+
+`./scripts/install.sh` ist nur für Mitwirkende (siehe CONTRIBUTING) und
+installiert keine Sidebar-Dateien.
+
+`sidebars/herdr.js` und `herdr.swift` bleiben nur als **Alt-Fallback** im Repo
+(für cmux-Builds ohne `cmux sidebar plugin`). Sie sind **nicht** das Produkt.
 
 Schnellstart in einer Herdr-Pane *in* cmux:
 
@@ -107,7 +105,7 @@ Die echten PTYs bleiben bei Herdr.
 | `cmux-plugin.toml` | Manifest für den offiziellen Plugin-Manager |
 | `bin/cmux-herdr-sidebar` | Sidebar-TUI |
 | `scripts/` | Entwickler-Install, Deinstallieren, Test-Skript |
-| `sidebars/` | Native cmux-Sidebar `herdr` (JS + Swift) |
+| `sidebars/` | Alt-Fallback der cmux-Sidebar (JS + Swift), nicht das Produkt |
 | `agent-skill/` | Skill für Coding-Agenten |
 | `docs/` | Diese Dokumentation |
 | `LICENSE` | MIT — andere dürfen den Code nutzen und verändern |

@@ -206,26 +206,51 @@ class InstallScriptTests(unittest.TestCase):
             )
             self.assertEqual(install.returncode, 0, install.stderr)
             target = Path(home) / ".local" / "bin" / "cmux-herdr"
-            sidebar_js = Path(home) / ".config" / "cmux" / "sidebars" / "herdr.js"
-            sidebar_swift = Path(home) / ".config" / "cmux" / "sidebars" / "herdr.swift"
+            sidebars = Path(home) / ".config" / "cmux" / "sidebars"
             self.assertTrue(target.exists())
-            self.assertTrue(sidebar_js.exists())
-            self.assertTrue(sidebar_swift.exists())
-            self.assertIn("cmux-herdr plugin install", install.stdout)
-            self.assertIn("Plugin installed.", install.stdout)
+            self.assertFalse(
+                sidebars.exists(),
+                "contributor install must not copy sidebar files into ~/.config/cmux",
+            )
+            self.assertIn("cmux-herdr contributor install", install.stdout)
+            self.assertIn("cmux sidebar plugin install", install.stdout)
+            self.assertIn("no sidebar files copied", install.stdout)
 
-    def test_sidebar_install_path_prefers_js_over_swift(self):
+    def test_plugin_checkout_path_follows_xdg_data_home(self):
+        with tempfile.TemporaryDirectory() as home:
+            data = Path(home) / "data"
+            with mock.patch.dict(
+                os.environ, {"HOME": home, "XDG_DATA_HOME": str(data)}, clear=False
+            ):
+                self.assertEqual(
+                    bridge.plugin_checkout_path(),
+                    str(data / "cmux" / "mux-plugins" / "cmux-herdr"),
+                )
+            env = dict(os.environ)
+            env.pop("XDG_DATA_HOME", None)
+            env["HOME"] = home
+            with mock.patch.dict(os.environ, env, clear=True):
+                self.assertEqual(
+                    bridge.plugin_checkout_path(),
+                    str(Path(home) / ".local" / "share" / "cmux" / "mux-plugins" / "cmux-herdr"),
+                )
+
+    def test_legacy_sidebar_copies_are_reported_not_required(self):
         with tempfile.TemporaryDirectory() as home:
             sidebars = Path(home) / ".config" / "cmux" / "sidebars"
             sidebars.mkdir(parents=True)
-            js = sidebars / "herdr.js"
-            swift = sidebars / "herdr.swift"
             with mock.patch.dict(os.environ, {"HOME": home}, clear=False):
-                self.assertTrue(bridge.sidebar_install_path().endswith("herdr.js"))
-                swift.write_text("// fallback\n", encoding="utf-8")
-                self.assertTrue(bridge.sidebar_install_path().endswith("herdr.swift"))
-                js.write_text("// product\n", encoding="utf-8")
-                self.assertTrue(bridge.sidebar_install_path().endswith("herdr.js"))
+                self.assertEqual(bridge.legacy_sidebar_installed(), [])
+                (sidebars / "herdr.swift").write_text("// legacy\n", encoding="utf-8")
+                self.assertEqual(
+                    bridge.legacy_sidebar_installed(),
+                    [str(sidebars / "herdr.swift")],
+                )
+                (sidebars / "herdr.js").write_text("// legacy\n", encoding="utf-8")
+                self.assertEqual(
+                    bridge.legacy_sidebar_installed(),
+                    [str(sidebars / "herdr.js"), str(sidebars / "herdr.swift")],
+                )
 
     def test_watch_service_install_does_not_replace_loaded_real_home_agent(self):
         script = ROOT / "scripts" / "install-watch-service.sh"
@@ -804,9 +829,11 @@ class DoctorTests(unittest.TestCase):
             sock = home / "herdr.sock"
             sock.write_text("", encoding="utf-8")
             os.chmod(sock, 0o600)
-            sidebar = home / ".config" / "cmux" / "sidebars" / "herdr.swift"
-            sidebar.parent.mkdir(parents=True)
-            sidebar.write_text("// sidebar\n", encoding="utf-8")
+            checkout = home / ".local" / "share" / "cmux" / "mux-plugins" / "cmux-herdr"
+            checkout.mkdir(parents=True)
+            legacy = home / ".config" / "cmux" / "sidebars" / "herdr.swift"
+            legacy.parent.mkdir(parents=True)
+            legacy.write_text("// legacy\n", encoding="utf-8")
             env = {
                 "HOME": str(home),
                 "XDG_STATE_HOME": str(state),
@@ -861,7 +888,13 @@ class DoctorTests(unittest.TestCase):
             self.assertTrue(by_name["host_fingerprint"]["ok"])
             self.assertIn("matching parent binding=yes", by_name["state_binding"]["detail"])
             self.assertIn("skipped", by_name["launch_agent"]["detail"])
-            self.assertTrue(by_name["sidebar"]["exists"])
+            self.assertTrue(by_name["plugin_checkout"]["exists"])
+            self.assertIn(
+                "plugin-manager checkout present",
+                by_name["plugin_checkout"]["detail"],
+            )
+            self.assertTrue(by_name["legacy_sidebar"]["exists"])
+            self.assertIn("not the product", by_name["legacy_sidebar"]["detail"])
             self.assertFalse(by_name["dry_sync"]["dry_sync"]["skipped"])
             self.assertEqual(by_name["dry_sync"]["dry_sync"]["agent_count"], 1)
 

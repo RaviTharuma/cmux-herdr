@@ -1550,7 +1550,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser(
         "doctor",
-        help="Diagnose plugin install (herdr, socket, fingerprint, LaunchAgent, sidebar)",
+        help=(
+            "Diagnose plugin install (herdr, socket, fingerprint, "
+            "plugin-manager checkout, LaunchAgent)"
+        ),
     )
     s.add_argument("--json", action="store_true", help="Also print raw JSON report")
     s.set_defaults(func=cmd_doctor)

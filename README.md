@@ -32,30 +32,13 @@ cmux tab titled roughly `herdr`. With it, Herdr sessions are real cmux
 workspaces, tabs, and panes — mouse, drag-and-drop, focus, order — not an
 iframe and not a nested Herdr chrome box.
 
-This is a released plugin (**v0.6.0**), not a patch to `cmux.app`. Python 3.10+,
+This is a released plugin (**v0.6.1**), not a patch to `cmux.app`. Python 3.10+,
 standard library only — no `pip`, no `npm`, no Cargo binary.
 
 ## Install
 
-The in-app UI is the interpreted sidebar `herdr` (`herdr.js` wins over
-`herdr.swift` for live drag). Mouse, `Reorderable`, context menus, live cmux
-workspaces. It names Herdr. It does not invent a team.
-
-From a clone (or the plugin-manager checkout):
-
-```bash
-mkdir -p ~/.config/cmux/sidebars
-cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js
-cmux sidebar reload
-cmux sidebar validate herdr --json
-cmux sidebar open herdr
-```
-
-Enable custom sidebars in cmux Settings → Beta features if `open` is refused.
-
-### CLI (official plugin manager)
-
-The `cmux-herdr` CLI and optional plugin-manager checkout:
+The product install path is the **official cmux plugin manager**. Nothing is
+copied into `~/.config/cmux`, and the left rail is never replaced.
 
 ```bash
 cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
@@ -64,21 +47,39 @@ cmux sidebar plugin update cmux-herdr
 cmux sidebar plugin remove cmux-herdr
 ```
 
-That clones into `$XDG_DATA_HOME/cmux/mux-plugins/cmux-herdr` (or
-`~/.local/share/cmux/mux-plugins/cmux-herdr`). Copy `sidebars/herdr.js`
-from there if you did not already. `cmux-plugin.toml` is honest Python
-(`[build]` is chmod +x, not Cargo). Plugin-manager `use` may host a PTY
-fallback; the product sidebar remains `herdr.js` (Swift fallback ships
-beside it).
+`install` clones into `$XDG_DATA_HOME/cmux/mux-plugins/cmux-herdr` (or
+`~/.local/share/cmux/mux-plugins/cmux-herdr`). `use` mounts the plugin as
+native cmux chrome and runs `bin/cmux-herdr-sidebar` from that checkout.
+`cmux-plugin.toml` is honest Python (`[build]` is chmod +x, not Cargo).
 
-Contributor symlink of the CLI (not the user UI path): [CONTRIBUTING.md](CONTRIBUTING.md).
+Then, from a Herdr pane nested in cmux:
+
+```bash
+cmux-herdr doctor
+cmux-herdr watch
+```
+
+`watch` is the live path: agent pills plus Herdr tabs and panes projected into
+real cmux tabs and splits, until native nested topology
+([cmux#10045](https://github.com/manaflow-ai/cmux/pull/10045)) lands. Plugin and
+native share the writer lease, so they hand off instead of fighting.
+
+Contributor symlink of the CLI (not the user path): [CONTRIBUTING.md](CONTRIBUTING.md).
 Release notes: [RELEASE.md](RELEASE.md).
+
+### Legacy sidebar files (not the product)
+
+`sidebars/herdr.js` and `sidebars/herdr.swift` remain in-tree as a **contrib
+fallback** for cmux builds without `cmux sidebar plugin`. Copying them into
+`~/.config/cmux/sidebars` and running `cmux sidebar select|open herdr` replaces
+the left rail or opens a pane — that is not the product and is not supported.
+Use the plugin manager.
 
 ## Features
 
 | | |
 |---|---|
-| **Native sidebar** | Interpreted `herdr` with mouse, drag-and-drop, and `Reorderable` live workspaces. Named Herdr. Status chips look like cmux statuses. Ghostty/cmux theme tokens. |
+| **Plugin-manager install** | `cmux sidebar plugin install` / `use` / `update` / `remove`. Mounted as native cmux chrome from the manager's checkout — no files copied into `~/.config/cmux`, no left rail replaced. |
 | **Live watch** | `cmux-herdr watch` keeps pills and surfaces in sync and projects Herdr tabs/panes into real cmux tabs and splits. Optional LaunchAgent so it survives closing the pane. |
 | **Tab and pane mirror** | Layout, focus, order, and prune — the same contract cmux gives tmux over SSH. Click a sidebar row to `workspace.select` / `surface.focus`. |
 | **Status pills** | Every Herdr agent becomes a status chip on the cmux workspace — working, idle, done, blocked — plus a progress bar for the session. |
@@ -96,13 +97,6 @@ cmux-herdr doctor
 cmux-herdr watch
 ```
 
-Open the native sidebar after the copy step:
-
-```bash
-cmux sidebar validate herdr --json
-cmux sidebar open herdr
-```
-
 `watch` is enough. You live in cmux chrome. `--pills-only` writes status
 chips without projecting tabs and panes.
 
@@ -110,7 +104,7 @@ chips without projecting tabs and panes.
 
 | Command | What it does |
 |---|---|
-| `doctor` | Diagnose plugin install, host fingerprint, sidebar, LaunchAgent |
+| `doctor` | Diagnose plugin-manager checkout, host fingerprint, LaunchAgent |
 | `status` | Show nested cmux + Herdr context |
 | `tree` / `agents` | Inner topology, compact agent list |
 | `watch` | Live pills + real cmux tabs/panes (`--pills-only` skips projection) |
@@ -249,7 +243,8 @@ Inventory and open checklist: **[OPEN.md](OPEN.md)**.
 ## FAQ
 
 **Is this shipped inside cmux.app?**
-No. It is a user-installed sidebar plugin. You keep it when you upgrade cmux.
+No. It is a user-installed plugin, mounted by `cmux sidebar plugin`. You keep
+it when you upgrade cmux.
 
 **How is this different from `herdr-plugin-cmux`?**
 [lachieh/herdr-plugin-cmux](https://github.com/lachieh/herdr-plugin-cmux) is a

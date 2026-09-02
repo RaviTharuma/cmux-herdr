@@ -107,8 +107,8 @@ enough to catch Python regressions. Dogfood the product on a Mac.
 |---|---|
 | `cmux-plugin.toml` | Plugin-manager manifest (`kind=sidebar`) |
 | `bin/cmux-herdr-sidebar` | Sidebar TUI the official manager runs |
-| `sidebars/herdr.js` | Product sidebar (native cmux chrome, named Herdr; live drag) |
-| `sidebars/herdr.swift` | Fallback interpreted Swift sidebar (same contract; `.js` wins) |
+| `sidebars/herdr.js` | Legacy contrib sidebar fallback — NOT the product install |
+| `sidebars/herdr.swift` | Legacy contrib Swift fallback — NOT the product install |
 | `agent-skill/SKILL.md` | Dual-hierarchy notes for coding agents |
 | `scripts/com.cmux-herdr.watch.plist` | LaunchAgent template (`/Users/PLACEHOLDER` is replaced on install) |
 
