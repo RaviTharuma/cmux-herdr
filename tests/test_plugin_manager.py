@@ -174,31 +174,34 @@ class PluginManagerInstallSimulationTests(unittest.TestCase):
 
 
 class OfficialInstallCopyTests(unittest.TestCase):
-    """README leads with native herdr.js, then official plugin-manager CLI."""
+    """README leads with official plugin-manager + CLI, not custom-sidebar copy."""
 
-    NATIVE = (
-        "cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js",
-        "cmux sidebar validate herdr --json",
-        "cmux sidebar open herdr",
-    )
     PLUGIN_MANAGER = (
         "cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git",
         "cmux sidebar plugin use cmux-herdr",
         "cmux sidebar plugin update cmux-herdr",
         "cmux sidebar plugin remove cmux-herdr",
     )
+    DEMOTED_CUSTOM_SIDEBAR = (
+        "cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js",
+        "cmux sidebar open herdr",
+        "cmux sidebar select herdr",
+    )
+    CLI_NEXT = (
+        "cmux-herdr doctor",
+        "cmux-herdr watch",
+    )
 
-    def test_readme_leads_with_native_sidebar_then_plugin_manager(self) -> None:
+    def test_readme_leads_with_plugin_manager_not_custom_sidebar(self) -> None:
         text = README.read_text(encoding="utf-8")
         install_section = text.split("## Install", 1)[1].split("## Features", 1)[0]
-        native_at = min(install_section.find(line) for line in self.NATIVE)
         plugin_at = min(install_section.find(line) for line in self.PLUGIN_MANAGER)
-        self.assertNotEqual(native_at, -1)
         self.assertNotEqual(plugin_at, -1)
-        self.assertLess(native_at, plugin_at)
-        for line in self.NATIVE + self.PLUGIN_MANAGER:
+        for line in self.PLUGIN_MANAGER + self.CLI_NEXT:
             self.assertIn(line, install_section)
-        self.assertIn("Reorderable", install_section)
+        for line in self.DEMOTED_CUSTOM_SIDEBAR:
+            self.assertNotIn(line, install_section)
+            self.assertNotIn(line, text)
         self.assertNotIn("./scripts/install.sh", install_section)
         self.assertNotIn("git clone --branch", install_section)
         hero = text.split("## Install", 1)[0]
@@ -206,8 +209,13 @@ class OfficialInstallCopyTests(unittest.TestCase):
         self.assertNotIn("<img src=\"docs/", hero)
         self.assertIn("github/v/release/RaviTharuma/cmux-herdr", text)
         features = text.split("## Features", 1)[1].split("## ", 1)[0]
-        self.assertIn("Native sidebar", features)
+        self.assertIn("Native cmux chrome", features)
+        self.assertNotIn("Native sidebar", features)
         self.assertNotIn("docs/screenshot", features)
+        de = (ROOT / "docs" / "de" / "README.md").read_text(encoding="utf-8")
+        self.assertIn(self.PLUGIN_MANAGER[0], de)
+        for line in self.DEMOTED_CUSTOM_SIDEBAR:
+            self.assertNotIn(line, de)
 
     def test_readme_omits_generated_screenshots(self) -> None:
         text = README.read_text(encoding="utf-8")
