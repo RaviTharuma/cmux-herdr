@@ -1,7 +1,7 @@
 # Architecture
 
 **cmux-herdr** is a released **cmux plugin for Herdr**: a Python 3.10+ CLI,
-an optional custom sidebar, and an agent skill. It is not an Xcode app, not a
+an optional experimental custom sidebar leftover, and an agent skill. It is not an Xcode app, not a
 Swift package, and not something you compile.
 
 ```text
@@ -36,7 +36,7 @@ Develop against the clone:
 
 The official install is `cmux sidebar plugin install` (see `cmux-plugin.toml`).
 `scripts/install.sh` is contributor-only: it symlinks `bin/cmux-herdr` to
-`~/.local/bin` and copies the optional JS/Swift sidebar and agent skill.
+`~/.local/bin` and copies the agent skill. It does not copy custom sidebars.
 
 ## How the CLI is assembled
 
@@ -107,8 +107,8 @@ enough to catch Python regressions. Dogfood the product on a Mac.
 |---|---|
 | `cmux-plugin.toml` | Plugin-manager manifest (`kind=sidebar`) |
 | `bin/cmux-herdr-sidebar` | Sidebar TUI the official manager runs |
-| `sidebars/herdr.js` | Product sidebar (native cmux chrome, named Herdr; live drag) |
-| `sidebars/herdr.swift` | Fallback interpreted Swift sidebar (same contract; `.js` wins) |
+| `sidebars/herdr.js` | Experimental leftover sidebar (not default-installed) |
+| `sidebars/herdr.swift` | Experimental leftover Swift sidebar (not default-installed) |
 | `agent-skill/SKILL.md` | Dual-hierarchy notes for coding agents |
 | `scripts/com.cmux-herdr.watch.plist` | LaunchAgent template (`/Users/PLACEHOLDER` is replaced on install) |
 
