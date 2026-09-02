@@ -7,9 +7,9 @@ Native cmux-Chrome — Maus, Reorderable, Tabs und Panes — kein
 eingerahmtes Herdr-Fenster.
 
 ```bash
-cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js
-cmux sidebar validate herdr --json
-cmux sidebar open herdr
+cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
+cmux-herdr doctor
+cmux-herdr watch
 ```
 
 Das GitHub-Projekt ist öffentlich:
@@ -32,29 +32,19 @@ macht cmux zur Herdr-Oberfläche:
 - Agent-Status von Herdr → Status-Pills in der cmux-Sidebar
 - Herdr-Tabs und -Panes → echte cmux-Tabs und Splits (`watch`)
 - Eine CLI (`cmux-herdr`), um die Engine zu steuern
-- Native Custom-Sidebar, Agent-Skill und LaunchAgent
+- Agent-Skill, LaunchAgent, Status-Pills und `watch`
 
 Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
 Es braucht **kein Compiling**: reines Python 3.10+ (Standardbibliothek), kein
 `pip`, kein `npm`, kein Cargo-Binary.
 
-Aktuelle Version: **v0.6.0**.
+Aktuelle Version: **v0.6.1**.
 
 ## Installation
 
-Die Produkt-UI ist die native Sidebar `herdr` (`herdr.js` gewinnt gegen
-`herdr.swift` beim Ziehen). Maus, Drag-and-drop, `Reorderable` über live
-cmux-Workspaces. Der Name Herdr bleibt sichtbar.
-
-```bash
-mkdir -p ~/.config/cmux/sidebars
-cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js
-cmux sidebar reload
-cmux sidebar validate herdr --json
-cmux sidebar open herdr
-```
-
-CLI über den offiziellen Plugin-Manager:
+Offizielle Installation ist der cmux-Plugin-Manager plus die `cmux-herdr`-CLI.
+Native Herdr-Chrome ist parent cmux (#8736 / #10045). Dieses Plugin kopiert
+keine Custom-Sidebar nach `~/.config/cmux/sidebars/`.
 
 ```bash
 cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
@@ -63,7 +53,8 @@ cmux sidebar plugin update cmux-herdr
 cmux sidebar plugin remove cmux-herdr
 ```
 
-`./scripts/install.sh` ist nur für Mitwirkende (siehe CONTRIBUTING).
+`./scripts/install.sh` ist nur für Mitwirkende (CLI-Symlink + Skill, siehe
+CONTRIBUTING). Es kopiert keine Sidebar-Dateien.
 
 Schnellstart in einer Herdr-Pane *in* cmux:
 
@@ -72,7 +63,8 @@ cmux-herdr doctor
 cmux-herdr watch
 ```
 
-`watch` reicht. Du bleibst in der cmux-Oberfläche.
+`watch` reicht. Du bleibst in der cmux-Oberfläche. `sidebars/herdr.js` und
+`herdr.swift` bleiben im Repo als experimentelle Reste, nicht als Default.
 
 ## Was du zum Benutzen brauchst
 
@@ -107,7 +99,7 @@ Die echten PTYs bleiben bei Herdr.
 | `cmux-plugin.toml` | Manifest für den offiziellen Plugin-Manager |
 | `bin/cmux-herdr-sidebar` | Sidebar-TUI |
 | `scripts/` | Entwickler-Install, Deinstallieren, Test-Skript |
-| `sidebars/` | Native cmux-Sidebar `herdr` (JS + Swift) |
+| `sidebars/` | Experimentelle Custom-Sidebar `herdr` (JS + Swift, kein Default) |
 | `agent-skill/` | Skill für Coding-Agenten |
 | `docs/` | Diese Dokumentation |
 | `LICENSE` | MIT — andere dürfen den Code nutzen und verändern |

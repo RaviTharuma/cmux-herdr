@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Contributor/dev install (CLI symlink, optional Swift sidebar, agent skill).
+# Contributor/dev install (CLI symlink + agent skill).
 # End users should run: cmux sidebar plugin install <this-repo.git>
+# Does not copy custom sidebars. Native Herdr chrome is parent cmux.
 # No root required.
 set -euo pipefail
 
@@ -8,11 +9,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN_SRC="${ROOT}/bin/cmux-herdr"
 LOCAL_BIN="${HOME}/.local/bin"
 TARGET="${LOCAL_BIN}/cmux-herdr"
-SIDEBAR_JS_SRC="${ROOT}/sidebars/herdr.js"
-SIDEBAR_SWIFT_SRC="${ROOT}/sidebars/herdr.swift"
-SIDEBAR_DST_DIR="${HOME}/.config/cmux/sidebars"
-SIDEBAR_JS_DST="${SIDEBAR_DST_DIR}/herdr.js"
-SIDEBAR_SWIFT_DST="${SIDEBAR_DST_DIR}/herdr.swift"
 SKILL_SRC="${ROOT}/agent-skill"
 
 echo "cmux-herdr plugin install"
@@ -39,20 +35,10 @@ fi
 # bin/cmux-herdr already adds repo root via Path(__file__).resolve().parent.parent
 # which works for symlinks. Also drop a thin path hint file if needed later.
 
-if [[ -f "${SIDEBAR_JS_SRC}" ]]; then
-  mkdir -p "${SIDEBAR_DST_DIR}"
-  cp "${SIDEBAR_JS_SRC}" "${SIDEBAR_JS_DST}"
-  echo "  sidebar: ${SIDEBAR_JS_DST}"
-else
-  echo "  sidebar: (js skipped, source missing)"
-fi
-if [[ -f "${SIDEBAR_SWIFT_SRC}" ]]; then
-  mkdir -p "${SIDEBAR_DST_DIR}"
-  cp "${SIDEBAR_SWIFT_SRC}" "${SIDEBAR_SWIFT_DST}"
-  echo "  sidebar: ${SIDEBAR_SWIFT_DST}"
-else
-  echo "  sidebar: (swift skipped, source missing)"
-fi
+# Do not copy sidebars/herdr.js or herdr.swift into ~/.config/cmux/sidebars/.
+# Those files stay in the repo as experimental leftovers. Uninstall removes
+# leftover copies from older installs.
+echo "  sidebar: not installed (experimental leftover in repo; native chrome is parent cmux)"
 
 install_skill_dir() {
   local dest="$1"
@@ -90,11 +76,7 @@ echo "Next steps:"
 echo "  1. Ensure ~/.local/bin is on PATH"
 echo "  2. Inside a Herdr pane nested in cmux, run:"
 echo "       cmux-herdr doctor"
-echo "       cmux-herdr status"
-echo "       cmux-herdr sync"
 echo "       cmux-herdr watch"
-echo "  3. Enable custom sidebars in cmux Settings → Beta features,"
-echo "     then: cmux sidebar reload && cmux sidebar validate herdr"
-echo "  4. Agents: skill installed as cmux-herdr (if skill dirs present)"
+echo "  3. Agents: skill installed as cmux-herdr (if skill dirs present)"
 echo
 echo "Plugin installed."

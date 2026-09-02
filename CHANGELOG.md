@@ -7,6 +7,21 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-02
+
+### Changed
+
+- Demote the custom `herdr` sidebar. Official install is
+  `cmux sidebar plugin install` plus the `cmux-herdr` CLI (`watch` /
+  `doctor` / `status` / `mirror`). `install.sh` no longer copies
+  `sidebars/herdr.js` or `herdr.swift` into `~/.config/cmux/sidebars/`.
+  README and the German overview no longer document `cmux sidebar open herdr`
+  as the UX. Native Herdr chrome is parent cmux (#8736, #10045).
+  `sidebars/herdr.{js,swift}` remain in the repo as experimental leftovers.
+  Uninstall deletes leftover `~/.config/cmux/sidebars/herdr.{js,swift}` if
+  present. Doctor treats a missing custom sidebar as expected; a leftover
+  copy is reported softly as demoted.
+
 ## [0.6.0] - 2026-09-02
 
 ### Changed
@@ -105,6 +120,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   agent manifests, worktrees, and workspace-move. See
   [docs/upstream/HERDR_BEYOND_TMUX.md](./docs/upstream/HERDR_BEYOND_TMUX.md).
 
+- SessionHost watch ceiling, persistent Herdr RPC session, live apply host,
+  attach/detach/restore, deep mirror, single-writer guard, and tmux-parity
+  hardening. Full item list is on the v0.3.3 tag.
+
 ### Fixed
 
 - **Herdr 0.8 CLI/RPC contract**: CLI fallbacks now match
@@ -123,177 +142,6 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   `pane.resize --cols/--rows` is not a Herdr API and is no longer sent.
   README Herdr repo URL is `herdrdev/herdr`. Default cmux socket example
   is `/tmp/cmux.sock`.
-
-### Added
-
-- **SessionHost watch ceiling**: subscribe gap (or periodic 10× interval)
-  triggers a full `session.snapshot` resync. Timeout ticks paint I/O only —
-  they do not remirror cmux chrome (native SessionHost does not rebuild
-  Bonsplit every poll). `attach-pane` read/send/resize go socket-first
-  through `herdr_rpc`. `fetch_snapshot` reuses the process-wide HerdrApi
-  session.
-
-- **Persistent Herdr RPC session**: `HerdrApi.open()` holds one Unix-socket
-  connection (native `HerdrNestedTopologyClient`). `watch --tmux-parity`
-  reuses it for pane reads instead of connecting per poll. Reconnects once
-  on drop. Never reuses `events.subscribe` for requests. `herdr_rpc`
-  reuses one process-wide session. CLI fallback runs `herdr` **once** so
-  the real stderr (not a leftover socket miss) is what the user sees.
-
-- **Input drain + pane seed on the pump**: queued Ghostty→Herdr keys are
-  flushed via `pane.send_keys` / `pane.send_text`. First `pane.read` seeds
-  the surface (tmux seed gate); later ticks apply a delta. ANSI read is
-  preferred. `tab.focused` / `workspace.focused` project onto the session
-  host without a full resync.
-
-- **Socket-first focus/split**: `focus-pane` / `focus-tab` / `focus-workspace`
-  / `focus-agent` / `split` use the allowlisted RPC (CLI fallback). Doctor
-  and `status` ping the API.
-
-- **CLI**: `set-ratio`, `move-pane`, `focus-dir`, `move-tab`, `rename-pane`,
-  `rename-agent`, `start-agent`, `notify`, `wait-output`.
-
-- **Herdr control-surface parity** (`bridge/cmux_herdr_api.py`):
-  socket-first allowlisted RPC for the published protocol-17 methods
-  (tabs, panes, workspaces, agents, layout). CLI fallback when the
-  socket is down. Refuses `server.stop`, `pane.graphics.*`, and
-  `plugin.*`. Control talks to Herdr even when native owns the cmux
-  projection. CLI: `api`, `new-tab`, `close-tab`, `rename-tab`,
-  `new-workspace`, `close-workspace`, `rename-workspace`, `close-pane`
-  (busy panes need `--force`), `zoom-pane`, `resize-pane`, `swap-pane`,
-  `send`, `neighbor`, `layout`, `agent-prompt`, `agent-wait`.
-
-- **Live SessionHost pump** (`bridge/cmux_herdr_pump.py`):
-  `watch --tmux-parity` feeds `pane.read` / focus / `agent_status` into
-  `LiveApplyHost` the way native SessionHost drives Ghostty. Topology
-  events resync; output stays isolated per pane; provider focus does
-  not steal first responder. Still in-memory surfaces — not PTY theft.
-
-- **Plugin ↔ native handoff** (`bridge/cmux_herdr_handoff.py`): one
-  writer lease (JSON `owner` / `pid` / `heartbeat_ms`) and one shared
-  restore file (`mode: reattach` only). Native live → plugin
-  attach/observe/restore/watch yield. Plugin watch → native should
-  yield (same files). Stale lease (dead pid or expired heartbeat) →
-  the other path may resume. Not Ghostty PTY theft.
-
-- **CLI attach / detach / restore** for the live apply host
-  (`cmux-herdr attach`, `detach`, `restore`). `watch --tmux-parity`
-  attaches on start and detaches on stop; host close never stops
-  Herdr. Restore reattaches from a persist file and never replays a
-  stale tree. `observe` uses `HERDR_SOCKET_PATH` instead of a hardcoded
-  `/tmp/herdr.sock`.
-
-- **Active-pane cwd → tab folder** on the live apply host: background
-  `cd` is cached and ignored; only the focused pane may set `tab_cwd`
-  (tmux `updateRemotePanelDirectory`). Focus changes promote a cached
-  path.
-
-- **Live ssh-tmux apply machine** (`bridge/cmux_herdr_live.py`): the
-  missing depth — `make_panel`, `process_remote_output`, named keys,
-  impose-before-rebuild, divider drag, first-responder
-  (`is_applying_focus` does not steal the keyboard), feed-forward
-  `update_client_size`, zoom-keeps-panels, attach/detach/restore,
-  busy-close, `remote.herdr.*`, and the native-live writer marker.
-  `mirror --tmux-parity` now runs this host. CLI: `send-key`,
-  `observe`. Plugin surfaces are in-memory Ghostty analogues; native
-  `RemoteHerdrLiveApply` swaps in `TerminalPanel`.
-
-- **Cmux-tmux attach / detach / restore / observability**
-  (`bridge/cmux_herdr_lifecycle.py`): same controller surface cmux
-  built for tmux (`RemoteTmuxController+Attach`, `remote.tmux.*`),
-  mapped onto the Herdr Unix socket. Beta gate, one-endpoint-one-window
-  affinity, re-entrant attach guard, connection reuse/replace, host
-  close detaches (never `server.stop`), restore **reattaches** after
-  restart (never replays a stale Bonsplit tree), `remote.herdr.sessions`
-  / `attach` / `mirror` / `window` / `detach` / `state` /
-  `pane_surfaces` / `pane_grids`. No SSH, ControlMaster, or
-  `tmux -CC`.
-
-- **Cmux-tmux control depth** (`bridge/cmux_herdr_control.py`): named
-  keys (`C-Up` → `pane.send_keys` + CSI fallback), 256 KiB input
-  forwarder, optimistic focus + rollback, layout-tree adjacent focus,
-  user `pane.split`, `pane.read` seed queue, tab activity / busy-close
-  from Herdr `agent_status`, host-close detach, inbound session title.
-  Same user mutations cmux built for tmux; no SSH/`tmux -CC`/`respawn`.
-
-- Honest **contract vs live** inventory in
-  [docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md): the PR7
-  column is the target, not wired AppKit. Lists tmux-live behaviors Herdr
-  still lacks live Ghostty/Bonsplit apply (contracts now cover seed,
-  named keys, focus rollback, user split, attach/detach, busy-close,
-  tab activity).
-
-- **I/O isolation + session-tab verbs** (`bridge/cmux_herdr_io.py`,
-  `bridge/cmux_herdr_session.py`): tmux `routeOutput` / `sendKeys` /
-  `setActivePane` contract in userspace — unknown pane is a no-op, output
-  never crosses panes, provider focus never echoes `pane.focus`, title
-  `ESC k` sequences are stripped, cwd updates only the active pane.
-  Session host linearizes `reconcile_session` into create/rename/close/
-  close-defaults/reorder/focus (tmux `rebuildTopology`).   Native twins stay
-  on a separate fork branch (not merged into #10045 while that PR is in
-  review). See [docs/upstream/LANES.md](docs/upstream/LANES.md).
-
-- **Host-apply verbs** (`bridge/cmux_herdr_host.py`): linearize impose +
-  reconcile into tmux apply order (create panels, mutate tree, impose
-  dividers, focus). `FakeBonsplitHost` proves the order without AppKit.
-  Native twin is `RemoteHerdrHostApply` on a separate fork branch (not
-  merged into #10045 while that PR is in review). See
-  [docs/upstream/LANES.md](docs/upstream/LANES.md).
-
-- **Bonsplit impose planner** (`bridge/cmux_herdr_impose.py`): ssh-tmux
-  `imposeDividerPlan` contract in userspace — right-associated binary tree,
-  targeted leaf expand/remove, tmux +1 divider-cell fraction, `plan(w) <= w`,
-  divider-drag hold/resolve. `mirror --tmux-parity` overlays those fractions
-  onto `cmux set-ratio`. Native twin is `RemoteHerdrImpose` on the cmux fork.
-  Tmux-depth development continues (host Bonsplit/Ghostty apply).
-
-- `AGENTS.md` for Cursor Cloud (stdlib-only test/run notes; fake herdr/cmux on Linux).
-- Community poll [cmux#10106](https://github.com/manaflow-ai/cmux/discussions/10106) on README / OPEN / upstream banners. Native window-mirror engine [RaviTharuma/cmux#8](https://github.com/RaviTharuma/cmux/pull/8) is merged.
-
-- **Persistent Herdr socket + window-mirror engine:** `bridge/cmux_herdr_socket.py`
-  holds one protocol-17 NDJSON `events.subscribe` session for
-  `watch --tmux-parity` (no reconnect-every-tick). `bridge/cmux_herdr_engine.py`
-  is the Python twin of native `RemoteHerdrWindowMirror` (zoom keeps hidden
-  panes, geometry-only does not bump structure version, feed-forward client
-  grid, incremental `pane.read` delta). `attach-pane` appends when output
-  extends the last snapshot.
-
-- Native track retarget: [docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md)
-  and paste-ready [PR7 `RemoteHerdrWindowMirror`](docs/upstream/PR7_HERDR_WINDOW_MIRROR.md)
-  so the in-app path copies ssh-tmux instead of stopping at sidebar virtual rows.
-
-- **Deep mirror** (`cmux-herdr mirror` / `attach-pane` / `watch --mirror`):
-  project Herdr tabs into real cmux tabs and extra panes into cmux splits,
-  each running an `attach-pane` follower (`herdr pane read` + `pane send`).
-  Idempotent via `herdr-mirror:<pane_id>` keys stored in the association
-  cache `mirrors` map. Default scope is the current Herdr tab; `--all`
-  mirrors the full session; `--dry-run` prints the plan; `--prune` closes
-  leftover cmux surfaces. This is the plugin analogue of cmux `ssh-tmux`
-  (extra viewers, not Ghostty PTY theft).
-
-- **Single-writer guard**: `sync` / `watch` / `mirror` no-op competing writes when
-  native nested attachment is live (`CMUX_HERDR_NATIVE_LIVE=1`, or a
-  `native-live-<fingerprint>` / `native-live` marker under
-  `$XDG_STATE_HOME/cmux-herdr/`). Logs the handoff once per process.
-  Escape hatch: `CMUX_HERDR_FORCE_PLUGIN=1`. `doctor` and `status` report the
-  active writer.
-- **Native-title lock + diff-before-write**: association records persist
-  `title_lock` / `locked_title` / last written pill value. Identical pills are
-  not rewritten every poll. `cmux-herdr lock-title` / `unlock-title` set the
-  lock; `CMUX_HERDR_LOCK_TITLES=1` locks each display name after the first
-  successful write.
-- **Heuristic-once parent map**: association records keep `parent_tab_id` /
-  `parent_workspace_id` / `heuristic_satisfied` / `association_key`
-  (`pane_id:session_id`). After the first successful association, empty
-  snapshot parentage does not re-run env/sole-tab inference. A new
-  `agent_session_id` drops locks so they are not reused across instance
-  identities.
-- **Advanced tmux-parity hardening:** engine-owned reconcile drives
-  `mirror_to_cmux` (zoom keeps base panes; geometry-only does not recreate);
-  fail-closed splits (no orphan-tab fallback); single size-claim writer
-  (`size-authority-<fingerprint>` / `CMUX_HERDR_SIZE_AUTHORITY`); socket-first
-  `session.snapshot` + secure socket checks (UID/mode/no symlink); layout
-  event subscriptions on the persistent watch session.
 
 ## [0.2.0] — 2026-08-12
 
@@ -370,7 +218,8 @@ Works today without any cmux upstream merge.
 - Native nested topology ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)) is
   intentionally out of scope for the plugin.
 
-[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.3.4...v0.4.0

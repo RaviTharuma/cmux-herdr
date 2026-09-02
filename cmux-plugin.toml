@@ -1,8 +1,8 @@
 [plugin]
 name = "cmux-herdr"
 kind = "sidebar"
-version = "0.6.0"
-description = "Herdr in native cmux chrome: live workspaces, Reorderable, pane mirroring"
+version = "0.6.1"
+description = "Herdr in native cmux chrome: CLI, watch, status pills, pane mirroring"
 
 [run]
 command = ["bin/cmux-herdr-sidebar"]
