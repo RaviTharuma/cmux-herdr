@@ -4,7 +4,7 @@ After a version PR is on `main`, **push an annotated tag**. GitHub Actions
 (`.github/workflows/release.yml`) runs the test suite and publishes the
 GitHub Release from `CHANGELOG.md`. You do not need the GitHub UI.
 
-Current tagged line: **v0.6.0**. `VERSION` has no `v` prefix; the git tag does.
+Current version line: **v0.6.1** (tag after this merge). `VERSION` has no `v` prefix; the git tag does.
 
 ## Preconditions
 
@@ -43,21 +43,14 @@ Optional live smoke (macOS, Herdr nested in cmux):
 
 ## Install from the tag
 
-Native sidebar (in-app UI):
-
-```bash
-mkdir -p ~/.config/cmux/sidebars
-cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js
-cmux sidebar validate herdr --json
-cmux sidebar open herdr
-```
-
-CLI checkout:
+Official install is the plugin manager plus the CLI (not a custom-sidebar copy):
 
 ```bash
 cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
 cmux sidebar plugin use cmux-herdr
 cmux-herdr --version
+cmux-herdr doctor
+cmux-herdr watch
 ```
 
 Contributor clone of a tag (not the user path):
@@ -75,7 +68,7 @@ Install paths (plugin manager clones into `$XDG_DATA_HOME/cmux/mux-plugins/cmux-
 | Artifact | Path |
 |---|---|
 | CLI | `~/.local/bin/cmux-herdr` |
-| Sidebar | `~/.config/cmux/sidebars/herdr.js` (Swift fallback: `herdr.swift`) |
+| Custom sidebar leftover | `~/.config/cmux/sidebars/herdr.js` / `herdr.swift` (demoted; uninstall deletes) |
 | Agent skill | `~/.agents/skills/cmux-herdr/` (and/or `~/.pi/agent/skills/cmux-herdr/`) |
 | LaunchAgent plist | `~/Library/LaunchAgents/com.cmux-herdr.watch.plist` |
 | Watch logs | `~/Library/Logs/cmux-herdr-watch.{out,err}.log` |

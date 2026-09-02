@@ -1,8 +1,8 @@
 # Contributing to cmux-herdr
 
 Thank you for contributing to the **cmux-herdr** plugin — the cmux plugin for
-Herdr. It is a small, **stdlib-only Python CLI** plus an optional sidebar and
-agent skill. There is no compiler, no `npm install`, and no `pip install` step.
+Herdr. It is a small, **stdlib-only Python CLI** plus an experimental leftover
+sidebar and agent skill. There is no compiler, no `npm install`, and no `pip install` step.
 
 A German overview of the project and of GitHub itself lives in
 [docs/de/README.md](docs/de/README.md). Maintainer GitHub settings are in
@@ -13,9 +13,11 @@ for) is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 End users install with the official cmux plugin manager (see the README).
 `./scripts/install.sh` is **contributor/dev only**: it symlinks
-`bin/cmux-herdr` into `~/.local/bin` and copies the optional JS/Swift sidebar
-and agent skill so edits in this clone go live. It is not the documented
-user path and it does not replace `cmux sidebar plugin install`.
+`bin/cmux-herdr` into `~/.local/bin` and copies the agent skill so edits in
+this clone go live. It does **not** copy `sidebars/herdr.js` / `herdr.swift`
+(those are experimental leftovers; uninstall removes leftover copies under
+`~/.config/cmux/sidebars/`). It is not the documented user path and it does
+not replace `cmux sidebar plugin install`.
 
 ```bash
 ./scripts/install.sh
@@ -82,8 +84,8 @@ CI (GitHub Actions) runs the same `./scripts/test.sh` on Python 3.10–3.13.
 | `scripts/` | contributor install / uninstall / test / LaunchAgent |
 | `cmux-plugin.toml` | Official plugin-manager manifest |
 | `bin/cmux-herdr-sidebar` | Sidebar TUI the plugin manager runs |
-| `sidebars/herdr.js` | Product sidebar (native cmux chrome, named Herdr) |
-| `sidebars/herdr.swift` | Fallback interpreted Swift sidebar |
+| `sidebars/herdr.js` | Experimental leftover sidebar (not default-installed) |
+| `sidebars/herdr.swift` | Experimental leftover Swift sidebar (not default-installed) |
 | `agent-skill/` | Instructions for AI agents using the dual hierarchy |
 
 New library code belongs in `bridge/` with a matching `bridge/test_*_unit.py`.
