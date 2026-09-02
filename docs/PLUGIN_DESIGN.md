@@ -46,7 +46,7 @@ This repository implements the plugin. It must not depend on unmerged cmux patch
 2. **`bin/cmux-herdr`** — user CLI (`status`, `tree`, `sync`, `watch`, `api`, focus helpers, …)
 3. **`bridge/cmux_herdr_api.py`** — socket-first allowlisted Herdr RPC (never `server.stop`)
 4. **`bridge/cmux_herdr_pump.py`** — SessionHost-style event pump into `LiveApplyHost`
-5. **`sidebars/herdr.swift`** — best-effort custom sidebar (navigator + instructions; live agent rows come from status pills written by the bridge)
+5. **`sidebars/herdr.swift`** — interpreted custom sidebar: live `workspaces` (reorder, select), host Ghostty/cmux theme tokens, `w.color` / git / progress, and live `statuses` / `agents` / tabs. No invented team. Agent pills still come from `cmux-herdr sync|watch`.
 6. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy
 7. **`scripts/install.sh` / `uninstall.sh`** — symlink CLI, install sidebar + skill
 
@@ -56,7 +56,7 @@ Custom sidebars run in a **restricted Swift interpreter** and primarily see the 
 
 - `sync` / `watch` push live agent state into `cmux set-status` keys (`herdr:<pane_id>`).
 - `mirror` creates real cmux tabs/splits running `attach-pane` followers so the outer workspace *looks* like ssh-tmux (idempotent `herdr-mirror:<pane_id>` keys).
-- The sidebar lists outer workspaces / the tabs `mirror` created; it still cannot call Herdr itself.
+- The sidebar lists live outer workspaces, their cmux statuses (`herdr:<pane_id>` when projected), coding-agent sessions, and the focused workspace's surfaces. It still cannot call Herdr itself.
 
 Until native nested topology lands, `cmux-herdr watch --tmux-parity` is the supported live deep mirror.
 

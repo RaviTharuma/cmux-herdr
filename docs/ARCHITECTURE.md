@@ -105,7 +105,7 @@ enough to catch Python regressions. Dogfood the product on a Mac.
 
 | Path | Role |
 |---|---|
-| `sidebars/herdr.swift` | cmux custom sidebar (outer workspaces only) |
+| `sidebars/herdr.swift` | cmux custom sidebar (live workspaces, statuses, agents, tabs; theme tokens) |
 | `agent-skill/SKILL.md` | Dual-hierarchy notes for coding agents |
 | `scripts/com.cmux-herdr.watch.plist` | LaunchAgent template (`/Users/PLACEHOLDER` is replaced on install) |
 
