@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Contract tests for the interpreted Herdr sidebar.
+"""Contract tests for the native Herdr sidebar.
 
 The sidebar cannot be mounted on this Linux VM (cmux is macOS). These tests
-lock the native-UI rules: live cmux workspaces only, Ghostty/cmux theme
-tokens, and no invented team roster.
+lock the product rules: Herdr is the name, cmux is the chrome, live workspaces
+only, no iframe/bridge/CLI cheat-sheet.
 """
 
 from __future__ import annotations
@@ -13,72 +13,112 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SIDEBAR = ROOT / "sidebars" / "herdr.swift"
+SIDEBAR_JS = ROOT / "sidebars" / "herdr.js"
+SIDEBAR_SWIFT = ROOT / "sidebars" / "herdr.swift"
+
+FORBIDDEN_UX = (
+    "bridge",
+    "iframe",
+    "Dual hierarchy",
+    "dual hierarchy",
+    "Status pills update after",
+    "cmux-herdr sync",
+    "cmux-herdr watch",
+    "cmux-herdr status",
+    "cmux-herdr tree",
+    "cmux-herdr mirror",
+    "cmux-herdr agents",
+    "Inner agent mux",
+    "you are looking at",
+    "boxed-in",
+)
 
 
-def _sidebar_source() -> str:
-    return SIDEBAR.read_text(encoding="utf-8")
+def _read(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
 
 
 class NativeSidebarContractTests(unittest.TestCase):
-    """Keep the custom sidebar on live cmux data and host theming."""
+    """Keep both sidebar runtimes on native cmux chrome with Herdr named."""
 
     def setUp(self) -> None:
-        self.source = _sidebar_source()
+        self.js = _read(SIDEBAR_JS)
+        self.swift = _read(SIDEBAR_SWIFT)
 
-    def test_sidebar_file_exists_and_is_a_view_expression(self) -> None:
-        self.assertTrue(SIDEBAR.is_file())
-        self.assertGreater(len(self.source), 200)
-        self.assertIsNone(re.search(r"^\s*struct\s+\w+", self.source, flags=re.M))
-        self.assertNotIn("@State", self.source)
-        self.assertIn("ScrollView", self.source)
+    def test_js_is_the_product_sidebar_and_swift_is_fallback(self) -> None:
+        self.assertTrue(SIDEBAR_JS.is_file())
+        self.assertTrue(SIDEBAR_SWIFT.is_file())
+        self.assertGreater(len(self.js), 200)
+        self.assertGreater(len(self.swift), 200)
+        self.assertIn("wins over herdr.swift", self.js)
+        self.assertIsNone(re.search(r"^\s*struct\s+\w+", self.swift, flags=re.M))
+        self.assertNotIn("@State", self.swift)
+        self.assertIn("ScrollView", self.swift)
+        self.assertIn("sidebar(", self.js)
+
+    def test_keeps_herdr_name_visible(self) -> None:
+        self.assertRegex(self.js, r'Text\("Herdr"\)')
+        self.assertRegex(self.swift, r'Text\("Herdr"\)')
+
+    def test_does_not_advertise_cli_or_iframe_bridge_ux(self) -> None:
+        for source in (self.js, self.swift):
+            labels = re.findall(r'(?:Text|Button)\(\s*"([^"]+)"', source)
+            joined = "\n".join(labels)
+            for phrase in FORBIDDEN_UX:
+                self.assertNotIn(
+                    phrase.lower(),
+                    joined.lower(),
+                    f"sidebar still advertises {phrase!r} in UI copy",
+                )
+            self.assertNotRegex(source, r'Text\("cmux-herdr')
+            self.assertNotIn('Text("Commands")', source)
 
     def test_binds_live_workspaces_not_hardcoded_rows(self) -> None:
-        self.assertIn("workspaces", self.source)
-        self.assertIn("workspace.select", self.source)
-        self.assertIn("workspace.reorder", self.source)
-        self.assertIn("Reorderable", self.source)
-        self.assertIn("No live cmux workspaces", self.source)
-        self.assertNotIn("Alice", self.source)
-        self.assertNotIn("Bob", self.source)
-        self.assertNotIn("Charlie", self.source)
-        self.assertNotRegex(
-            self.source,
-            r'Text\("(Engineering|Design|Marketing|Team Members)"\)',
-        )
+        for source in (self.js, self.swift):
+            self.assertIn("workspace.select", source)
+            self.assertIn("workspace.reorder", source)
+            self.assertIn("Reorderable", source)
+            self.assertIn("contextMenu", source)
+            self.assertIn("surface.focus", source)
+            self.assertNotIn("Alice", source)
+            self.assertNotIn("Bob", source)
+            self.assertNotIn("Charlie", source)
+            self.assertNotRegex(
+                source,
+                r'Text\("(Engineering|Design|Marketing|Team Members)"\)',
+            )
 
     def test_does_not_invent_a_team_section(self) -> None:
-        lowered = self.source.lower()
-        self.assertNotIn("team roster", lowered)
-        self.assertNotIn("teammates", lowered)
-        self.assertNotRegex(self.source, r'Text\("Team"\)')
+        for source in (self.js, self.swift):
+            lowered = source.lower()
+            self.assertNotIn("team roster", lowered)
+            self.assertNotIn("teammates", lowered)
+            self.assertNotRegex(source, r'Text\("Team"\)')
 
     def test_uses_ghostty_cmux_theme_tokens_for_chrome(self) -> None:
-        for token in ('"accent"', '"primary"', '"secondary"', '"tertiary"'):
-            self.assertIn(token, self.source, f"missing theme token {token}")
-        self.assertNotIn("#0A84FF", self.source)
-        self.assertNotIn("#FF9F0A", self.source)
-        self.assertNotIn("#8E8E93", self.source)
-        self.assertNotIn("#1F2430", self.source)
-        self.assertNotIn("#D9D7CE", self.source)
+        for source in (self.js, self.swift):
+            for token in ('"accent"', '"primary"', '"secondary"', '"tertiary"'):
+                self.assertIn(token, source, f"missing theme token {token}")
+            self.assertNotIn("#0A84FF", source)
+            self.assertNotIn("#FF9F0A", source)
+            self.assertNotIn("#8E8E93", source)
+            self.assertNotIn("#1F2430", source)
+            self.assertNotIn("#D9D7CE", source)
 
-    def test_renders_live_statuses_agents_and_tabs(self) -> None:
-        self.assertIn("w.statuses", self.source)
-        self.assertIn("w.agents", self.source)
-        self.assertIn("w.tabs", self.source)
-        self.assertIn("w.color", self.source)
-        self.assertIn("w.branch", self.source)
-        self.assertIn("w.progress", self.source)
-        self.assertIn("surface.focus", self.source)
-        self.assertIn("clock.time", self.source)
-        self.assertIn("selectedTitle", self.source)
-        self.assertIn("herdr:", self.source)
+    def test_status_chips_are_native_labels_not_herdr_key_dumps(self) -> None:
+        for source in (self.js, self.swift):
+            self.assertIn("statusLabel", source)
+            self.assertIn("statuses", source)
+            self.assertIn("tabs", source)
+        self.assertNotIn('s.key.hasPrefix("herdr:")', self.swift)
+        self.assertIn('indexOf(":")', self.js)
+        self.assertIn('!s.key.contains(":")', self.swift)
 
     def test_caps_live_lists(self) -> None:
-        self.assertIn("prefix(40)", self.source)
-        self.assertIn("prefix(12)", self.source)
-        self.assertIn("prefix(8)", self.source)
-        self.assertIn("prefix(6)", self.source)
+        for source in (self.js, self.swift):
+            self.assertIn("40", source)
+            self.assertIn("12", source)
+            self.assertIn("6", source)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ After a version PR is on `main`, **push an annotated tag**. GitHub Actions
 (`.github/workflows/release.yml`) runs the test suite and publishes the
 GitHub Release from `CHANGELOG.md`. You do not need the GitHub UI.
 
-Current tagged line: **v0.5.0**. `VERSION` has no `v` prefix; the git tag does.
+Current tagged line: **v0.6.0**. `VERSION` has no `v` prefix; the git tag does.
 
 ## Preconditions
 
@@ -47,7 +47,7 @@ Native sidebar (in-app UI):
 
 ```bash
 mkdir -p ~/.config/cmux/sidebars
-cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift
+cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js
 cmux sidebar validate herdr --json
 cmux sidebar open herdr
 ```
@@ -75,7 +75,7 @@ Install paths (plugin manager clones into `$XDG_DATA_HOME/cmux/mux-plugins/cmux-
 | Artifact | Path |
 |---|---|
 | CLI | `~/.local/bin/cmux-herdr` |
-| Sidebar | `~/.config/cmux/sidebars/herdr.swift` |
+| Sidebar | `~/.config/cmux/sidebars/herdr.js` (Swift fallback: `herdr.swift`) |
 | Agent skill | `~/.agents/skills/cmux-herdr/` (and/or `~/.pi/agent/skills/cmux-herdr/`) |
 | LaunchAgent plist | `~/Library/LaunchAgents/com.cmux-herdr.watch.plist` |
 | Watch logs | `~/Library/Logs/cmux-herdr-watch.{out,err}.log` |

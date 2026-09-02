@@ -46,10 +46,10 @@ This repository implements the plugin. It must not depend on unmerged cmux patch
 2. **`bin/cmux-herdr`** — user CLI (`status`, `tree`, `sync`, `watch`, `api`, focus helpers, …)
 3. **`bridge/cmux_herdr_api.py`** — socket-first allowlisted Herdr RPC (never `server.stop`)
 4. **`bridge/cmux_herdr_pump.py`** — SessionHost-style event pump into `LiveApplyHost`
-5. **`sidebars/herdr.swift`** — interpreted custom sidebar: live `workspaces` (reorder, select), host Ghostty/cmux theme tokens, `w.color` / git / progress, and live `statuses` / `agents` / tabs. No invented team. Agent pills still come from `cmux-herdr sync|watch`.
+5. **`sidebars/herdr.js`** (+ `herdr.swift` fallback) — interpreted custom sidebar named Herdr: live `workspaces` (reorder, select, context menu), host Ghostty/cmux theme tokens, and live statuses / tabs. `.js` wins for drag. No iframe, no CLI cheat-sheet. Agent pills still come from `cmux-herdr watch`.
 6. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy
 7. **`cmux-plugin.toml` + `bin/cmux-herdr-sidebar`** — official plugin-manager install
-8. **`scripts/install.sh` / `uninstall.sh`** — contributor symlink CLI + optional Swift sidebar + skill
+8. **`scripts/install.sh` / `uninstall.sh`** — contributor symlink CLI + optional JS/Swift sidebar + skill
 
 ## Why status pills plus optional tab/pane mirror
 
@@ -59,7 +59,7 @@ Custom sidebars run in a **restricted Swift interpreter** and primarily see the 
 - `mirror` creates real cmux tabs/splits running `attach-pane` followers so the outer workspace *looks* like ssh-tmux (idempotent `herdr-mirror:<pane_id>` keys).
 - The sidebar lists live outer workspaces, their cmux statuses (`herdr:<pane_id>` when projected), coding-agent sessions, and the focused workspace's surfaces. It still cannot call Herdr itself.
 
-Until native nested topology lands, `cmux-herdr watch --tmux-parity` is the supported live deep mirror.
+Until native nested topology lands, `cmux-herdr watch` is the supported live deep mirror.
 
 ## Workspace resolution caveat
 
@@ -106,6 +106,6 @@ Shared rules so upgrades do not thrash titles or parentage:
 Native tmux parity (PR7) copies `RemoteTmuxWindowMirror` in `CmuxNestedTopology`
 (`RemoteHerdrWindowMirror` engine + pane I/O). AppKit/Bonsplit/Ghostty host
 wiring is still required in the cmux app. This plugin stays the fallback
-(`watch --tmux-parity`) when native attachment is not live.
+(`watch`) when native attachment is not live.
 
-Until then, `cmux-herdr watch --tmux-parity` is the supported live deep mirror.
+Until then, `cmux-herdr watch` is the supported live deep mirror.

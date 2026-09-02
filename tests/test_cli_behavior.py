@@ -126,6 +126,20 @@ class CliBehaviorTests(unittest.TestCase):
             check=False,
         )
 
+    def test_watch_defaults_to_tmux_parity(self):
+        cli = load_cli_module()
+        parser = cli.build_parser()
+        watch = parser.parse_args(["watch"])
+        self.assertTrue(watch.tmux_parity)
+        pills = parser.parse_args(["watch", "--pills-only"])
+        self.assertFalse(pills.tmux_parity)
+        mirror = parser.parse_args(["mirror"])
+        self.assertFalse(mirror.tmux_parity)
+        help_run = self.run_cli("watch", "--help")
+        self.assertEqual(help_run.returncode, 0, help_run.stderr)
+        self.assertIn("pills-only", help_run.stdout)
+        self.assertIn("real cmux tabs/panes", help_run.stdout)
+
     def test_help_lists_core_commands(self):
         result = self.run_cli("--help")
         self.assertEqual(result.returncode, 0, result.stderr)

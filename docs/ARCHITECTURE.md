@@ -36,7 +36,7 @@ Develop against the clone:
 
 The official install is `cmux sidebar plugin install` (see `cmux-plugin.toml`).
 `scripts/install.sh` is contributor-only: it symlinks `bin/cmux-herdr` to
-`~/.local/bin` and copies the optional Swift sidebar and agent skill.
+`~/.local/bin` and copies the optional JS/Swift sidebar and agent skill.
 
 ## How the CLI is assembled
 
@@ -107,7 +107,8 @@ enough to catch Python regressions. Dogfood the product on a Mac.
 |---|---|
 | `cmux-plugin.toml` | Plugin-manager manifest (`kind=sidebar`) |
 | `bin/cmux-herdr-sidebar` | Sidebar TUI the official manager runs |
-| `sidebars/herdr.swift` | cmux custom sidebar (live workspaces, statuses, agents, tabs; theme tokens) |
+| `sidebars/herdr.js` | Product sidebar (native cmux chrome, named Herdr; live drag) |
+| `sidebars/herdr.swift` | Fallback interpreted Swift sidebar (same contract; `.js` wins) |
 | `agent-skill/SKILL.md` | Dual-hierarchy notes for coding agents |
 | `scripts/com.cmux-herdr.watch.plist` | LaunchAgent template (`/Users/PLACEHOLDER` is replaced on install) |
 

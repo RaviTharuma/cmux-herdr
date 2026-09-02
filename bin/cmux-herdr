@@ -1535,7 +1535,7 @@ def _add_read_flags(sp: argparse.ArgumentParser, *, include_raw: bool) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cmux-herdr",
-        description="cmux plugin for Herdr — status pills, tab/pane mirroring, and inner-mux control.",
+        description="cmux plugin for Herdr — cmux is the official UI, with status pills, tab/pane mirroring, and inner-mux control.",
     )
     p.add_argument(
         "--version",
@@ -1650,7 +1650,11 @@ def build_parser() -> argparse.ArgumentParser:
     add_sync_flags(s)
     s.set_defaults(func=cmd_sync)
 
-    s = sub.add_parser("watch", help="Loop sync every N seconds (default 3)")
+    s = sub.add_parser(
+        "watch",
+        help="Live Herdr session as real cmux tabs/panes (default)",
+        description="Live Herdr session as real cmux tabs/panes (default).",
+    )
     add_sync_flags(s)
     add_mirror_flags(s)
     s.add_argument(
@@ -1663,7 +1667,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument(
         "--once",
         action="store_true",
-        help="Alias for sync (single iteration)",
+        help="Single iteration (same as sync when --pills-only)",
     )
     s.add_argument(
         "--mirror",
@@ -1673,9 +1677,15 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument(
         "--events",
         action="store_true",
-        help="Prefer Herdr Unix-socket events between polls (tmux-parity default)",
+        help="Prefer Herdr Unix-socket events between polls (on by default)",
     )
-    s.set_defaults(func=cmd_watch)
+    s.add_argument(
+        "--pills-only",
+        dest="tmux_parity",
+        action="store_false",
+        help="Write status pills only; do not project tabs/panes",
+    )
+    s.set_defaults(func=cmd_watch, tmux_parity=True)
 
     s = sub.add_parser(
         "mirror",

@@ -2,12 +2,12 @@
 
 **Ein cmux-Plugin für Herdr.**
 
-Live-Status-Pills in der cmux-Sidebar, Herdr-Tab- und Pane-Spiegelung,
-und eine CLI, die verschachtelte Herdr-Agenten als vollwertige cmux-Flächen
-behandelt.
+cmux ist die offizielle Oberfläche von Herdr. Herdr ist die Engine.
+Native cmux-Chrome — Maus, Reorderable, Tabs und Panes — kein
+eingerahmtes Herdr-Fenster.
 
 ```bash
-cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift
+cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js
 cmux sidebar validate herdr --json
 cmux sidebar open herdr
 ```
@@ -23,31 +23,32 @@ Vollständige Befehle und Flags: [README.md](../../README.md).
 
 Zwei Programme stecken ineinander:
 
-1. **cmux** — die äußere macOS-App mit Fenstern, Workspaces, Tabs.
-2. **Herdr** — der innere Terminal-Mux für KI-Agenten (Tabs, Panes, Status).
+1. **cmux** — die offizielle GUI: Fenster, Workspaces, Tabs, Panes.
+2. **Herdr** — die Engine für KI-Agenten (Tabs, Panes, Status).
 
 Ohne Plugin sieht cmux oft nur **eine** Fläche namens `herdr`. **cmux-herdr**
-ist das Plugin dazwischen:
+macht cmux zur Herdr-Oberfläche:
 
-- Agent-Status von Herdr → farbige Status-Pills in der cmux-Sidebar
-- Herdr-Tabs und -Panes → echte cmux-Tabs und Splits (`mirror`)
-- Eine CLI (`cmux-herdr`), um beide Schichten zu steuern
-- Optionale Custom-Sidebar, Agent-Skill und LaunchAgent
+- Agent-Status von Herdr → Status-Pills in der cmux-Sidebar
+- Herdr-Tabs und -Panes → echte cmux-Tabs und Splits (`watch`)
+- Eine CLI (`cmux-herdr`), um die Engine zu steuern
+- Native Custom-Sidebar, Agent-Skill und LaunchAgent
 
 Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
 Es braucht **kein Compiling**: reines Python 3.10+ (Standardbibliothek), kein
 `pip`, kein `npm`, kein Cargo-Binary.
 
-Aktuelle Version: **v0.5.0**.
+Aktuelle Version: **v0.6.0**.
 
 ## Installation
 
-Die Produkt-UI ist die native Swift-Sidebar `herdr` (Maus, Drag-and-drop,
-`Reorderable` über live cmux-Workspaces) — kein Tastatur-TUI.
+Die Produkt-UI ist die native Sidebar `herdr` (`herdr.js` gewinnt gegen
+`herdr.swift` beim Ziehen). Maus, Drag-and-drop, `Reorderable` über live
+cmux-Workspaces. Der Name Herdr bleibt sichtbar.
 
 ```bash
 mkdir -p ~/.config/cmux/sidebars
-cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift
+cp sidebars/herdr.js ~/.config/cmux/sidebars/herdr.js
 cmux sidebar reload
 cmux sidebar validate herdr --json
 cmux sidebar open herdr
@@ -67,11 +68,11 @@ cmux sidebar plugin remove cmux-herdr
 Schnellstart in einer Herdr-Pane *in* cmux:
 
 ```bash
-cmux-herdr status
-cmux-herdr tree
-cmux-herdr sync
-cmux-herdr watch --tmux-parity
+cmux-herdr doctor
+cmux-herdr watch
 ```
+
+`watch` reicht. Du bleibst in der cmux-Oberfläche.
 
 ## Was du zum Benutzen brauchst
 
@@ -93,7 +94,7 @@ aktualisierst.
 Nein. Installieren und loslegen.
 
 **Ersetzt es natives ssh-tmux?**
-Nein. `mirror` erzeugt zusätzliche cmux-Ansichten der laufenden Herdr-Sitzung.
+Nein. `watch` erzeugt zusätzliche cmux-Ansichten der laufenden Herdr-Sitzung.
 Die echten PTYs bleiben bei Herdr.
 
 ## Aufbau des Repos (kurz)
@@ -106,7 +107,7 @@ Die echten PTYs bleiben bei Herdr.
 | `cmux-plugin.toml` | Manifest für den offiziellen Plugin-Manager |
 | `bin/cmux-herdr-sidebar` | Sidebar-TUI |
 | `scripts/` | Entwickler-Install, Deinstallieren, Test-Skript |
-| `sidebars/` | Optionale cmux-Sidebar `herdr` |
+| `sidebars/` | Native cmux-Sidebar `herdr` (JS + Swift) |
 | `agent-skill/` | Skill für Coding-Agenten |
 | `docs/` | Diese Dokumentation |
 | `LICENSE` | MIT — andere dürfen den Code nutzen und verändern |

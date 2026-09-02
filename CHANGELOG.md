@@ -7,6 +7,25 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-02
+
+### Changed
+
+- Sidebar is native cmux chrome named **Herdr**: `sidebars/herdr.js` is the
+  product path (live drag; `.js` wins over `.swift`), with `herdr.swift` as
+  fallback. No iframe, no bridge caption, no CLI cheat-sheet, no dual-hierarchy
+  explainer. Click a row to `workspace.select` / `surface.focus`. Status chips
+  show working/idle/done, not raw `herdr:` keys.
+- `cmux-herdr watch` defaults to pane mirroring (layout, focus, order, prune).
+  `--pills-only` writes status chips without projecting tabs.
+- README marketing is "cmux as the UI, Herdr as the engine". Generated
+  screenshot PNGs are removed (no fake cmux chrome).
+
+### Added
+
+- Interpreted JS sidebar with `Reorderable`, context menus, and Ghostty/cmux
+  theme tokens.
+
 ## [0.5.0] - 2026-09-02
 
 ### Added
@@ -351,7 +370,8 @@ Works today without any cmux upstream merge.
 - Native nested topology ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)) is
   intentionally out of scope for the plugin.
 
-[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.3.4...v0.4.0
 [0.3.4]: https://github.com/RaviTharuma/cmux-herdr/releases/tag/v0.3.4
