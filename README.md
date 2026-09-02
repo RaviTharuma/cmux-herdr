@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="cmux-herdr sidebar plugin in cmux: lab workspaces and status pills next to a Ghostty terminal" />
+  <img src="docs/screenshot.png" alt="Native herdr Swift sidebar in cmux: Reorderable lab workspaces, status pills, and Ghostty chrome" />
 </p>
 
 <p align="center">
@@ -41,7 +41,25 @@ standard library only — no `pip`, no `npm`, no Cargo binary.
 
 ## Install
 
-Requires a cmux build that ships `cmux sidebar plugin`.
+The in-app UI is the interpreted Swift sidebar `herdr` — mouse, drag-and-drop,
+and `Reorderable` over **live cmux workspaces**. It is not a keyboard TUI and
+it does not invent a team.
+
+From a clone (or the plugin-manager checkout):
+
+```bash
+mkdir -p ~/.config/cmux/sidebars
+cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift
+cmux sidebar reload
+cmux sidebar validate herdr --json
+cmux sidebar open herdr
+```
+
+Enable custom sidebars in cmux Settings → Beta features if `open` is refused.
+
+### CLI (official plugin manager)
+
+The `cmux-herdr` CLI and optional plugin-manager checkout:
 
 ```bash
 cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
@@ -50,17 +68,13 @@ cmux sidebar plugin update cmux-herdr
 cmux sidebar plugin remove cmux-herdr
 ```
 
-That clones the repo into the cmux plugin directory, reads `cmux-plugin.toml`
-(`kind = "sidebar"`, name `cmux-herdr`), runs the optional `[build]` (chmod +x
-on the Python sidebar wrapper — nothing is compiled), and verifies
-`bin/cmux-herdr-sidebar` is executable. `use` writes the resolved command into
-cmux-tui config.
+That clones into `$XDG_DATA_HOME/cmux/mux-plugins/cmux-herdr` (or
+`~/.local/share/cmux/mux-plugins/cmux-herdr`). Copy `sidebars/herdr.swift`
+from there if you did not already. `cmux-plugin.toml` is honest Python
+(`[build]` is chmod +x, not Cargo). Plugin-manager `use` may host a PTY
+fallback; the product sidebar remains `herdr.swift`.
 
-The sidebar TUI inherits the host Ghostty/cmux palette and lists **live
-workspaces from the cmux control socket** (`CMUX_TUI_SOCKET`, legacy
-`CMUX_MUX_SOCKET`). It does not invent a team.
-
-Contributor clone + symlink (not the user install): [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributor symlink of the CLI (not the user UI path): [CONTRIBUTING.md](CONTRIBUTING.md).
 Release notes: [RELEASE.md](RELEASE.md).
 
 ## Features
@@ -71,16 +85,16 @@ Release notes: [RELEASE.md](RELEASE.md).
 | **Tab and pane mirror** | `cmux-herdr mirror --tmux-parity` projects Herdr tabs into real cmux tabs and splits, with layout, focus, order, and prune. Same contract cmux gives tmux over SSH. |
 | **Live watch** | `cmux-herdr watch --tmux-parity` keeps pills and surfaces in sync. Prefers Herdr `events.subscribe`; otherwise polls. Optional LaunchAgent so it survives closing the pane. |
 | **One CLI** | Topology (`tree`, `agents`), control (`new-tab`, `send`, `agent-prompt`), attach/detach/restore, and the published Herdr socket API — never `server.stop`. |
-| **Sidebar plugin** | Official plugin-manager TUI plus an optional interpreted Swift `herdr` sidebar for older custom-sidebar builds. |
+| **Native sidebar** | Interpreted Swift `herdr` with mouse, drag-and-drop, and `Reorderable` live workspaces. Status pills, agents, and surfaces bind host cmux context. Ghostty/cmux theme tokens — no custom green skin. |
 | **Agent skill** | Ships a `cmux-herdr` skill so coding agents learn the dual hierarchy instead of pretending Herdr is tmux. |
 | **Safe handoff** | Plugin and native cmux share one writer lease. If native nested topology is live, this plugin yields. If native dies, watch can resume. |
 
 <p align="center">
-  <img src="docs/screenshot-pills.png" alt="Lab status pills in the cmux sidebar: working, idle, done, blocked" />
+  <img src="docs/screenshot-pills.png" alt="Native herdr sidebar showing Reorderable lab workspaces and live status pills" />
 </p>
 
 <p align="center">
-  <img src="docs/screenshot-mirror.png" alt="Lab Herdr tabs mirrored into cmux splits beside the plugin sidebar" />
+  <img src="docs/screenshot-mirror.png" alt="Native herdr sidebar beside lab-mirrored cmux splits" />
 </p>
 
 ## Quick start
@@ -96,12 +110,14 @@ cmux-herdr sync                # one-shot status pills
 cmux-herdr watch --tmux-parity # live pills + tabs/splits
 ```
 
-After `cmux sidebar plugin use cmux-herdr`, focus the sidebar (`prefix S` in
-cmux-tui). The TUI reads live workspaces from the mux socket; `Esc` is ignored
-because cmux owns the focus escape chord.
+Open the native sidebar after the copy step:
 
-Older custom-sidebar builds can still load `herdr.swift` from Settings → Beta
-features → Custom sidebars, then `cmux sidebar reload`.
+```bash
+cmux sidebar validate herdr --json
+cmux sidebar open herdr
+```
+
+Then `cmux-herdr sync` or `watch` so `herdr:*` pills show up on those rows.
 
 ## Commands
 

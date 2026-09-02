@@ -174,25 +174,37 @@ class PluginManagerInstallSimulationTests(unittest.TestCase):
 
 
 class OfficialInstallCopyTests(unittest.TestCase):
-    """Public install path is the official cmux plugin manager."""
+    """README leads with native herdr.swift, then official plugin-manager CLI."""
 
-    REQUIRED = (
+    NATIVE = (
+        "cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift",
+        "cmux sidebar validate herdr --json",
+        "cmux sidebar open herdr",
+    )
+    PLUGIN_MANAGER = (
         "cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git",
         "cmux sidebar plugin use cmux-herdr",
         "cmux sidebar plugin update cmux-herdr",
         "cmux sidebar plugin remove cmux-herdr",
     )
 
-    def test_readme_install_is_official_only(self) -> None:
+    def test_readme_leads_with_native_sidebar_then_plugin_manager(self) -> None:
         text = README.read_text(encoding="utf-8")
-        for line in self.REQUIRED:
-            self.assertIn(line, text)
-        install_section = text.split("## Install", 1)[1].split("## ", 1)[0]
+        install_section = text.split("## Install", 1)[1].split("## Features", 1)[0]
+        native_at = min(install_section.find(line) for line in self.NATIVE)
+        plugin_at = min(install_section.find(line) for line in self.PLUGIN_MANAGER)
+        self.assertNotEqual(native_at, -1)
+        self.assertNotEqual(plugin_at, -1)
+        self.assertLess(native_at, plugin_at)
+        for line in self.NATIVE + self.PLUGIN_MANAGER:
+            self.assertIn(line, install_section)
+        self.assertIn("Reorderable", install_section)
         self.assertNotIn("./scripts/install.sh", install_section)
         self.assertNotIn("git clone --branch", install_section)
         hero = text.split("## Install", 1)[0]
         self.assertIn("docs/screenshot.png", hero)
         self.assertIn("github/v/release/RaviTharuma/cmux-herdr", text)
+        self.assertIn("Native sidebar", text.split("## Features", 1)[1].split("## ", 1)[0])
 
     def test_hero_and_feature_screenshots_exist(self) -> None:
         for rel in (

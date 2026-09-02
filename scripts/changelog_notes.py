@@ -47,11 +47,16 @@ def release_notes(tag: str, changelog_text: str | None = None) -> str:
         f"---\n\n"
         f"Install:\n\n"
         f"```bash\n"
+        f"mkdir -p ~/.config/cmux/sidebars\n"
+        f"cp sidebars/herdr.swift ~/.config/cmux/sidebars/herdr.swift\n"
+        f"cmux sidebar validate herdr --json\n"
+        f"cmux sidebar open herdr\n"
         f"cmux sidebar plugin install "
         f"https://github.com/RaviTharuma/cmux-herdr.git\n"
         f"cmux sidebar plugin use cmux-herdr\n"
         f"```\n\n"
-        f"Python 3.10+, stdlib only. Plugin-manager `[build]` is chmod +x, not Cargo.\n"
+        f"In-app UI is the native Swift sidebar (mouse / Reorderable). "
+        f"Plugin-manager is the CLI checkout. `[build]` is chmod +x, not Cargo.\n"
     )
 
 

@@ -51,6 +51,8 @@ class ChangelogNotesTests(unittest.TestCase):
 
     def test_release_notes_include_install(self) -> None:
         text = notes.release_notes("v0.3.4", self.SAMPLE)
+        self.assertIn("cmux sidebar validate herdr", text)
+        self.assertIn("cmux sidebar open herdr", text)
         self.assertIn("cmux sidebar plugin install", text)
         self.assertIn("cmux sidebar plugin use cmux-herdr", text)
         self.assertIn("chmod +x", text)
