@@ -9,8 +9,8 @@ This page is for the **owner** of the **cmux-herdr** plugin
 Paste this into the repo **About** box on github.com so the listing matches the
 README:
 
-- **Description:** `cmux plugin for Herdr — live status pills in the cmux sidebar, tab/pane mirroring, and a CLI for nested agents`
-- **Topics:** `cmux`, `herdr`, `plugin`, `cmux-plugin`, `sidebar`, `cli`, `macos`, `python`, `tmux`, `terminal`, `coding-agents`
+- **Description:** `cmux plugin for Herdr: live sidebar status pills, tab/pane mirroring, nested agents CLI`
+- **Topics:** `cli`, `cmux`, `cmux-plugin`, `coding-agents`, `herdr`, `macos`, `multiplexer`, `nested-agents`, `plugin`, `python`, `sidebar`, `status-pills`, `terminal`, `tmux`
 - **Website:** leave empty, or `https://github.com/RaviTharuma/cmux-herdr`
 
 The GitHub repository is **public**:
