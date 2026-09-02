@@ -1,9 +1,8 @@
 # cmux-herdr
 
-**Ein cmux-Plugin für Herdr.**
+**cmux sidebar plugin for Herdr nested agents**
 
-Live-Status-Pills, echte Tabs und Splits, und eine CLI, die verschachtelte
-Herdr-Agenten als vollwertige cmux-Flächen behandelt.
+Ein cmux-Plugin (not a Herdr plugin): Live-Status-Pills in der cmux-Sidebar, Tab/Pane-Spiegelung mit tmux-parity, und eine CLI für nested Herdr agents.
 
 Das GitHub-Projekt ist öffentlich:
 **https://github.com/RaviTharuma/cmux-herdr**
