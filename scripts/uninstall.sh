@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Reverse cmux-herdr install.
+# Reverse cmux-herdr install (CLI, leftover custom sidebars, agent skill).
+# Custom herdr.js / herdr.swift under ~/.config/cmux/sidebars/ are demoted
+# leftovers from older installs — delete them if present.
 set -euo pipefail
 
 LOCAL_BIN="${HOME}/.local/bin"
@@ -26,7 +28,7 @@ fi
 for sidebar in "${SIDEBAR_JS_DST}" "${SIDEBAR_SWIFT_DST}"; do
   if [[ -f "${sidebar}" ]]; then
     rm -f "${sidebar}"
-    echo "  removed ${sidebar}"
+    echo "  removed leftover ${sidebar}"
   fi
 done
 
