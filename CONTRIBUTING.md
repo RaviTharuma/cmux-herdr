@@ -1,8 +1,8 @@
 # Contributing to cmux-herdr
 
 Thank you for contributing to the **cmux-herdr** plugin — the cmux plugin for
-Herdr. It is a small, **stdlib-only Python CLI** plus an experimental leftover
-sidebar and agent skill. There is no compiler, no `npm install`, and no `pip install` step.
+Herdr. Runtime code is a Rust Cargo binary; users receive prebuilt,
+checksum-verified releases and do not need Python or Rust toolchains.
 
 A German overview of the project and of GitHub itself lives in
 [docs/de/README.md](docs/de/README.md). Maintainer GitHub settings are in
@@ -28,7 +28,7 @@ Optional LaunchAgent (also dev): `./scripts/install-watch-service.sh`.
 
 ## Before you start
 
-1. You need **Python 3.10+**. 3.12 is what CI uses in the matrix.
+1. Install Rust and Cargo (the stable toolchain, with `rustfmt` and `clippy`).
 2. You do **not** need macOS, `herdr`, or `cmux` to run the test suite.
    Those binaries are only required for live use.
 3. Read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
@@ -42,14 +42,13 @@ Optional LaunchAgent (also dev): `./scripts/install-watch-service.sh`.
 ./bin/cmux-herdr doctor
 ```
 
-`./scripts/test.sh` runs `python3 -m py_compile` (syntax check only — **not**
-a C/Swift build) and stdlib `unittest` over `bridge/` and `tests/`.
-
-**Do not add pytest, pip, or npm dependencies.**
+`./scripts/test.sh` runs `cargo fmt --check`, `cargo clippy -- -D warnings`,
+and `cargo test`.
 
 Live commands (`tree`, `sync`, `mirror`) need fake or real `herdr`/`cmux` on
-`PATH`. The suite already ships fakes; copy that pattern from
-`tests/test_cli_behavior.py` if you add a CLI test.
+`PATH`. The suite already ships fakes; copy that pattern from the Rust
+integration tests if you add a CLI test.
+
 
 ## Pull requests
 
@@ -59,10 +58,9 @@ Live commands (`tree`, `sync`, `mirror`) need fake or real `herdr`/`cmux` on
 4. Do not commit:
    - secrets, `.env`, private keys
    - live `cmux tree` / Herdr dumps
-   - `__pycache__/`, editor backups, LaunchAgent logs
 5. Use the PR template. Link an issue when one exists.
 
-CI (GitHub Actions) runs the same `./scripts/test.sh` on Python 3.10–3.13.
+CI runs the same `./scripts/test.sh` on macOS and Linux.
 
 ## Where to file bugs
 
@@ -77,20 +75,18 @@ CI (GitHub Actions) runs the same `./scripts/test.sh` on Python 3.10–3.13.
 
 | Path | Role |
 |---|---|
-| `bin/cmux-herdr` | CLI entry (argparse) |
-| `bridge/*.py` | Library: snapshot, mirror, socket RPC, handoff |
-| `bridge/test_*.py` | Unit tests next to the library |
-| `tests/` | CLI / behavior tests with fake binaries |
-| `scripts/` | contributor install / uninstall / test / LaunchAgent |
-| `cmux-plugin.toml` | Official plugin-manager manifest |
-| `bin/cmux-herdr-sidebar` | Sidebar TUI the plugin manager runs |
-| `sidebars/herdr.js` | Experimental leftover sidebar (not default-installed) |
-| `sidebars/herdr.swift` | Experimental leftover Swift sidebar (not default-installed) |
+| `src/*.rs` | Rust runtime: CLI, sidebar, socket, state, mirror, lifecycle, update service |
+| `bin/cmux-herdr` | Thin POSIX-sh launcher for the runtime binary |
+| `bin/cmux-herdr-sidebar` | Thin launcher passing the `sidebar` subcommand |
+| `tests/` | Cargo integration and behavior tests with fake binaries |
+| `scripts/` | Contributor install / uninstall / test / LaunchAgent |
+| `cmux-plugin.toml` | Official plugin-manager manifest and bootstrap configuration |
+| `sidebars/` | Experimental leftover sidebars (not default-installed) |
 | `agent-skill/` | Instructions for AI agents using the dual hierarchy |
 
-New library code belongs in `bridge/` with a matching `bridge/test_*_unit.py`.
-New CLI flags belong in `bin/cmux-herdr` plus a `tests/test_cli_behavior.py`
-case when they are user-visible.
+New runtime code belongs in the appropriate `src/*.rs` module with a focused
+Rust test. New CLI flags belong in the clap definitions plus an integration
+test when they are user-visible.
 
 ## License
 

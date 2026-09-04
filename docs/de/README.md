@@ -35,8 +35,8 @@ macht cmux zur Herdr-Oberfläche:
 - Agent-Skill, LaunchAgent, Status-Pills und `watch`
 
 Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
-Es braucht **kein Compiling**: reines Python 3.10+ (Standardbibliothek), kein
-`pip`, kein `npm`, kein Cargo-Binary.
+Der Plugin-Manager lädt eine checksum-verifizierte Rust-Binärdatei; Nutzer
+brauchen weder Python noch eine Rust-Toolchain.
 
 Aktuelle Version: **v0.6.1**.
 
@@ -68,13 +68,14 @@ cmux-herdr watch
 
 ## Was du zum Benutzen brauchst
 
-- macOS
-- `cmux` und `herdr` im `PATH`
-- Python 3.10 oder neuer
+- macOS mit `cmux` und `herdr` im `PATH`
+- Eine cmux-Version mit `cmux sidebar plugin`
 - Herdr 0.8+
+- Einen funktionierenden Herdr-Socket
 
-Zum **Testen der Quellen** reicht Linux mit Python — so läuft auch GitHub
-Actions. Die echten Spiegel-Befehle brauchen die macOS-Apps.
+Zum **Testen der Quellen** brauchst du Rust/Cargo. Die vier unterstützten
+Release-Ziele werden automatisch geladen; `cargo build --release` ist nur ein
+Fallback für ungewöhnliche Architekturen oder Offline-Entwicklung.
 
 ## FAQ
 
@@ -93,13 +94,12 @@ Die echten PTYs bleiben bei Herdr.
 
 | Ordner | Inhalt |
 |---|---|
-| `bin/cmux-herdr` | Das Kommandozeilenprogramm des Plugins |
-| `bridge/` | Die Logik (Python-Module) plus Unit-Tests |
-| `tests/` | Tests mit nachgemachtem `herdr`/`cmux` |
+| `src/*.rs` | Rust-Laufzeit: CLI, Sidebar, Socket, Mirror, Status und Update-Service |
+| `bin/*` | Dünne POSIX-sh-Launcher, die die Binärdatei starten |
+| `tests/` | Cargo-Integrations- und Verhaltenstests |
 | `cmux-plugin.toml` | Manifest für den offiziellen Plugin-Manager |
-| `bin/cmux-herdr-sidebar` | Sidebar-TUI |
-| `scripts/` | Entwickler-Install, Deinstallieren, Test-Skript |
-| `sidebars/` | Experimentelle Custom-Sidebar `herdr` (JS + Swift, kein Default) |
+| `scripts/` | Entwickler-Install, Deinstallieren und Test-Skript |
+| `sidebars/` | Experimentelle Reste (nicht standardmäßig installiert) |
 | `agent-skill/` | Skill für Coding-Agenten |
 | `docs/` | Diese Dokumentation |
 | `LICENSE` | MIT — andere dürfen den Code nutzen und verändern |

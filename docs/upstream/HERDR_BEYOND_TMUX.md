@@ -4,7 +4,7 @@ Features Herdr exposes that **ssh-tmux has no analogue for**, and how this
 plugin surfaces them. Tmux parity remains the gold standard for *window
 mirror* behavior; these verbs are additive product depth.
 
-Canonical allowlist: `bridge/cmux_herdr_api.py` → `ALLOWED_METHODS`.
+Canonical allowlist: `src/api.rs` → `ALLOWED_METHODS`.
 CLI entrypoints live in `bin/cmux-herdr`.
 
 ## Why this exists
@@ -53,7 +53,7 @@ socket-only (no stable CLI tree passthrough).
 ## Native path
 
 Native `#10045` / PR7 must keep the same lease files as
-`bridge/cmux_herdr_handoff.py` (`RemoteHerdrHandoff` twin). Agent chrome
+`src/handoff.rs` (`RemoteHerdrHandoff` twin). Agent chrome
 (status / explain / manifests) belongs in the nested sidebar navigator,
 not only in the window mirror.
 

@@ -199,11 +199,11 @@ If native later rehydrates from this file as truth, we will reintroduce thrash a
 
 ### 2.8 Install / path / packaging friction
 
-- must run from repo without install (`sys.path` hacks)
-- must also install to `~/.local/bin`
+- must run from the repo through thin launchers and a bootstrapped binary
+- contributor installs still link the CLI into `~/.local/bin`
 - skill lives under `~/.pi/agent/skills/cmux-herdr`
-- docs, bridge, and skill drift unless updated together
-- `pytest` not always present; `unittest` is the reliable runner
+- docs, runtime, and skill drift unless updated together
+- prebuilt release assets and the Cargo source fallback must obey one contract
 
 ### 2.9 Test infrastructure annoyances
 
@@ -573,7 +573,7 @@ Still easy to:
 ### 6.5 Tooling inconsistencies
 
 - Node test runner + `--experimental-strip-types` for pi-subagents
-- Python unittest for plugin
+- Rust/Cargo for plugin
 - Swift/xcode world for cmux PR
 - `gh` for upstream artifacts
 - review bots (CodeRabbit / Greptile / Cubic) generating noise mixed with real nits

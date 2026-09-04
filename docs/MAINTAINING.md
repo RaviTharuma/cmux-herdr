@@ -10,7 +10,7 @@ Paste this into the repo **About** box on github.com so the listing matches the
 README:
 
 - **Description:** `cmux plugin for Herdr: live sidebar status pills, tab/pane mirroring, nested agents CLI`
-- **Topics:** `cli`, `cmux`, `cmux-plugin`, `coding-agents`, `herdr`, `macos`, `multiplexer`, `nested-agents`, `plugin`, `python`, `sidebar`, `status-pills`, `terminal`, `tmux`
+- **Topics:** `cli`, `cmux`, `cmux-plugin`, `coding-agents`, `herdr`, `macos`, `multiplexer`, `nested-agents`, `plugin`, `sidebar`, `status-pills`, `terminal`, `tmux`
 - **Website:** leave empty, or `https://github.com/RaviTharuma/cmux-herdr`
 
 The GitHub repository is **public**:
@@ -36,7 +36,7 @@ present.
 | **Release** | A GitHub page built on a tag, with notes from `CHANGELOG.md`. |
 | **LICENSE** | Tells other people they may use, copy, and modify the code (MIT). |
 | **CODEOWNERS** | Asks GitHub to request a review from `@RaviTharuma` on every PR. |
-| **Actions** | CI on Python 3.10–3.13; tag `vX.Y.Z` publishes a GitHub Release. |
+| **Actions** | CI runs Cargo fmt/clippy/test on supported platforms; tag `vX.Y.Z` publishes a GitHub Release. |
 
 ## Cutting a release
 

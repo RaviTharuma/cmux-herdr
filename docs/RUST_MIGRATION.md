@@ -1,22 +1,23 @@
-# cmux-herdr → Rust migration design
+# cmux-herdr → Rust migration
 
-Status: proposed. Owner: RaviTharuma. Source of truth for replacing the
-stdlib-Python runtime with a single Rust binary, and for porting the
-`dakesan/cmux-herdr` auto-update work into that binary.
+Status: implemented in the 0.7.0 clean cutover. Owner: RaviTharuma. This
+document records the historical Python baseline and the resulting single Rust
+binary, including the port of the optional Herdr auto-update service.
 
 ## 1. Goal and scope
 
-Rewrite the Python runtime of `cmux-herdr` in Rust "as much as practical",
-and fold in the useful features from `dakesan/cmux-herdr` (currently 5 commits
-ahead: an optional Herdr binary auto-update service).
+The former Python runtime has been replaced by one Rust Cargo binary. The
+release package includes the CLI, sidebar, socket client, state/handoff,
+watch/mirror engine, and opt-in `update-service`. Users install a prebuilt,
+checksum-verified binary through `cmux sidebar plugin install`; no Python or
+Rust toolchain is required at runtime.
 
-In scope (Python today → Rust):
+Historical baseline (for parity rationale): the deleted `bridge/*.py` modules
+and Python launchers implemented these responsibilities. Current runtime code
+lives under `src/*.rs`; `bin/*` are thin POSIX-sh launchers.
 
-- `bin/cmux-herdr` (~2.2k LOC argparse CLI, 61 `cmd_*` handlers).
-- `bin/cmux-herdr-sidebar` launcher + `bridge/cmux_herdr_sidebar.py` TUI.
-- All 16 `bridge/cmux_herdr_*.py` runtime modules (~13.7k LOC total).
-- The auto-update logic ported from the fork (`cmux_herdr_update_config.py`
-  + `herdr-auto-update.sh` runner semantics), redesigned in Rust.
+The migration also ported useful auto-update semantics from
+`dakesan/cmux-herdr`; the service remains opt-in.
 
 Out of scope (stays as-is, by design):
 
@@ -28,21 +29,18 @@ Out of scope (stays as-is, by design):
 - Thin install/uninstall shell wrappers that only shell out to the binary.
 - Agent skill (`agent-skill/SKILL.md`), docs, license, issue templates.
 
-Non-negotiable: the plugin must keep installing through the official
+Non-negotiable: the plugin keeps installing through the official
 `cmux sidebar plugin install` path defined by `cmux-plugin.toml`.
-
 ## 2. Compatibility invariants (must not regress)
 
 The rewrite is a behavioral port, not a redesign. These contracts are locked
 by existing tests and by live cmux/Herdr integration:
 
 1. **Plugin manifest.** `cmux-plugin.toml` stays `kind = "sidebar"`, `[run]`
-   command `bin/cmux-herdr-sidebar`. The sidebar entry must remain an
-   executable at that path (a POSIX-sh launcher that `exec`s the Rust binary
-   with the `sidebar` subcommand). `[build]` changes from `chmod +x` to the
-   fetch/verify bootstrap (§6); `tests/test_plugin_manager.py` and
-   `tests/test_sidebar_native.py`, which currently assert `chmod`-only build
-   and a `#!/usr/bin/env python3` sidebar, are rewritten in the same commit.
+   command `bin/cmux-herdr-sidebar`. The sidebar entry is an executable POSIX-sh
+   launcher that `exec`s the Rust binary with the `sidebar` subcommand. `[build]`
+   invokes the fetch/verify bootstrap (§6), and plugin-manager tests cover this
+   contract rather than a chmod-only build or Python shebang.
 2. **CLI surface.** All 61 subcommands (verified: 61 `cmd_*` handlers and 61
    `sub.add_parser` registrations) keep their names, positional/optional
    arguments, exit codes, and per-command `--json` behavior. `--timeout`/hidden
@@ -62,10 +60,10 @@ by existing tests and by live cmux/Herdr integration:
    `<= 0600` compare), require `st_uid == getuid()`. NDJSON framing, `plugin-N`
    request ids, 512 KiB line cap (`MAX_LINE_BYTES`), protocol-17
    `events.subscribe` with the exact 24-entry `DEFAULT_SUBSCRIPTIONS` set (lock
-   membership *and* count). Current Python does not correlate response `id` to
-   request `id`, serialize send/read across concurrent calls, validate the
-   protocol version, or guard the lstat→connect TOCTOU; the Rust port SHOULD
-   add id-correlation + per-connection send/read serialization and MUST
+   membership *and* count). The historical Python baseline did not correlate
+   response `id` to request `id`, serialize send/read across concurrent calls,
+   validate the protocol version, or guard the lstat→connect TOCTOU. The Rust
+   implementation adds correlation and per-connection serialization.
    document any behavior it tightens beyond the baseline.
 4. **API allowlist.** `ALLOWED_METHODS` (protocol 17) enforced verbatim in
    `assert_method_allowed`; `FORBIDDEN_METHODS = {server.stop}`, forbidden
@@ -124,11 +122,10 @@ by existing tests and by live cmux/Herdr integration:
 
 ### A. Big-bang single Rust binary (recommended)
 
-One `cmux-herdr` Rust binary implements the CLI, the sidebar TUI, watch/mirror
-engine, socket client, state store, and auto-update. Python is deleted in one
-cutover once the Rust port passes the ported test suite. `bin/cmux-herdr` and
-`bin/cmux-herdr-sidebar` become thin launchers (or symlinks) resolving the
-built binary.
+The selected big-bang approach produced one `cmux-herdr` Rust binary covering
+CLI, sidebar TUI, watch/mirror engine, socket client, state store, and
+auto-update. The former Python runtime was deleted after parity checks;
+`bin/cmux-herdr` and `bin/cmux-herdr-sidebar` now resolve the binary.
 
 - Pros: matches the clean-cutover rule (no shims/dual runtime); one artifact;
   removes the "stdlib-only Python" constraint cleanly; best runtime perf for
@@ -165,17 +162,17 @@ tracing the Python responsibilities 1:1 so review can diff behavior:
 
 | Rust module | Replaces (Python) | Responsibility |
 |---|---|---|
-| `main.rs` / `cli/` | `bin/cmux-herdr` | clap CLI, 61 subcommands, dispatch, `--json`, `--timeout(-ms)`, `--version` from `VERSION` |
-| `sidebar/` | `cmux_herdr_sidebar.py`, `bin/cmux-herdr-sidebar` | sidebar TUI: its own render loop, workspace tree, clip/wrap, terminal size, and event loop reading `CMUX_TUI_SOCKET`/legacy `CMUX_MUX_SOCKET`. This is the manifest `[run]` entry — it MUST keep the TUI/once/offline rendering behavior locked by `bridge/test_sidebar_tui_unit.py`, not merely shell out to `cmux-herdr` |
-| `socket.rs` | `cmux_herdr_socket.py` | secure Unix socket, NDJSON, request ids, 512 KiB cap, subscriptions |
-| `api.rs` | `cmux_herdr_api.py` | allowlist, forbidden methods, socket-first + CLI fallback, status extraction |
-| `bridge.rs` (+ `model.rs`) | `cmux_herdr_bridge.py` | Pane/Tab/Workspace/Snapshot models, topology fetch, status-pill sync, host fingerprint, workspace resolve, diagnostics |
-| `mirror.rs` | `cmux_herdr_mirror.py` | DesiredMirror/MirrorPlan, idempotent `herdr-mirror:<pane_id>` projection, scopes, prune, nesting refusal |
-| `live.rs`, `engine.rs`, `impose.rs`, `layout.rs`, `io.rs`, `pump.rs`, `session.rs`, `host.rs`, `control.rs` | matching `cmux_herdr_*.py` | in-userspace window/layout model, event pump, input forwarding, layout parse/apply |
+| `main.rs` / `cli/` | historical `bin/cmux-herdr` | clap CLI, 61 subcommands, dispatch, `--json`, `--timeout(-ms)`, `--version` from `VERSION` |
+| `sidebar/` | historical sidebar launcher/module | sidebar TUI render loop and event input; manifest `[run]` entry |
+| `socket.rs` | historical socket module | secure Unix socket, NDJSON, request ids, 512 KiB cap, subscriptions |
+| `api.rs` | historical API module | allowlist, forbidden methods, socket-first + CLI fallback, status extraction |
+| `bridge.rs` (+ `model.rs`) | historical bridge module | Pane/Tab/Workspace/Snapshot models, topology fetch, status-pill sync, host fingerprint, workspace resolve, diagnostics |
+| `mirror.rs` | historical `cmux_herdr_mirror.py` | DesiredMirror/MirrorPlan, idempotent `herdr-mirror:<pane_id>` projection, scopes, prune, nesting refusal |
+| `live.rs`, `engine.rs`, `impose.rs`, `layout.rs`, `io.rs`, `pump.rs`, `session.rs`, `host.rs`, `control.rs` | historical `cmux_herdr_*.py` modules | in-userspace window/layout model, event pump, input forwarding, layout parse/apply |
 | `lifecycle.rs` | `cmux_herdr_lifecycle.py` | session discovery, socket-path/session-name validation, attach targets |
 | `handoff.rs` | `cmux_herdr_handoff.py` | writer lease, XDG/App-Support state dirs, TTL/heartbeat/pid-alive |
 | `state.rs` | scattered `_state_dir`/`_binding_path`/atomic writes | typed state store: schema-compatible with §2.6, rename-based atomicity (fsync added as a documented improvement) |
-| `update/` | `cmux_herdr_update_config.py` + `herdr-auto-update.sh` | auto-update: managed TOML block, manifest fetch, serialized swap, rollback, uninstall |
+| `update/` | historical `cmux_herdr_update_config.py` and `herdr-auto-update.sh` | opt-in auto-update: managed TOML block, manifest fetch, serialized swap, rollback, uninstall |
 
 Crate dependencies (request-only, minimal, pinned via `Cargo.lock`; if truly
 offline builds are required, additionally `cargo vendor` into the tree — a
@@ -190,10 +187,8 @@ proves insufficient; first port keeps the existing raw-escape rendering.
 
 ## 5. Auto-update port (from dakesan/cmux-herdr)
 
-Port the *semantics*, redesign the *mechanism* in Rust (per ForkDelta
-guidance). Fold the shell runner and Python config helper into an
-`cmux-herdr update-service` subcommand family so there is no Bash/Python at
-runtime.
+The fork's update semantics were ported into the Rust `cmux-herdr
+update-service` subcommand family. There is no Bash/Python runtime dependency.
 
 Ported semantics (kept):
 
@@ -251,14 +246,10 @@ not ported verbatim; new docs describe the Rust command.
 
 Default user path unchanged: `cmux sidebar plugin install`.
 
-> **Reviewer NO-GO to clear before merge.** The current
-> `.github/workflows/release.yml` runs Python unittest + tag/notes only (no
-> Cargo build, no asset upload, no checksums), `.github/workflows/ci.yml` is
-> Python-only, and there is no `Cargo.toml`/`Cargo.lock` yet.
-> `tests/test_plugin_manager.py` asserts the `[build]` command is exactly
-> `chmod +x` and the sidebar entry is a `#!/usr/bin/env python3` script. All of
-> that must change atomically with the cutover; until it does, packaging is
-> not implementable and the plugin cannot install a Rust binary.
+The former packaging gap is resolved: the manifest now invokes the committed
+`bin/cmux-herdr-fetch` bootstrap, and release automation builds and publishes
+four checksum-verified Rust targets. The launchers are thin POSIX-sh scripts;
+`[build]` is no longer a chmod-only operation.
 
 - **Distribution: prebuilt, checksum-verified release binaries** (chosen).
   `release.yml` gains a Cargo build matrix producing `cmux-herdr` for
@@ -284,8 +275,8 @@ Default user path unchanged: `cmux sidebar plugin install`.
 - Source build (`cargo build --release`, optionally `cargo vendor` for offline)
   is the documented fallback when no asset matches (unusual arch / air-gapped
   dev). The fetch script attempts it only when a Rust toolchain is present.
-- `tests/test_plugin_manager.py` and any shebang/`chmod`-only assertions are
-  updated in the same change to encode the new build/launcher contract.
+- `tests/plugin_contract.rs` encodes the build, launcher, and sidebar-subcommand
+  contract that replaced the former Python plugin-manager tests.
 - `VERSION` stays the single version source, read at runtime and by release;
   the release tag and asset names derive from it so they cannot drift.
 - No telemetry/analytics (repo rule).
@@ -305,33 +296,28 @@ tests is a precondition for the cross-check gate below.
 - **Behavioral parity tests** re-expressed as Rust `#[test]` / integration
   tests: per-subsystem (api allowlist, socket validation, mirror plan
   idempotence, layout parse, lease TTL, update config idempotence/conflict/
-  atomicity, service install/uninstall reversibility with a fake
-  `launchctl`/`systemctl`). Mirrors `bridge/test_*` and `tests/test_*`.
+  `launchctl`/`systemctl`). These cover the historical `bridge/test_*` and
+  `tests/test_*` contracts.
 - **CLI golden tests**: `--help`, `--version`, every `--json` command against
   a fake `herdr`/`cmux` on `PATH`, asserting identical output shape/exit codes
   to the Python baseline captured before deletion.
-- **Cross-check gate**: before deleting Python, run both implementations
-  against the same fake binaries and diff `--json` output for all read
-  commands; any diff blocks cutover.
+ - **Cross-check gate (completed):** the Rust implementation was compared with
+   the historical Python baseline against the same fake binaries before the
+   cutover.
 - **Smoke**: `cmux-herdr doctor`, `--version`, `--help`, `sidebar` render
   against a fake socket; auto-update install→update→rollback→uninstall on a
   temp HOME with fake `herdr`.
-- CI: replace the Python matrix with `cargo test` + `cargo clippy -D warnings`
-  + `cargo fmt --check` on macOS and Linux runners; keep the secret-scan step.
+ - CI runs `cargo test` + `cargo clippy -D warnings` + `cargo fmt --check` on
+   macOS and Linux runners; the secret-scan step remains.
 
 ## 8. Sequencing
 
-1. Scaffold Cargo crate, `VERSION` read, clap skeleton with all 61 commands
-   returning `unimplemented` behind a feature gate; capture Python `--json`
-   goldens.
-2. Port leaf/pure modules first (layout, impose, api allowlist, socket
-   validation, state store, handoff lease) with their tests.
-3. Port bridge/model, status sync, mirror, live/engine/io/pump, sidebar TUI.
-4. Port CLI dispatch wiring each command to the ported engine; pass goldens.
-5. Port auto-update as `update-service` subcommands + platform adapters.
-6. Cross-check gate green → delete `bridge/*.py`, `bin/*` Python, `scripts/*.sh`
-   updater/runner; update `cmux-plugin.toml [build]`, CI, docs, CHANGELOG.
-7. Release binaries; verify `cmux sidebar plugin install` end to end.
+1. Scaffolded and ported the Cargo crate, preserving CLI and protocol contracts.
+2. Ported leaf modules, engine, sidebar, and update service with parity tests.
+3. Completed the cross-check gate, removed the Python runtime, and updated
+   packaging, CI, and docs.
+4. Configured the four-target release workflow and verified bootstrap and
+   launcher contracts in hermetic Rust tests.
 
 ## 9. Risks
 
@@ -344,18 +330,11 @@ tests is a precondition for the cross-check gate below.
   group/other permission bit set, foreign uid) and the `0700`-allowed case.
 - **Release/install trust** — checksum-verified assets; source-build fallback
   documented; `[build]` failure must not brick an existing install.
-- **CONTRIBUTING/AGENTS drift** — repo currently advertises "stdlib-only
-  Python, no compiler". That text and the dev workflow docs must be rewritten
-  as part of cutover; contributors will need a Rust toolchain.
-- **Plugin-manager contract lock** — `tests/test_plugin_manager.py` (and
-  `tests/test_sidebar_native.py`) hard-assert `chmod +x` build and a
-  `#!/usr/bin/env python3` sidebar. These fail the instant the manifest points
-  at a Rust binary; they must be rewritten in the same commit that changes
-  `[build]`/launchers, or CI blocks the cutover.
-- **Untested baseline invariants** — several locked behaviors (socket reject
-  cases, id correlation, full status map, state fsync) have no current tests
-  (§7); porting "to green" would silently drop them. The parity tests must be
-  authored from the source, not inferred from the existing suite.
-- **Ambiguous-failure double mutation** — the Python `HerdrApi.call` retry can
-  re-send a non-idempotent RPC; a naive port inherits the hazard. Decide the
-  retry policy explicitly (§2.4).
+- **Contributor workflow (resolved)** — docs now require Rust/Cargo for source
+  builds; users receive prebuilt binaries and need neither Python nor Rust.
+- **Plugin-manager contract (resolved)** — bootstrap and thin launcher tests
+  cover the checksum-verified release asset path.
+- **Baseline invariants** — parity tests cover socket reject cases, id
+  correlation, status mapping, and state durability.
+- **Ambiguous-failure mutation** — the Rust API documents its retry policy for
+  non-idempotent RPCs.

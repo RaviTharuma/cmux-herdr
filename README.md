@@ -10,7 +10,7 @@
   <a href="https://github.com/RaviTharuma/cmux-herdr/actions/workflows/ci.yml"><img src="https://github.com/RaviTharuma/cmux-herdr/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/RaviTharuma/cmux-herdr/releases/latest"><img src="https://img.shields.io/github/v/release/RaviTharuma/cmux-herdr" alt="Release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+" /></a>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/runtime-Rust-brown.svg" alt="Rust binary" /></a>
   <a href="https://github.com/topics/plugin"><img src="https://img.shields.io/badge/kind-cmux%20plugin-4c71f2.svg" alt="cmux plugin" /></a>
 </p>
 
@@ -32,8 +32,9 @@ cmux tab titled roughly `herdr`. With it, Herdr sessions are real cmux
 workspaces, tabs, and panes — mouse, drag-and-drop, focus, order — not an
 iframe and not a nested Herdr chrome box.
 
-This is a released plugin (**v0.6.1**), not a patch to `cmux.app`. Python 3.10+,
-standard library only — no `pip`, no `npm`, no Cargo binary.
+The current source version is **v0.7.0**. This is a plugin for `cmux.app`, not
+a patch to it. The plugin manager downloads a checksum-verified Rust binary;
+users need neither Python nor a Rust toolchain.
 
 ## Install
 
@@ -51,9 +52,30 @@ cmux sidebar plugin remove cmux-herdr
 ```
 
 That clones into `$XDG_DATA_HOME/cmux/mux-plugins/cmux-herdr` (or
-`~/.local/share/cmux/mux-plugins/cmux-herdr`). `cmux-plugin.toml` is honest Python
-(`[build]` is chmod +x, not Cargo). Plugin-manager `use` may host a PTY
-fallback. Then, inside a Herdr pane nested in cmux:
+`~/.local/share/cmux/mux-plugins/cmux-herdr`). The plugin-manager build step
+uses `bin/cmux-herdr-fetch` to select one of four release targets, download the
+matching binary and `SHA256SUMS` over HTTPS, verify the checksum, and install it
+atomically. `bin/cmux-herdr` and `bin/cmux-herdr-sidebar` are thin POSIX-sh
+launchers for that binary. A source build (`cargo build --release`) is only a
+fallback for unusual architectures or offline development.
+## Development
+
+The canonical checks are:
+
+```bash
+./scripts/test.sh          # cargo fmt --check, cargo clippy -- -D warnings, cargo test
+./bin/cmux-herdr --version
+./bin/cmux-herdr --help
+./bin/cmux-herdr doctor
+./bin/cmux-herdr-sidebar --help
+```
+
+Runtime implementation is under `src/*.rs`; `bin/*` contains only thin POSIX-sh
+launchers. Layout of the repo: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Index: [docs/README.md](docs/README.md).
+
+
+### After install
 
 ```bash
 cmux-herdr doctor
@@ -122,12 +144,12 @@ tmux analogue: [docs/upstream/HERDR_BEYOND_TMUX.md](docs/upstream/HERDR_BEYOND_T
 
 ## Requirements
 
-- macOS with `cmux` and `herdr` on `PATH`
-- A cmux build that includes `cmux sidebar plugin`
-- Python 3.10+ (stdlib only; **not** on PyPI)
+- macOS with `cmux` and `herdr` on `PATH`; a cmux build that includes `cmux sidebar plugin`
 - A working Herdr socket (usual when `HERDR_ENV=1`)
 - Herdr **0.8+** (agent name may live under `agent_session.agent`)
 - `sync` / `watch` / `mirror` from a nested pane so both contexts exist; `tree` and `agents` still work without cmux
+The plugin manager supplies the checksum-verified runtime binary. Contributors
+building from source additionally need Rust/Cargo; users do not.
 
 ## How it works
 
@@ -266,20 +288,19 @@ Not required to use the plugin. Design notes live in
 
 ## Development
 
-**Tests are stdlib `unittest` only — no pytest.** Prefer the wrapper:
+The canonical checks are:
 
 ```bash
-./scripts/test.sh
+./scripts/test.sh          # cargo fmt --check, cargo clippy -- -D warnings, cargo test
 ./bin/cmux-herdr --version
 ./bin/cmux-herdr --help
 ./bin/cmux-herdr doctor
 ./bin/cmux-herdr-sidebar --help
 ```
 
-There is no compile step. `python3 -m py_compile` inside `scripts/test.sh` only
-checks that the Python sources parse. Layout of the repo:
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Index:
-[docs/README.md](docs/README.md).
+Runtime implementation is under `src/*.rs`; `bin/*` contains only thin POSIX-sh
+launchers. Layout of the repo: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Index: [docs/README.md](docs/README.md).
 
 ## Contributing
 
