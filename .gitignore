@@ -1,26 +1,2 @@
-__pycache__/
-*.py[cod]
-.DS_Store
-.idea/
-.vscode/
-*.egg-info/
-.venv/
-venv/
-
-# editor/agent refine backups
-*.bak
-*.bak-*
-
-# local agent scratch (never commit)
-.tmp-push/
-proto_push_args.json
-*.bundle
-github_*.png
-.playwright-mcp/
-
-# secrets and local dumps (never commit)
-.env
-.env.*
-*.pem
-*.sock
-docs/live-env-snapshot.txt
+/target
+/.cmux-herdr

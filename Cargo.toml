@@ -1,0 +1,32 @@
+[package]
+name = "cmux-herdr"
+version = "0.7.0"
+edition = "2021"
+rust-version = "1.98"
+description = "Herdr in native cmux chrome: CLI, watch, status pills, pane mirroring"
+license = "MIT"
+repository = "https://github.com/RaviTharuma/cmux-herdr"
+default-run = "cmux-herdr"
+
+[[bin]]
+name = "cmux-herdr"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+# preserve_order: JSON objects keep insertion order to mirror Python dict
+# ordering, which handoff's `str(dict)` repr coercion is byte-sensitive to.
+serde_json = { version = "1", features = ["preserve_order"] }
+toml_edit = "0.22"
+rustix = { version = "0.38", features = ["fs", "process", "net", "termios"] }
+sha2 = "0.10"
+tempfile = "3"
+
+[dev-dependencies]
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1
+panic = "abort"

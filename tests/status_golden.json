@@ -1,0 +1,608 @@
+{
+  "panes": [
+    {
+      "raw": {
+        "pane_id": "p1",
+        "tab_id": "t1",
+        "workspace_id": "w1",
+        "agent": " bot ",
+        "agent_status": "working",
+        "agent_session": {
+          "kind": "path",
+          "value": "/x/s.jsonl",
+          "agent": "nested"
+        },
+        "terminal_title": "hello",
+        "revision": 7
+      },
+      "pane": {
+        "pane_id": "p1",
+        "tab_id": "t1",
+        "workspace_id": "w1",
+        "agent": "bot",
+        "agent_status": "working",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "terminal_title": "hello",
+        "agent_session_path": "/x/s.jsonl",
+        "agent_session_id": null,
+        "agent_session_kind": "path",
+        "revision": 7,
+        "display_name": "hello",
+        "status_key": "herdr:p1",
+        "has_agent": true
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "p2",
+        "agent_session": {
+          "value": "/logs/a.jsonl"
+        }
+      },
+      "pane": {
+        "pane_id": "p2",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": null,
+        "agent_status": "unknown",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "terminal_title": null,
+        "agent_session_path": "/logs/a.jsonl",
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "display_name": "p2",
+        "status_key": "herdr:p2",
+        "has_agent": false
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "p3",
+        "agent_session": {
+          "kind": "id",
+          "value": "sess-9"
+        }
+      },
+      "pane": {
+        "pane_id": "p3",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": null,
+        "agent_status": "unknown",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "terminal_title": null,
+        "agent_session_path": null,
+        "agent_session_id": "sess-9",
+        "agent_session_kind": "id",
+        "revision": null,
+        "display_name": "p3",
+        "status_key": "herdr:p3",
+        "has_agent": false
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "p4",
+        "agent_session": {
+          "value": "opaque-id"
+        }
+      },
+      "pane": {
+        "pane_id": "p4",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": null,
+        "agent_status": "unknown",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "terminal_title": null,
+        "agent_session_path": null,
+        "agent_session_id": "opaque-id",
+        "agent_session_kind": null,
+        "revision": null,
+        "display_name": "p4",
+        "status_key": "herdr:p4",
+        "has_agent": false
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "p5",
+        "agent_session": {
+          "agent": "fallbot"
+        },
+        "agent_status": "idle"
+      },
+      "pane": {
+        "pane_id": "p5",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": "fallbot",
+        "agent_status": "idle",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "terminal_title": null,
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "display_name": "fallbot@p5",
+        "status_key": "herdr:p5",
+        "has_agent": true
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "p6",
+        "terminal_title_stripped": "stripped",
+        "terminal_title": "raw",
+        "cwd": "/c",
+        "foreground_cwd": "/fg",
+        "focused": true
+      },
+      "pane": {
+        "pane_id": "p6",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": null,
+        "agent_status": "unknown",
+        "label": null,
+        "cwd": "/c",
+        "focused": true,
+        "terminal_title": "stripped",
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "display_name": "stripped",
+        "status_key": "herdr:p6",
+        "has_agent": false
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "p7",
+        "foreground_cwd": "/only-fg"
+      },
+      "pane": {
+        "pane_id": "p7",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": null,
+        "agent_status": "unknown",
+        "label": null,
+        "cwd": "/only-fg",
+        "focused": false,
+        "terminal_title": null,
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "display_name": "p7",
+        "status_key": "herdr:p7",
+        "has_agent": false
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "p8",
+        "terminal_title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "pane": {
+        "pane_id": "p8",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": null,
+        "agent_status": "unknown",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "terminal_title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "display_name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+        "status_key": "herdr:p8",
+        "has_agent": false
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "p9",
+        "label": "MyLabel",
+        "agent": "z",
+        "terminal_title": "ignored"
+      },
+      "pane": {
+        "pane_id": "p9",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": "z",
+        "agent_status": "unknown",
+        "label": "MyLabel",
+        "cwd": null,
+        "focused": false,
+        "terminal_title": "ignored",
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "display_name": "MyLabel",
+        "status_key": "herdr:p9",
+        "has_agent": true
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "p10",
+        "revision": "not-int"
+      },
+      "pane": {
+        "pane_id": "p10",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": null,
+        "agent_status": "unknown",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "terminal_title": null,
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "display_name": "p10",
+        "status_key": "herdr:p10",
+        "has_agent": false
+      }
+    },
+    {
+      "raw": {},
+      "pane": {
+        "pane_id": "",
+        "tab_id": "",
+        "workspace_id": "",
+        "agent": null,
+        "agent_status": "unknown",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "terminal_title": null,
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "display_name": "",
+        "status_key": "herdr:",
+        "has_agent": false
+      }
+    }
+  ],
+  "styles": {
+    "\"working\"": [
+      "hammer",
+      "#ff9500",
+      80
+    ],
+    "\"WORKING\"": [
+      "hammer",
+      "#ff9500",
+      80
+    ],
+    "\"Idle\"": [
+      "pause.circle",
+      "#8e8e93",
+      40
+    ],
+    "\"done\"": [
+      "checkmark.circle",
+      "#34c759",
+      30
+    ],
+    "\"blocked\"": [
+      "exclamationmark.triangle",
+      "#ff3b30",
+      90
+    ],
+    "\"unknown\"": [
+      "questionmark.circle",
+      "#8e8e93",
+      10
+    ],
+    "\"weird\"": [
+      "circle",
+      "#8e8e93",
+      10
+    ],
+    "\"\"": [
+      "questionmark.circle",
+      "#8e8e93",
+      10
+    ],
+    "\"  working  \"": [
+      "hammer",
+      "#ff9500",
+      80
+    ],
+    "null": [
+      "questionmark.circle",
+      "#8e8e93",
+      10
+    ]
+  },
+  "values": [
+    {
+      "case": {
+        "pane": {
+          "agent": "bot",
+          "agent_status": "working",
+          "terminal_title": "title"
+        },
+        "tabs": null,
+        "locked": null,
+        "parent": null
+      },
+      "value": "bot/working · title"
+    },
+    {
+      "case": {
+        "pane": {
+          "agent": "bot",
+          "agent_status": "Working",
+          "terminal_title": "title"
+        },
+        "tabs": "t",
+        "locked": null,
+        "parent": null
+      },
+      "value": "bot/working · TabLabel · title"
+    },
+    {
+      "case": {
+        "pane": {
+          "agent": "bot",
+          "agent_status": "idle",
+          "terminal_title": "title"
+        },
+        "tabs": "t",
+        "locked": "LOCKED",
+        "parent": null
+      },
+      "value": "bot/idle · TabLabel · LOCKED"
+    },
+    {
+      "case": {
+        "pane": {
+          "agent_status": "done",
+          "terminal_title": "TabLabel"
+        },
+        "tabs": "t",
+        "locked": null,
+        "parent": null
+      },
+      "value": "agent/done · TabLabel"
+    },
+    {
+      "case": {
+        "pane": {
+          "agent": "a",
+          "agent_status": "idle",
+          "label": "TabLabel"
+        },
+        "tabs": "t",
+        "locked": null,
+        "parent": null
+      },
+      "value": "a/idle · TabLabel"
+    },
+    {
+      "case": {
+        "pane": {
+          "agent": "bot",
+          "agent_status": "working",
+          "tab_id": "tX",
+          "terminal_title": "t"
+        },
+        "tabs": "t",
+        "locked": null,
+        "parent": "t1"
+      },
+      "value": "bot/working · TabLabel · t"
+    }
+  ],
+  "payloads": [
+    {
+      "prior": {},
+      "payload": {
+        "value": "bot/blocked · TabLabel · realtitle",
+        "icon": "exclamationmark.triangle",
+        "color": "#ff3b30",
+        "priority": 90,
+        "title_lock": false,
+        "locked_title": null
+      }
+    },
+    {
+      "prior": {
+        "title_lock": true,
+        "locked_title": "L"
+      },
+      "payload": {
+        "value": "bot/blocked · TabLabel · L",
+        "icon": "exclamationmark.triangle",
+        "color": "#ff3b30",
+        "priority": 90,
+        "title_lock": true,
+        "locked_title": "L"
+      }
+    },
+    {
+      "prior": {
+        "title_lock": true,
+        "locked_title": "  spaced  "
+      },
+      "payload": {
+        "value": "bot/blocked · TabLabel · spaced",
+        "icon": "exclamationmark.triangle",
+        "color": "#ff3b30",
+        "priority": 90,
+        "title_lock": true,
+        "locked_title": "spaced"
+      }
+    },
+    {
+      "prior": {
+        "title_lock": false,
+        "locked_title": "L"
+      },
+      "payload": {
+        "value": "bot/blocked · TabLabel · realtitle",
+        "icon": "exclamationmark.triangle",
+        "color": "#ff3b30",
+        "priority": 90,
+        "title_lock": false,
+        "locked_title": null
+      }
+    },
+    {
+      "prior": {
+        "title_lock": true,
+        "heuristic_satisfied": true,
+        "parent_tab_id": "t1"
+      },
+      "payload": {
+        "value": "bot/blocked · TabLabel · realtitle",
+        "icon": "exclamationmark.triangle",
+        "color": "#ff3b30",
+        "priority": 90,
+        "title_lock": true,
+        "locked_title": null
+      }
+    },
+    {
+      "prior": {
+        "title_lock": true,
+        "heuristic_satisfied": false,
+        "parent_tab_id": "t1"
+      },
+      "payload": {
+        "value": "bot/blocked · TabLabel · realtitle",
+        "icon": "exclamationmark.triangle",
+        "color": "#ff3b30",
+        "priority": 90,
+        "title_lock": true,
+        "locked_title": null
+      }
+    },
+    {
+      "prior": null,
+      "payload": {
+        "value": "bot/blocked · TabLabel · realtitle",
+        "icon": "exclamationmark.triangle",
+        "color": "#ff3b30",
+        "priority": 90,
+        "title_lock": false,
+        "locked_title": null
+      }
+    }
+  ],
+  "should_write": [
+    {
+      "payload": {
+        "value": "v",
+        "icon": "i",
+        "color": "c",
+        "priority": 1
+      },
+      "prior": null,
+      "result": true
+    },
+    {
+      "payload": {
+        "value": "v",
+        "icon": "i",
+        "color": "c",
+        "priority": 1
+      },
+      "prior": {
+        "last_status_value": "v",
+        "last_icon": "i",
+        "last_color": "c",
+        "last_priority": 1
+      },
+      "result": false
+    },
+    {
+      "payload": {
+        "value": "v",
+        "icon": "i",
+        "color": "c",
+        "priority": 1
+      },
+      "prior": {
+        "last_status_value": "v2",
+        "last_icon": "i",
+        "last_color": "c",
+        "last_priority": 1
+      },
+      "result": true
+    }
+  ],
+  "locked": [
+    {
+      "prior": {},
+      "result": null
+    },
+    {
+      "prior": {
+        "title_lock": true,
+        "locked_title": "L"
+      },
+      "result": "L"
+    },
+    {
+      "prior": {
+        "title_lock": true,
+        "locked_title": "  spaced  "
+      },
+      "result": "spaced"
+    },
+    {
+      "prior": {
+        "title_lock": false,
+        "locked_title": "L"
+      },
+      "result": null
+    },
+    {
+      "prior": {
+        "title_lock": true,
+        "heuristic_satisfied": true,
+        "parent_tab_id": "t1"
+      },
+      "result": null
+    },
+    {
+      "prior": {
+        "title_lock": true,
+        "heuristic_satisfied": false,
+        "parent_tab_id": "t1"
+      },
+      "result": null
+    },
+    {
+      "prior": null,
+      "result": null
+    }
+  ]
+}

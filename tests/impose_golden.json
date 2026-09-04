@@ -1,0 +1,1758 @@
+{
+  "case_count": 43,
+  "cases": [
+    {
+      "inputs": {
+        "value": {
+          "__f64_bits": 13839561654909534208
+        }
+      },
+      "name": "clamp-low",
+      "op": "clamp_ratio",
+      "output": {
+        "__f64_bits": 4587366580439587226
+      }
+    },
+    {
+      "inputs": {
+        "value": {
+          "__f64_bits": 4599670414621563421
+        }
+      },
+      "name": "clamp-middle",
+      "op": "clamp_ratio",
+      "output": {
+        "__f64_bits": 4599670414621563421
+      }
+    },
+    {
+      "inputs": {
+        "value": {
+          "__f64_bits": 4620693217682128896
+        }
+      },
+      "name": "clamp-high",
+      "op": "clamp_ratio",
+      "output": {
+        "__f64_bits": 4606732058837280358
+      }
+    },
+    {
+      "inputs": {
+        "first_span": 100,
+        "rest_spans": [
+          99
+        ]
+      },
+      "name": "divider-plus-one",
+      "op": "divider_fraction",
+      "output": {
+        "__f64_bits": 4602678819172646912
+      }
+    },
+    {
+      "inputs": {
+        "first_span": 1,
+        "rest_spans": [
+          1000
+        ]
+      },
+      "name": "divider-low-clamp",
+      "op": "divider_fraction",
+      "output": {
+        "__f64_bits": 4587366580439587226
+      }
+    },
+    {
+      "inputs": {
+        "first_span": -3,
+        "rest_spans": [
+          -4,
+          0
+        ]
+      },
+      "name": "divider-negative-spans",
+      "op": "divider_fraction",
+      "output": {
+        "__f64_bits": 4587366580439587226
+      }
+    },
+    {
+      "inputs": {
+        "region": {
+          "height": {
+            "__f64_bits": 4645744490609377280
+          },
+          "width": {
+            "__f64_bits": 4650248090236747776
+          }
+        },
+        "render": {
+          "height": {
+            "__f64_bits": 4647503709213818880
+          },
+          "width": {
+            "__f64_bits": 4651127699538968576
+          }
+        }
+      },
+      "name": "parent-bounded",
+      "op": "region_bounded_plan_parent",
+      "output": {
+        "height": {
+          "__f64_bits": 4645744490609377280
+        },
+        "width": {
+          "__f64_bits": 4650248090236747776
+        }
+      }
+    },
+    {
+      "inputs": {
+        "region": null,
+        "render": {
+          "height": {
+            "__f64_bits": 4644337115725824000
+          },
+          "width": {
+            "__f64_bits": 4648840715353194496
+          }
+        }
+      },
+      "name": "parent-render-only",
+      "op": "region_bounded_plan_parent",
+      "output": {
+        "height": {
+          "__f64_bits": 4644337115725824000
+        },
+        "width": {
+          "__f64_bits": 4648840715353194496
+        }
+      }
+    },
+    {
+      "inputs": {
+        "region": {
+          "height": {
+            "__f64_bits": 4632233691727265792
+          },
+          "width": {
+            "__f64_bits": 4636737291354636288
+          }
+        },
+        "render": null
+      },
+      "name": "parent-region-only",
+      "op": "region_bounded_plan_parent",
+      "output": {
+        "height": {
+          "__f64_bits": 4632233691727265792
+        },
+        "width": {
+          "__f64_bits": 4636737291354636288
+        }
+      }
+    },
+    {
+      "inputs": {
+        "region": null,
+        "render": null
+      },
+      "name": "parent-none",
+      "op": "region_bounded_plan_parent",
+      "output": null
+    },
+    {
+      "inputs": {
+        "region": {
+          "height": {
+            "__f64_bits": 4607182418800017408
+          },
+          "width": {
+            "__f64_bits": 9223372036854775808
+          }
+        },
+        "render": {
+          "height": {
+            "__f64_bits": 4607182418800017408
+          },
+          "width": {
+            "__f64_bits": 0
+          }
+        }
+      },
+      "name": "parent-signed-zero",
+      "op": "region_bounded_plan_parent",
+      "output": {
+        "height": {
+          "__f64_bits": 4607182418800017408
+        },
+        "width": {
+          "__f64_bits": 0
+        }
+      }
+    },
+    {
+      "inputs": {
+        "region": {
+          "height": {
+            "__f64_bits": 4607182418800017408
+          },
+          "width": {
+            "__f64_bits": 4617315517961601024
+          }
+        },
+        "render": {
+          "height": {
+            "__f64_bits": 4607182418800017408
+          },
+          "width": {
+            "__f64_bits": 9221120237041090560
+          }
+        }
+      },
+      "name": "parent-render-nan",
+      "op": "region_bounded_plan_parent",
+      "output": {
+        "height": {
+          "__f64_bits": 4607182418800017408
+        },
+        "width": {
+          "__f64_bits": 9221120237041090560
+        }
+      }
+    },
+    {
+      "inputs": {
+        "lhs": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "rhs": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 200,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 199,
+              "x": 201,
+              "y": 0
+            }
+          ],
+          "width": 400,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "shape-ignores-geometry",
+      "op": "same_shape_and_pane_ids",
+      "output": true
+    },
+    {
+      "inputs": {
+        "lhs": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "rhs": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "z",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "shape-different-pane",
+      "op": "same_shape_and_pane_ids",
+      "output": false
+    },
+    {
+      "inputs": {
+        "added_pane_id": "b",
+        "new": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "old": {
+          "height": 80,
+          "pane": "a",
+          "width": 200,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "expansion-added-second",
+      "op": "leaf_expansion",
+      "output": {
+        "existing_pane_id": "a",
+        "fraction": {
+          "__f64_bits": 4602678819172646912
+        },
+        "insert_first": false,
+        "new_pane_id": "b",
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "inputs": {
+        "added_pane_id": "b",
+        "new": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 79,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 120,
+              "x": 80,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "old": {
+          "height": 80,
+          "pane": "a",
+          "width": 200,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "expansion-added-first",
+      "op": "leaf_expansion",
+      "output": {
+        "existing_pane_id": "a",
+        "fraction": {
+          "__f64_bits": 4600787307329151304
+        },
+        "insert_first": true,
+        "new_pane_id": "b",
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "inputs": {
+        "added_pane_id": "c",
+        "new": {
+          "height": 120,
+          "vertical": [
+            {
+              "height": 59,
+              "horizontal": [
+                {
+                  "height": 59,
+                  "pane": "a",
+                  "width": 79,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "height": 59,
+                  "pane": "b",
+                  "width": 160,
+                  "x": 80,
+                  "y": 0
+                }
+              ],
+              "width": 240,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 60,
+              "pane": "c",
+              "width": 240,
+              "x": 0,
+              "y": 60
+            }
+          ],
+          "width": 240,
+          "x": 0,
+          "y": 0
+        },
+        "old": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "expansion-not-local",
+      "op": "leaf_expansion",
+      "output": null
+    },
+    {
+      "inputs": {
+        "previous": null,
+        "rendered": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "action-first-rebuild",
+      "op": "tree_action",
+      "output": {
+        "expansion": null,
+        "kind": "rebuild",
+        "removed_pane_id": null
+      }
+    },
+    {
+      "inputs": {
+        "previous": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "rendered": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 400,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "action-keep",
+      "op": "tree_action",
+      "output": {
+        "expansion": null,
+        "kind": "keep",
+        "removed_pane_id": null
+      }
+    },
+    {
+      "inputs": {
+        "previous": {
+          "height": 80,
+          "pane": "a",
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "rendered": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "action-expand",
+      "op": "tree_action",
+      "output": {
+        "expansion": {
+          "existing_pane_id": "a",
+          "fraction": {
+            "__f64_bits": 4602678819172646912
+          },
+          "insert_first": false,
+          "new_pane_id": "b",
+          "orientation": "horizontal"
+        },
+        "kind": "expand_leaf",
+        "removed_pane_id": null
+      }
+    },
+    {
+      "inputs": {
+        "previous": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "rendered": {
+          "height": 80,
+          "pane": "a",
+          "width": 200,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "action-remove",
+      "op": "tree_action",
+      "output": {
+        "expansion": null,
+        "kind": "remove_leaf",
+        "removed_pane_id": "b"
+      }
+    },
+    {
+      "inputs": {
+        "previous": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "c",
+              "width": 99,
+              "x": 201,
+              "y": 0
+            }
+          ],
+          "width": 300,
+          "x": 0,
+          "y": 0
+        },
+        "rendered": {
+          "height": 120,
+          "vertical": [
+            {
+              "height": 59,
+              "horizontal": [
+                {
+                  "height": 59,
+                  "pane": "a",
+                  "width": 79,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "height": 59,
+                  "pane": "b",
+                  "width": 160,
+                  "x": 80,
+                  "y": 0
+                }
+              ],
+              "width": 240,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 60,
+              "pane": "c",
+              "width": 240,
+              "x": 0,
+              "y": 60
+            }
+          ],
+          "width": 240,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "action-rebuild-shape",
+      "op": "tree_action",
+      "output": {
+        "expansion": null,
+        "kind": "rebuild",
+        "removed_pane_id": null
+      }
+    },
+    {
+      "inputs": {
+        "metrics": null,
+        "node": {
+          "height": 80,
+          "pane": "a",
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "parent": {
+          "height": {
+            "__f64_bits": 4630826316843712512
+          },
+          "width": {
+            "__f64_bits": 4636033603912859648
+          }
+        }
+      },
+      "name": "binary-single-leaf",
+      "op": "binary_tree",
+      "output": {
+        "outer": {
+          "height": {
+            "__f64_bits": 4630826316843712512
+          },
+          "width": {
+            "__f64_bits": 4636033603912859648
+          }
+        },
+        "pane_id": "a"
+      }
+    },
+    {
+      "inputs": {
+        "metrics": null,
+        "node": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "parent": null
+      },
+      "name": "binary-two-leaf",
+      "op": "binary_tree",
+      "output": {
+        "first": {
+          "outer": null,
+          "pane_id": "a"
+        },
+        "first_extent": null,
+        "fraction": {
+          "__f64_bits": 4602678819172646912
+        },
+        "orientation": "horizontal",
+        "second": {
+          "outer": null,
+          "pane_id": "b"
+        }
+      }
+    },
+    {
+      "inputs": {
+        "metrics": null,
+        "node": {
+          "height": 1,
+          "horizontal": [],
+          "kind": "horizontal",
+          "width": 1,
+          "x": 0,
+          "y": 0
+        },
+        "parent": {
+          "height": {
+            "__f64_bits": 4617315517961601024
+          },
+          "width": {
+            "__f64_bits": 4621819117588971520
+          }
+        }
+      },
+      "name": "binary-empty-split",
+      "op": "binary_tree",
+      "output": {
+        "outer": {
+          "height": {
+            "__f64_bits": 4617315517961601024
+          },
+          "width": {
+            "__f64_bits": 4621819117588971520
+          }
+        },
+        "pane_id": ""
+      }
+    },
+    {
+      "inputs": {
+        "metrics": {
+          "cell_height": {
+            "__f64_bits": 0
+          },
+          "cell_width": {
+            "__f64_bits": 0
+          }
+        },
+        "node": {
+          "height": 120,
+          "vertical": [
+            {
+              "height": 59,
+              "horizontal": [
+                {
+                  "height": 59,
+                  "pane": "a",
+                  "width": 79,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "height": 59,
+                  "pane": "b",
+                  "width": 160,
+                  "x": 80,
+                  "y": 0
+                }
+              ],
+              "width": 240,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 60,
+              "pane": "c",
+              "width": 240,
+              "x": 0,
+              "y": 60
+            }
+          ],
+          "width": 240,
+          "x": 0,
+          "y": 0
+        },
+        "parent": {
+          "height": {
+            "__f64_bits": 4638144666238189568
+          },
+          "width": {
+            "__f64_bits": 4642648265865560064
+          }
+        }
+      },
+      "name": "binary-deep-zero-metrics",
+      "op": "binary_tree",
+      "output": {
+        "first": {
+          "first": {
+            "outer": {
+              "height": {
+                "__f64_bits": 4633500329122463744
+              },
+              "width": {
+                "__f64_bits": 4635259547726905344
+              }
+            },
+            "pane_id": "a"
+          },
+          "first_extent": {
+            "__f64_bits": 4635259547726905344
+          },
+          "fraction": {
+            "__f64_bits": 4599601359427277073
+          },
+          "orientation": "horizontal",
+          "second": {
+            "outer": {
+              "height": {
+                "__f64_bits": 4633500329122463744
+              },
+              "width": {
+                "__f64_bits": 4639868700470542336
+              }
+            },
+            "pane_id": "b"
+          }
+        },
+        "first_extent": {
+          "__f64_bits": 4633500329122463744
+        },
+        "fraction": {
+          "__f64_bits": 4602528699185067895
+        },
+        "orientation": "vertical",
+        "second": {
+          "outer": {
+            "height": {
+              "__f64_bits": 4633781804099174400
+            },
+            "width": {
+              "__f64_bits": 4642648265865560064
+            }
+          },
+          "pane_id": "c"
+        }
+      }
+    },
+    {
+      "inputs": {
+        "metrics": {
+          "cell_height": {
+            "__f64_bits": 4625196817309499392
+          },
+          "cell_width": {
+            "__f64_bits": 4620693217682128896
+          },
+          "divider_thickness": {
+            "__f64_bits": 4616189618054758400
+          },
+          "minimum_pane_extent": {
+            "__f64_bits": 4629137466983448576
+          },
+          "surface_pad_height": {
+            "__f64_bits": 4617315517961601024
+          },
+          "surface_pad_width": {
+            "__f64_bits": 4613937818241073152
+          },
+          "tab_bar_height": {
+            "__f64_bits": 4626885667169763328
+          }
+        },
+        "node": {
+          "height": 120,
+          "vertical": [
+            {
+              "height": 59,
+              "horizontal": [
+                {
+                  "height": 59,
+                  "pane": "a",
+                  "width": 79,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "height": 59,
+                  "pane": "b",
+                  "width": 160,
+                  "x": 80,
+                  "y": 0
+                }
+              ],
+              "width": 240,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 60,
+              "pane": "c",
+              "width": 240,
+              "x": 0,
+              "y": 60
+            }
+          ],
+          "width": 240,
+          "x": 0,
+          "y": 0
+        },
+        "parent": {
+          "height": {
+            "__f64_bits": 4636737291354636288
+          },
+          "width": {
+            "__f64_bits": 4641592734702895104
+          }
+        }
+      },
+      "name": "binary-deep-chrome",
+      "op": "binary_tree",
+      "output": {
+        "first": {
+          "first": {
+            "outer": {
+              "height": {
+                "__f64_bits": 4631895745281873374
+              },
+              "width": {
+                "__f64_bits": 4634499653342438307
+              }
+            },
+            "pane_id": "a"
+          },
+          "first_extent": {
+            "__f64_bits": 4634499653342438307
+          },
+          "fraction": {
+            "__f64_bits": 4599635719528709392
+          },
+          "orientation": "horizontal",
+          "second": {
+            "outer": {
+              "height": {
+                "__f64_bits": 4631895745281873374
+              },
+              "width": {
+                "__f64_bits": 4639052379011755566
+              }
+            },
+            "pane_id": "b"
+          }
+        },
+        "first_extent": {
+          "__f64_bits": 4631895745281873374
+        },
+        "fraction": {
+          "__f64_bits": 4602603523881071229
+        },
+        "orientation": "vertical",
+        "second": {
+          "outer": {
+            "height": {
+              "__f64_bits": 4632008688219236898
+            },
+            "width": {
+              "__f64_bits": 4641592734702895104
+            }
+          },
+          "pane_id": "c"
+        }
+      }
+    },
+    {
+      "inputs": {
+        "metrics": null,
+        "node": {
+          "height": 1,
+          "horizontal": [
+            {
+              "height": 1,
+              "pane": "a",
+              "width": 9223372036854775807
+            },
+            {
+              "height": 1,
+              "pane": "b",
+              "width": 9223372036854775807
+            },
+            {
+              "height": 1,
+              "pane": "c",
+              "width": 9223372036854775807
+            }
+          ],
+          "width": 1
+        },
+        "parent": null
+      },
+      "name": "binary-rest-span-overflow",
+      "op": "binary_tree",
+      "output": {
+        "first": {
+          "outer": null,
+          "pane_id": "a"
+        },
+        "first_extent": null,
+        "fraction": {
+          "__f64_bits": 4599676419421066581
+        },
+        "orientation": "horizontal",
+        "second": {
+          "first": {
+            "outer": null,
+            "pane_id": "b"
+          },
+          "first_extent": null,
+          "fraction": {
+            "__f64_bits": 4602678819172646912
+          },
+          "orientation": "horizontal",
+          "second": {
+            "outer": null,
+            "pane_id": "c"
+          }
+        }
+      }
+    },
+    {
+      "inputs": {
+        "node": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "c",
+              "width": 99,
+              "x": 201,
+              "y": 0
+            }
+          ],
+          "width": 300,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "collect-ternary",
+      "op": "collect_fractions",
+      "output": [
+        {
+          "__f64_bits": 4599696502362548724
+        },
+        {
+          "__f64_bits": 4602633556864834143
+        }
+      ]
+    },
+    {
+      "inputs": {
+        "assigned_cells": 0,
+        "axis": "horizontal",
+        "split_key": "split-a"
+      },
+      "name": "drag-begin-clamps",
+      "op": "begin_divider_drag",
+      "output": {
+        "axis": "horizontal",
+        "split_key": "split-a",
+        "target_cells": 1
+      }
+    },
+    {
+      "inputs": {
+        "assigned_cells": 37,
+        "axis": "vertical",
+        "split_key": "split-b"
+      },
+      "name": "drag-begin-vertical",
+      "op": "begin_divider_drag",
+      "output": {
+        "axis": "vertical",
+        "split_key": "split-b",
+        "target_cells": 37
+      }
+    },
+    {
+      "inputs": {
+        "assigned_cells": 50,
+        "hold": {
+          "axis": "horizontal",
+          "split_key": "split-a",
+          "target_cells": 40
+        },
+        "split_still_exists": true
+      },
+      "name": "hold-pending",
+      "op": "resolve_divider_hold",
+      "output": {
+        "axis": "horizontal",
+        "split_key": "split-a",
+        "target_cells": 40
+      }
+    },
+    {
+      "inputs": {
+        "assigned_cells": 40,
+        "hold": {
+          "axis": "horizontal",
+          "split_key": "split-a",
+          "target_cells": 40
+        },
+        "split_still_exists": true
+      },
+      "name": "hold-resolved",
+      "op": "resolve_divider_hold",
+      "output": null
+    },
+    {
+      "inputs": {
+        "assigned_cells": 50,
+        "hold": {
+          "axis": "horizontal",
+          "split_key": "split-a",
+          "target_cells": 40
+        },
+        "split_still_exists": false
+      },
+      "name": "hold-vanished",
+      "op": "resolve_divider_hold",
+      "output": null
+    },
+    {
+      "inputs": {
+        "assigned_cells": null,
+        "hold": {
+          "axis": "horizontal",
+          "split_key": "split-a",
+          "target_cells": 40
+        },
+        "split_still_exists": true
+      },
+      "name": "hold-no-assignment",
+      "op": "resolve_divider_hold",
+      "output": null
+    },
+    {
+      "inputs": {
+        "assigned_cells": 50,
+        "axis_span": {
+          "__f64_bits": 4650248090236747776
+        },
+        "dragged_extent": {
+          "__f64_bits": 4645744490609377280
+        },
+        "total_cells": 100
+      },
+      "name": "drag-end-noop",
+      "op": "end_divider_drag",
+      "output": [
+        50,
+        false
+      ]
+    },
+    {
+      "inputs": {
+        "assigned_cells": 50,
+        "axis_span": {
+          "__f64_bits": 4650248090236747776
+        },
+        "dragged_extent": {
+          "__f64_bits": 4641240890982006784
+        },
+        "total_cells": 100
+      },
+      "name": "drag-end-change",
+      "op": "end_divider_drag",
+      "output": [
+        25,
+        true
+      ]
+    },
+    {
+      "inputs": {
+        "assigned_cells": 1,
+        "axis_span": {
+          "__f64_bits": 0
+        },
+        "dragged_extent": {
+          "__f64_bits": 4626322717216342016
+        },
+        "total_cells": 0
+      },
+      "name": "drag-end-zero-metrics",
+      "op": "end_divider_drag",
+      "output": [
+        1,
+        false
+      ]
+    },
+    {
+      "inputs": {
+        "assigned_cells": 2,
+        "axis_span": {
+          "__f64_bits": 4636737291354636288
+        },
+        "dragged_extent": {
+          "__f64_bits": 4666722622711529472
+        },
+        "total_cells": 10
+      },
+      "name": "drag-end-upper-clamp",
+      "op": "end_divider_drag",
+      "output": [
+        9,
+        true
+      ]
+    },
+    {
+      "inputs": {
+        "focus_pane_id": "b",
+        "hold": null,
+        "metrics": {
+          "cell_height": {
+            "__f64_bits": 0
+          },
+          "cell_width": {
+            "__f64_bits": 0
+          }
+        },
+        "previous": null,
+        "region_size": {
+          "height": {
+            "__f64_bits": 4645744490609377280
+          },
+          "width": {
+            "__f64_bits": 4650248090236747776
+          }
+        },
+        "render_size": {
+          "height": {
+            "__f64_bits": 4647503709213818880
+          },
+          "width": {
+            "__f64_bits": 4651127699538968576
+          }
+        },
+        "rendered": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "title": "Build"
+      },
+      "name": "plan-zero-metrics-bounded",
+      "op": "plan_impose",
+      "output": {
+        "divider_tree": {
+          "first": {
+            "outer": {
+              "height": {
+                "__f64_bits": 4645744490609377280
+              },
+              "width": {
+                "__f64_bits": 4645744490609377280
+              }
+            },
+            "pane_id": "a"
+          },
+          "first_extent": {
+            "__f64_bits": 4645744490609377280
+          },
+          "fraction": {
+            "__f64_bits": 4602678819172646912
+          },
+          "orientation": "horizontal",
+          "second": {
+            "outer": {
+              "height": {
+                "__f64_bits": 4645744490609377280
+              },
+              "width": {
+                "__f64_bits": 4645744490609377280
+              }
+            },
+            "pane_id": "b"
+          }
+        },
+        "focus_pane_id": "b",
+        "fractions": [
+          {
+            "__f64_bits": 4602678819172646912
+          }
+        ],
+        "held_split_key": null,
+        "title": "Build",
+        "tree_action": {
+          "expansion": null,
+          "kind": "rebuild",
+          "removed_pane_id": null
+        }
+      }
+    },
+    {
+      "inputs": {
+        "focus_pane_id": "c",
+        "hold": {
+          "axis": "vertical",
+          "split_key": "root",
+          "target_cells": 40
+        },
+        "metrics": {
+          "cell_height": {
+            "__f64_bits": 4625196817309499392
+          },
+          "cell_width": {
+            "__f64_bits": 4620693217682128896
+          },
+          "divider_thickness": {
+            "__f64_bits": 4616189618054758400
+          },
+          "minimum_pane_extent": {
+            "__f64_bits": 4627730092099895296
+          },
+          "surface_pad_height": {
+            "__f64_bits": 4613937818241073152
+          },
+          "surface_pad_width": {
+            "__f64_bits": 4611686018427387904
+          },
+          "tab_bar_height": {
+            "__f64_bits": 4626322717216342016
+          }
+        },
+        "previous": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "region_size": {
+          "height": {
+            "__f64_bits": 4637440978796412928
+          },
+          "width": {
+            "__f64_bits": 4641240890982006784
+          }
+        },
+        "render_size": {
+          "height": {
+            "__f64_bits": 4638144666238189568
+          },
+          "width": {
+            "__f64_bits": 4642648265865560064
+          }
+        },
+        "rendered": {
+          "height": 120,
+          "vertical": [
+            {
+              "height": 59,
+              "horizontal": [
+                {
+                  "height": 59,
+                  "pane": "a",
+                  "width": 79,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "height": 59,
+                  "pane": "b",
+                  "width": 160,
+                  "x": 80,
+                  "y": 0
+                }
+              ],
+              "width": 240,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 60,
+              "pane": "c",
+              "width": 240,
+              "x": 0,
+              "y": 60
+            }
+          ],
+          "width": 240,
+          "x": 0,
+          "y": 0
+        },
+        "title": "Deep"
+      },
+      "name": "plan-deep-chrome-held",
+      "op": "plan_impose",
+      "output": {
+        "divider_tree": {
+          "first": {
+            "first": {
+              "outer": {
+                "height": {
+                  "__f64_bits": 4632593419694883966
+                },
+                "width": {
+                  "__f64_bits": 4634264248683473875
+                }
+              },
+              "pane_id": "a"
+            },
+            "first_extent": {
+              "__f64_bits": 4634264248683473875
+            },
+            "fraction": {
+              "__f64_bits": 4599632543015511128
+            },
+            "orientation": "horizontal",
+            "second": {
+              "outer": {
+                "height": {
+                  "__f64_bits": 4632593419694883966
+                },
+                "width": {
+                  "__f64_bits": 4638818237620349462
+                }
+              },
+              "pane_id": "b"
+            }
+          },
+          "first_extent": {
+            "__f64_bits": 4632593419694883966
+          },
+          "fraction": {
+            "__f64_bits": 4602603366194596726
+          },
+          "orientation": "vertical",
+          "second": {
+            "outer": {
+              "height": {
+                "__f64_bits": 4632718388689779586
+              },
+              "width": {
+                "__f64_bits": 4641240890982006784
+              }
+            },
+            "pane_id": "c"
+          }
+        },
+        "focus_pane_id": "c",
+        "fractions": [
+          {
+            "__f64_bits": 4602603366194596726
+          },
+          {
+            "__f64_bits": 4599632543015511128
+          }
+        ],
+        "held_split_key": "root",
+        "title": "Deep",
+        "tree_action": {
+          "expansion": null,
+          "kind": "rebuild",
+          "removed_pane_id": null
+        }
+      }
+    },
+    {
+      "inputs": {
+        "node": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "c",
+              "width": 99,
+              "x": 201,
+              "y": 0
+            }
+          ],
+          "width": 300,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "specs-overlay-ternary",
+      "op": "specs_with_impose_fractions",
+      "output": [
+        {
+          "direction": "right",
+          "pane_id": "b",
+          "ratio": {
+            "__f64_bits": 4599696502362548724
+          },
+          "split_from_pane_id": "a"
+        },
+        {
+          "direction": "right",
+          "pane_id": "c",
+          "ratio": {
+            "__f64_bits": 4602633556864834143
+          },
+          "split_from_pane_id": "b"
+        }
+      ]
+    },
+    {
+      "inputs": {
+        "focus_pane_id": "b",
+        "hold": null,
+        "metrics": null,
+        "previous": {
+          "height": 80,
+          "pane": "a",
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "region_size": null,
+        "render_size": null,
+        "rendered": {
+          "height": 80,
+          "horizontal": [
+            {
+              "height": 80,
+              "pane": "a",
+              "width": 100,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "height": 80,
+              "pane": "b",
+              "width": 99,
+              "x": 101,
+              "y": 0
+            }
+          ],
+          "width": 200,
+          "x": 0,
+          "y": 0
+        },
+        "title": "From result"
+      },
+      "name": "plan-from-reconcile",
+      "op": "plan_from_reconcile",
+      "output": {
+        "divider_tree": {
+          "first": {
+            "outer": null,
+            "pane_id": "a"
+          },
+          "first_extent": null,
+          "fraction": {
+            "__f64_bits": 4602678819172646912
+          },
+          "orientation": "horizontal",
+          "second": {
+            "outer": null,
+            "pane_id": "b"
+          }
+        },
+        "focus_pane_id": "b",
+        "fractions": [
+          {
+            "__f64_bits": 4602678819172646912
+          }
+        ],
+        "held_split_key": null,
+        "title": "From result",
+        "tree_action": {
+          "expansion": {
+            "existing_pane_id": "a",
+            "fraction": {
+              "__f64_bits": 4602678819172646912
+            },
+            "insert_first": false,
+            "new_pane_id": "b",
+            "orientation": "horizontal"
+          },
+          "kind": "expand_leaf",
+          "removed_pane_id": null
+        }
+      }
+    }
+  ]
+}

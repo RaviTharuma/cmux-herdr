@@ -1,0 +1,121 @@
+#!/bin/sh
+# Fetch and verify the release binary used by the cmux plugin manager.
+# Existing installs are replaced only after a complete checksum verification.
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+VERSION=$(tr -d '[:space:]' < "$ROOT/VERSION")
+DEST_DIR="$ROOT/.cmux-herdr/bin"
+DEST="$DEST_DIR/cmux-herdr"
+RELEASE_BASE=${CMUX_HERDR_RELEASE_BASE_URL:-https://github.com/RaviTharuma/cmux-herdr/releases/download}
+
+fail() {
+  printf 'cmux-herdr-fetch: %s\n' "$*" >&2
+  exit 1
+}
+
+[ -n "$VERSION" ] || fail "VERSION is empty"
+case "$RELEASE_BASE" in
+  https://*) ;;
+  *) fail "release base URL must use https://" ;;
+esac
+
+OS=$(uname -s)
+ARCH=$(uname -m)
+case "$OS:$ARCH" in
+  Darwin:arm64|Darwin:aarch64) TARGET=aarch64-apple-darwin ;;
+  Darwin:x86_64|Darwin:amd64) TARGET=x86_64-apple-darwin ;;
+  Linux:aarch64|Linux:arm64) TARGET=aarch64-unknown-linux-gnu ;;
+  Linux:x86_64|Linux:amd64) TARGET=x86_64-unknown-linux-gnu ;;
+  *) TARGET= ;;
+esac
+
+assert_safe_destination() {
+  [ ! -L "$ROOT/.cmux-herdr" ] || fail "refusing symlinked install directory: $ROOT/.cmux-herdr"
+  [ ! -L "$DEST_DIR" ] || fail "refusing symlinked install directory: $DEST_DIR"
+  [ ! -L "$DEST" ] || fail "refusing symlinked install destination: $DEST"
+  [ ! -d "$DEST" ] || fail "install destination is a directory: $DEST"
+}
+
+commit_install() {
+  source_path=$1
+  assert_safe_destination
+  mv -f "$source_path" "$DEST"
+  [ -f "$DEST" ] && [ -x "$DEST" ] || fail "installed binary is not executable: $DEST"
+}
+
+assert_safe_destination
+mkdir -p "$DEST_DIR"
+TMP_DIR=$(mktemp -d "$DEST_DIR/.fetch.XXXXXX") || fail "cannot create temporary directory"
+cleanup() {
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT HUP INT TERM
+
+install_source_build() {
+  command -v cargo >/dev/null 2>&1 || return 1
+  printf 'cmux-herdr-fetch: release asset unavailable; building from source\n' >&2
+  cargo build --release --locked --manifest-path "$ROOT/Cargo.toml" || return 1
+  [ -f "$ROOT/target/release/cmux-herdr" ] || return 1
+  cp "$ROOT/target/release/cmux-herdr" "$TMP_DIR/cmux-herdr" || return 1
+  chmod 755 "$TMP_DIR/cmux-herdr" || return 1
+  commit_install "$TMP_DIR/cmux-herdr"
+}
+
+download() {
+  url=$1
+  out=$2
+  if command -v curl >/dev/null 2>&1; then
+    curl --disable --proto '=https' --proto-redir '=https' \
+      --fail --location --silent --show-error --output "$out" "$url"
+  elif command -v wget >/dev/null 2>&1; then
+    wget --no-config --https-only --quiet --output-document="$out" "$url"
+  else
+    return 127
+  fi
+}
+
+if [ -z "$TARGET" ]; then
+  install_source_build || fail "unsupported platform $OS/$ARCH and cargo source build failed"
+  printf 'cmux-herdr-fetch: installed source build at %s\n' "$DEST"
+  exit 0
+fi
+
+ASSET="cmux-herdr-$VERSION-$TARGET"
+TAG="v$VERSION"
+URL="$RELEASE_BASE/$TAG"
+
+if ! download "$URL/SHA256SUMS" "$TMP_DIR/SHA256SUMS"; then
+  install_source_build || fail "cannot download SHA256SUMS and cargo source build is unavailable"
+  printf 'cmux-herdr-fetch: installed source build at %s\n' "$DEST"
+  exit 0
+fi
+if ! download "$URL/$ASSET" "$TMP_DIR/$ASSET"; then
+  install_source_build || fail "cannot download $ASSET and cargo source build is unavailable"
+  printf 'cmux-herdr-fetch: installed source build at %s\n' "$DEST"
+  exit 0
+fi
+
+EXPECTED=$(awk -v name="$ASSET" '$2 == name || $2 == "*" name { print $1 }' "$TMP_DIR/SHA256SUMS")
+case "$EXPECTED" in
+  ''|*[!0-9A-Fa-f]*) fail "SHA256SUMS has no valid entry for $ASSET" ;;
+esac
+[ "${#EXPECTED}" -eq 64 ] || fail "SHA256SUMS has no valid entry for $ASSET"
+
+if command -v sha256sum >/dev/null 2>&1; then
+  ACTUAL=$(sha256sum "$TMP_DIR/$ASSET" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+  ACTUAL=$(shasum -a 256 "$TMP_DIR/$ASSET" | awk '{print $1}')
+elif command -v openssl >/dev/null 2>&1; then
+  ACTUAL=$(openssl dgst -sha256 "$TMP_DIR/$ASSET" | awk '{print $NF}')
+else
+  fail "no SHA-256 tool found (need sha256sum, shasum, or openssl)"
+fi
+
+EXPECTED_LOWER=$(printf '%s' "$EXPECTED" | tr 'A-F' 'a-f')
+ACTUAL_LOWER=$(printf '%s' "$ACTUAL" | tr 'A-F' 'a-f')
+[ "$EXPECTED_LOWER" = "$ACTUAL_LOWER" ] || fail "checksum mismatch for $ASSET"
+
+chmod 755 "$TMP_DIR/$ASSET"
+commit_install "$TMP_DIR/$ASSET"
+printf 'cmux-herdr-fetch: installed %s at %s\n' "$ASSET" "$DEST"

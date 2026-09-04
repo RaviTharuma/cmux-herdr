@@ -7,6 +7,31 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-04
+
+### Changed
+
+- Replaced the Python runtime with one Rust binary while preserving all 61 CLI
+  commands, the sidebar TUI, socket protocol, status/state contracts, mirror
+  engine, attach/restore lifecycle, I/O routing, and writer handoff behavior.
+- Official plugin installation now downloads one of four prebuilt macOS/Linux
+  binaries, verifies it against the release `SHA256SUMS`, and installs it
+  atomically. A local Cargo source build is only a fallback for unsupported or
+  offline developer environments.
+- CI and release publishing now run `cargo fmt`, strict Clippy, and the Rust
+  parity/behavior suite. Release tags publish four target binaries plus
+  `SHA256SUMS`.
+
+### Added
+
+- Opt-in `update-service` support ported from `dakesan/cmux-herdr`: reversible
+  comment-preserving Herdr config ownership, transactional binary update and
+  rollback, bounded backups, stale-lock takeover, and launchd/systemd-user
+  installation without a Python or Bash runtime dependency.
+- Golden parity fixtures captured from the former Python implementation,
+  covering CLI argv, topology/model parsing, layout/impose, state, handoff,
+  mirror, sidebar, host/lifecycle, and the live engine/event pump.
+
 ## [0.6.1] - 2026-09-02
 
 ### Changed
@@ -218,7 +243,8 @@ Works today without any cmux upstream merge.
 - Native nested topology ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)) is
   intentionally out of scope for the plugin.
 
-[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.4.0...v0.5.0

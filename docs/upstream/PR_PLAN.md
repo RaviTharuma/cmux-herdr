@@ -222,8 +222,7 @@ These keep the compatibility route honest while native PRs land. They are **not*
 Suggested verification for the plugin track:
 
 ```bash
-python -m unittest discover -s bridge -v
-python -m unittest discover -s tests -v
+./scripts/test.sh
 # dogfood: watch cycle does not rewrite a locked title; parent map survives pane status flicker
 ```
 
@@ -239,7 +238,7 @@ Exact placement should follow maintainer feedback, but current source boundaries
 - `Sources/TerminalController.swift` capability/method dispatch;
 - `Packages/macOS/CmuxControlSocket/.../ControlCommandExecutionPolicy.swift` for lane and authorization policy;
 - corresponding `cmuxTests`, package tests, and UI tests;
-- (plugin repo) `bridge/cmux_herdr_bridge.py`, state-file helpers, and bridge unit/behavior tests.
+- (plugin repo) `src/bridge.rs`, `src/state.rs`, and Rust behavior tests.
 
 Implementation hygiene:
 

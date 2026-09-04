@@ -19,5 +19,5 @@ If you must touch a file another branch just changed: fetch, rebase, and
 open a follow-up PR. Do not force-push shared history.
 
 Current native-side artifacts (impose, I/O, control, lifecycle, live apply)
-have Python twins on plugin `main`. Native twins belong on the cmux fork,
+have Rust contract twins on the plugin `main`. Native twins belong on the cmux fork,
 not in this tree.

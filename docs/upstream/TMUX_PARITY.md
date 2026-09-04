@@ -20,7 +20,7 @@ Legend: **Yes** in the plugin column is shipped userspace. **Yes** in the Native
 |---|---|---|---|
 | Each inner **window/tab** → real cmux **tab** | Yes (`mirror` / `--tmux-parity`) | Virtual row only | Yes — one `RemoteHerdrWindowMirror` per Herdr tab |
 | Each inner **pane** → real **Bonsplit pane + TerminalPanel** | Extra viewer via `attach-pane` (not PTY theft) | Virtual row only | Yes — `makePanel(paneId)` like tmux |
-| Layout tree is source of truth (`horizontal` / `vertical` / leaf) | Yes (`cmux_herdr_layout.py`, same JSON shape as `RemoteTmuxLayoutNode`) | Layout hints later | Yes — parse Herdr layouts into the same node type |
+| Layout tree is source of truth (`horizontal` / `vertical` / leaf) | Yes (`src/layout.rs`, same JSON shape as `RemoteTmuxLayoutNode`) | Layout hints later | Yes — parse Herdr layouts into the same node type |
 | Pane create-order = DFS `paneIDsInOrder` | Yes | Snapshot order | Yes |
 | Split direction from tree (not alternate right/down) | Yes | n/a | Yes — `split-window` analogue = `pane.split` |
 | Divider **ratio** from assigned cells | `cmux set-ratio` via `RemoteHerdrImpose` fractions (tmux +1 cell) | n/a | Yes — `RemoteHerdrImpose.plan` → host `imposeDividerPlan()` |
@@ -110,15 +110,13 @@ SSH ControlMaster, `tmux -CC` parser, `%layout-change` wire format, control-mode
 
 ### Plugin (cannot close without native cmux)
 
-This is the plugin ceiling. Further depth is AppKit, not more Python.
+This is the plugin ceiling. Further depth is AppKit, not more Rust.
 
 - No Ghostty PTY theft; `attach-pane` is a second client, like `tmux attach` from another terminal. Reads/sends/resizes now use the same Unix-socket RPC as native SessionHost, then CLI fallback.
 - No true `%output` byte stream; poll `pane.read` + incremental delta when the snapshot extends. Subscribe gaps force a snapshot resync. Timeout ticks paint only (no chrome remirror).
 - No Bonsplit divider-drag → `resize-pane` (the plugin has no Bonsplit owner). Native [RaviTharuma/cmux#17](https://github.com/RaviTharuma/cmux/pull/17) owns that host path.
 - `cmux split` / `set-ratio` / `move-tab` / `focus-surface` verbs differ across cmux CLI builds; the bridge tries fallbacks and records errors.
-- The live apply machine runs `make_panel` / output / drag / focus /
-  size / attach in-process. Surfaces are in-memory Ghostty analogues — the
-  plugin cannot open a real `TerminalPanel`.
+- The live apply machine runs `make_panel` / output / drag / focus / size / attach in-process. Surfaces are in-memory Ghostty analogues — the plugin cannot open a real `TerminalPanel`.
 
 ### Native PR7 (must copy tmux, not invent a third model)
 
@@ -181,5 +179,4 @@ Lease freshness requires a live pid **and** `heartbeat_ms` within TTL (45s). `Re
 ## Native landing sequence
 
 1. Land or rebase [#10045](https://github.com/manaflow-ai/cmux/pull/10045) (sidebar + socket + focus).
-2. Open **PR7** from [PR7_HERDR_WINDOW_MIRROR.md](./PR7_HERDR_WINDOW_MIRROR.md) against `manaflow-ai/cmux` (fork branch off current nested-topology tip).
-3. Keep this plugin as fallback and as the layout-planner fixture source (`bridge/cmux_herdr_layout.py` matches the Swift node JSON).
+3. Keep this plugin as fallback and as the layout-planner fixture source (`src/layout.rs` matches the Swift node JSON).

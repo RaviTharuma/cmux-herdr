@@ -1,0 +1,1680 @@
+{
+  "parse": [
+    {
+      "raw": null,
+      "node": null
+    },
+    {
+      "raw": [],
+      "node": null
+    },
+    {
+      "raw": [
+        {
+          "pane_id": "solo"
+        }
+      ],
+      "node": {
+        "kind": "pane",
+        "pane_id": "solo",
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "p:solo",
+        "pane_ids_in_order": [
+          "solo"
+        ],
+        "first_child_ratio": null,
+        "children": []
+      }
+    },
+    {
+      "raw": [
+        {
+          "pane_id": "a"
+        },
+        {
+          "pane_id": "b"
+        },
+        {
+          "pane_id": "c"
+        }
+      ],
+      "node": {
+        "kind": "vertical",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "v:p:a,p:b,p:c",
+        "pane_ids_in_order": [
+          "a",
+          "b",
+          "c"
+        ],
+        "first_child_ratio": 0.95,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "a",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:a",
+            "pane_ids_in_order": [
+              "a"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "b",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:b",
+            "pane_ids_in_order": [
+              "b"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "c",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:c",
+            "pane_ids_in_order": [
+              "c"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "raw": {
+        "pane_id": "leaf1"
+      },
+      "node": {
+        "kind": "pane",
+        "pane_id": "leaf1",
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "p:leaf1",
+        "pane_ids_in_order": [
+          "leaf1"
+        ],
+        "first_child_ratio": null,
+        "children": []
+      }
+    },
+    {
+      "raw": {
+        "type": "pane",
+        "pane_id": "leaf2",
+        "width": 20,
+        "height": 10,
+        "x": 3,
+        "y": 4
+      },
+      "node": {
+        "kind": "pane",
+        "pane_id": "leaf2",
+        "rect": [
+          3,
+          4,
+          20,
+          10
+        ],
+        "signature": "p:leaf2",
+        "pane_ids_in_order": [
+          "leaf2"
+        ],
+        "first_child_ratio": null,
+        "children": []
+      }
+    },
+    {
+      "raw": {
+        "layout": {
+          "pane_id": "wrapped"
+        }
+      },
+      "node": {
+        "kind": "pane",
+        "pane_id": "wrapped",
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "p:wrapped",
+        "pane_ids_in_order": [
+          "wrapped"
+        ],
+        "first_child_ratio": null,
+        "children": []
+      }
+    },
+    {
+      "raw": {
+        "root": {
+          "horizontal": [
+            {
+              "pane_id": "a"
+            },
+            {
+              "pane_id": "b"
+            }
+          ]
+        }
+      },
+      "node": {
+        "kind": "horizontal",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "h:p:a,p:b",
+        "pane_ids_in_order": [
+          "a",
+          "b"
+        ],
+        "first_child_ratio": 0.95,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "a",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:a",
+            "pane_ids_in_order": [
+              "a"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "b",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:b",
+            "pane_ids_in_order": [
+              "b"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "raw": {
+        "width": 100,
+        "height": 40,
+        "horizontal": [
+          {
+            "pane_id": "a",
+            "width": 60,
+            "height": 40,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "pane_id": "b",
+            "width": 40,
+            "height": 40,
+            "x": 60,
+            "y": 0
+          }
+        ]
+      },
+      "node": {
+        "kind": "horizontal",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          100,
+          40
+        ],
+        "signature": "h:p:a,p:b",
+        "pane_ids_in_order": [
+          "a",
+          "b"
+        ],
+        "first_child_ratio": 0.6,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "a",
+            "rect": [
+              0,
+              0,
+              60,
+              40
+            ],
+            "signature": "p:a",
+            "pane_ids_in_order": [
+              "a"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "b",
+            "rect": [
+              60,
+              0,
+              40,
+              40
+            ],
+            "signature": "p:b",
+            "pane_ids_in_order": [
+              "b"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "raw": {
+        "vertical": [
+          {
+            "pane_id": "t",
+            "width": 80,
+            "height": 20,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "pane_id": "b",
+            "width": 80,
+            "height": 20,
+            "x": 0,
+            "y": 20
+          }
+        ]
+      },
+      "node": {
+        "kind": "vertical",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "signature": "v:p:t,p:b",
+        "pane_ids_in_order": [
+          "t",
+          "b"
+        ],
+        "first_child_ratio": 0.5,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "t",
+            "rect": [
+              0,
+              0,
+              80,
+              20
+            ],
+            "signature": "p:t",
+            "pane_ids_in_order": [
+              "t"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "b",
+            "rect": [
+              0,
+              20,
+              80,
+              20
+            ],
+            "signature": "p:b",
+            "pane_ids_in_order": [
+              "b"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "raw": {
+        "type": "split",
+        "direction": "vertical",
+        "first": {
+          "pane_id": "top"
+        },
+        "second": {
+          "pane_id": "bot"
+        }
+      },
+      "node": {
+        "kind": "vertical",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "v:p:top,p:bot",
+        "pane_ids_in_order": [
+          "top",
+          "bot"
+        ],
+        "first_child_ratio": 0.95,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "top",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:top",
+            "pane_ids_in_order": [
+              "top"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "bot",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:bot",
+            "pane_ids_in_order": [
+              "bot"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "raw": {
+        "kind": "hsplit",
+        "children": [
+          {
+            "pane_id": "x"
+          },
+          {
+            "pane_id": "y"
+          },
+          {
+            "pane_id": "z"
+          }
+        ]
+      },
+      "node": {
+        "kind": "horizontal",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "h:p:x,p:y,p:z",
+        "pane_ids_in_order": [
+          "x",
+          "y",
+          "z"
+        ],
+        "first_child_ratio": 0.95,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "x",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:x",
+            "pane_ids_in_order": [
+              "x"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "y",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:y",
+            "pane_ids_in_order": [
+              "y"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "z",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:z",
+            "pane_ids_in_order": [
+              "z"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "raw": {
+        "direction": "down",
+        "a": {
+          "pane_id": "u"
+        },
+        "b": {
+          "pane_id": "v"
+        }
+      },
+      "node": {
+        "kind": "vertical",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "v:p:u,p:v",
+        "pane_ids_in_order": [
+          "u",
+          "v"
+        ],
+        "first_child_ratio": 0.95,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "u",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:u",
+            "pane_ids_in_order": [
+              "u"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "v",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:v",
+            "pane_ids_in_order": [
+              "v"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "raw": {
+        "id": "split",
+        "children": [
+          {
+            "pane_id": "m"
+          },
+          {
+            "pane_id": "n"
+          }
+        ]
+      },
+      "node": {
+        "kind": "horizontal",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "h:p:m,p:n",
+        "pane_ids_in_order": [
+          "m",
+          "n"
+        ],
+        "first_child_ratio": 0.95,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "m",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:m",
+            "pane_ids_in_order": [
+              "m"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "n",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:n",
+            "pane_ids_in_order": [
+              "n"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "raw": {
+        "nodes": [
+          {
+            "pane_id": "p1"
+          },
+          {
+            "pane_id": "p2"
+          }
+        ],
+        "axis": "column"
+      },
+      "node": {
+        "kind": "vertical",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "v:p:p1,p:p2",
+        "pane_ids_in_order": [
+          "p1",
+          "p2"
+        ],
+        "first_child_ratio": 0.95,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "p1",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:p1",
+            "pane_ids_in_order": [
+              "p1"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "p2",
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "signature": "p:p2",
+            "pane_ids_in_order": [
+              "p2"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "raw": {
+        "pane": true,
+        "pane_id": "boolkind"
+      },
+      "node": {
+        "kind": "pane",
+        "pane_id": "boolkind",
+        "rect": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "signature": "p:boolkind",
+        "pane_ids_in_order": [
+          "boolkind"
+        ],
+        "first_child_ratio": null,
+        "children": []
+      }
+    },
+    {
+      "raw": {},
+      "node": null
+    },
+    {
+      "raw": "not-a-dict",
+      "node": null
+    },
+    {
+      "raw": {
+        "geometry": {
+          "cols": 30,
+          "rows": 10,
+          "left": 5,
+          "top": 2
+        },
+        "pane_id": "geo"
+      },
+      "node": {
+        "kind": "pane",
+        "pane_id": "geo",
+        "rect": [
+          5,
+          2,
+          30,
+          10
+        ],
+        "signature": "p:geo",
+        "pane_ids_in_order": [
+          "geo"
+        ],
+        "first_child_ratio": null,
+        "children": []
+      }
+    }
+  ],
+  "rect": [
+    {
+      "raw": {
+        "width": 10,
+        "height": 5,
+        "x": 1,
+        "y": 2
+      },
+      "rect": [
+        1,
+        2,
+        10,
+        5
+      ]
+    },
+    {
+      "raw": {
+        "cols": 8,
+        "rows": 4
+      },
+      "rect": [
+        0,
+        0,
+        8,
+        4
+      ]
+    },
+    {
+      "raw": {
+        "w": 3,
+        "h": 3,
+        "col": 1,
+        "row": 1
+      },
+      "rect": [
+        1,
+        1,
+        3,
+        3
+      ]
+    },
+    {
+      "raw": {
+        "geometry": {
+          "pane_width": 12,
+          "pane_height": 6,
+          "pane_left": 4,
+          "pane_top": 3
+        }
+      },
+      "rect": [
+        4,
+        3,
+        12,
+        6
+      ]
+    },
+    {
+      "raw": {
+        "rect": {
+          "width": 7,
+          "height": 0
+        }
+      },
+      "rect": [
+        0,
+        0,
+        7,
+        1
+      ]
+    },
+    {
+      "raw": {
+        "width": 0,
+        "height": 0
+      },
+      "rect": null
+    },
+    {
+      "raw": {},
+      "rect": null
+    },
+    {
+      "raw": "nope",
+      "rect": null
+    },
+    {
+      "raw": {
+        "width": "20",
+        "height": "10.5",
+        "x": "3"
+      },
+      "rect": [
+        3,
+        0,
+        20,
+        10
+      ]
+    },
+    {
+      "raw": {
+        "width": true,
+        "height": 5
+      },
+      "rect": [
+        0,
+        0,
+        1,
+        5
+      ]
+    }
+  ],
+  "zoom": [
+    {
+      "raw": {
+        "zoomed": true
+      },
+      "zoomed": true
+    },
+    {
+      "raw": {
+        "is_zoomed": 1
+      },
+      "zoomed": true
+    },
+    {
+      "raw": {
+        "zoom": "y"
+      },
+      "zoomed": true
+    },
+    {
+      "raw": {
+        "flags": "Z*"
+      },
+      "zoomed": true
+    },
+    {
+      "raw": {
+        "flags": "abc"
+      },
+      "zoomed": false
+    },
+    {
+      "raw": {},
+      "zoomed": false
+    },
+    {
+      "raw": "x",
+      "zoomed": false
+    }
+  ],
+  "split_specs": [
+    {
+      "raw": {
+        "width": 100,
+        "height": 40,
+        "horizontal": [
+          {
+            "pane_id": "a",
+            "width": 50,
+            "height": 40,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "pane_id": "b",
+            "width": 50,
+            "height": 40,
+            "x": 50,
+            "y": 0
+          }
+        ]
+      },
+      "specs": [
+        {
+          "pane_id": "b",
+          "split_from_pane_id": "a",
+          "direction": "right",
+          "ratio": 0.5
+        }
+      ]
+    },
+    {
+      "raw": {
+        "vertical": [
+          {
+            "pane_id": "a",
+            "width": 80,
+            "height": 20,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "pane_id": "b",
+            "width": 80,
+            "height": 10,
+            "x": 0,
+            "y": 20
+          },
+          {
+            "pane_id": "c",
+            "width": 80,
+            "height": 10,
+            "x": 0,
+            "y": 30
+          }
+        ]
+      },
+      "specs": [
+        {
+          "pane_id": "b",
+          "split_from_pane_id": "a",
+          "direction": "down",
+          "ratio": 0.5
+        },
+        {
+          "pane_id": "c",
+          "split_from_pane_id": "b",
+          "direction": "down",
+          "ratio": 0.5
+        }
+      ]
+    },
+    {
+      "raw": {
+        "horizontal": [
+          {
+            "vertical": [
+              {
+                "pane_id": "a",
+                "width": 50,
+                "height": 20,
+                "x": 0,
+                "y": 0
+              },
+              {
+                "pane_id": "b",
+                "width": 50,
+                "height": 20,
+                "x": 0,
+                "y": 20
+              }
+            ]
+          },
+          {
+            "pane_id": "c",
+            "width": 50,
+            "height": 40,
+            "x": 50,
+            "y": 0
+          }
+        ]
+      },
+      "specs": [
+        {
+          "pane_id": "b",
+          "split_from_pane_id": "a",
+          "direction": "down",
+          "ratio": 0.5
+        },
+        {
+          "pane_id": "c",
+          "split_from_pane_id": "a",
+          "direction": "right",
+          "ratio": 0.5
+        }
+      ]
+    }
+  ],
+  "bsp": [
+    {
+      "items": [
+        [
+          "a",
+          [
+            0,
+            0,
+            50,
+            40
+          ]
+        ],
+        [
+          "b",
+          [
+            50,
+            0,
+            50,
+            40
+          ]
+        ]
+      ],
+      "node": {
+        "kind": "horizontal",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          100,
+          40
+        ],
+        "signature": "h:p:a,p:b",
+        "pane_ids_in_order": [
+          "a",
+          "b"
+        ],
+        "first_child_ratio": 0.5,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "a",
+            "rect": [
+              0,
+              0,
+              50,
+              40
+            ],
+            "signature": "p:a",
+            "pane_ids_in_order": [
+              "a"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "b",
+            "rect": [
+              50,
+              0,
+              50,
+              40
+            ],
+            "signature": "p:b",
+            "pane_ids_in_order": [
+              "b"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "items": [
+        [
+          "top",
+          [
+            0,
+            0,
+            80,
+            20
+          ]
+        ],
+        [
+          "bot",
+          [
+            0,
+            20,
+            80,
+            20
+          ]
+        ]
+      ],
+      "node": {
+        "kind": "vertical",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          80,
+          40
+        ],
+        "signature": "v:p:top,p:bot",
+        "pane_ids_in_order": [
+          "top",
+          "bot"
+        ],
+        "first_child_ratio": 0.5,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "top",
+            "rect": [
+              0,
+              0,
+              80,
+              20
+            ],
+            "signature": "p:top",
+            "pane_ids_in_order": [
+              "top"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "bot",
+            "rect": [
+              0,
+              20,
+              80,
+              20
+            ],
+            "signature": "p:bot",
+            "pane_ids_in_order": [
+              "bot"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "items": [
+        [
+          "a",
+          [
+            0,
+            0,
+            40,
+            40
+          ]
+        ],
+        [
+          "b",
+          [
+            40,
+            0,
+            30,
+            20
+          ]
+        ],
+        [
+          "c",
+          [
+            40,
+            20,
+            30,
+            20
+          ]
+        ]
+      ],
+      "node": {
+        "kind": "horizontal",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          70,
+          40
+        ],
+        "signature": "h:p:a,v:p:b,p:c",
+        "pane_ids_in_order": [
+          "a",
+          "b",
+          "c"
+        ],
+        "first_child_ratio": 0.5714285714285714,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "a",
+            "rect": [
+              0,
+              0,
+              40,
+              40
+            ],
+            "signature": "p:a",
+            "pane_ids_in_order": [
+              "a"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "vertical",
+            "pane_id": null,
+            "rect": [
+              40,
+              0,
+              30,
+              40
+            ],
+            "signature": "v:p:b,p:c",
+            "pane_ids_in_order": [
+              "b",
+              "c"
+            ],
+            "first_child_ratio": 0.5,
+            "children": [
+              {
+                "kind": "pane",
+                "pane_id": "b",
+                "rect": [
+                  40,
+                  0,
+                  30,
+                  20
+                ],
+                "signature": "p:b",
+                "pane_ids_in_order": [
+                  "b"
+                ],
+                "first_child_ratio": null,
+                "children": []
+              },
+              {
+                "kind": "pane",
+                "pane_id": "c",
+                "rect": [
+                  40,
+                  20,
+                  30,
+                  20
+                ],
+                "signature": "p:c",
+                "pane_ids_in_order": [
+                  "c"
+                ],
+                "first_child_ratio": null,
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "items": [
+        [
+          "",
+          [
+            0,
+            0,
+            10,
+            10
+          ]
+        ]
+      ],
+      "node": null
+    },
+    {
+      "items": [
+        [
+          "only",
+          [
+            0,
+            0,
+            10,
+            10
+          ]
+        ]
+      ],
+      "node": {
+        "kind": "pane",
+        "pane_id": "only",
+        "rect": [
+          0,
+          0,
+          10,
+          10
+        ],
+        "signature": "p:only",
+        "pane_ids_in_order": [
+          "only"
+        ],
+        "first_child_ratio": null,
+        "children": []
+      }
+    },
+    {
+      "items": [
+        [
+          "z",
+          [
+            0,
+            0,
+            50,
+            50
+          ]
+        ],
+        [
+          "a",
+          [
+            0,
+            0,
+            50,
+            50
+          ]
+        ]
+      ],
+      "node": {
+        "kind": "vertical",
+        "pane_id": null,
+        "rect": [
+          0,
+          0,
+          50,
+          50
+        ],
+        "signature": "v:p:a,p:z",
+        "pane_ids_in_order": [
+          "a",
+          "z"
+        ],
+        "first_child_ratio": 0.95,
+        "children": [
+          {
+            "kind": "pane",
+            "pane_id": "a",
+            "rect": [
+              0,
+              0,
+              50,
+              50
+            ],
+            "signature": "p:a",
+            "pane_ids_in_order": [
+              "a"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          },
+          {
+            "kind": "pane",
+            "pane_id": "z",
+            "rect": [
+              0,
+              0,
+              50,
+              50
+            ],
+            "signature": "p:z",
+            "pane_ids_in_order": [
+              "z"
+            ],
+            "first_child_ratio": null,
+            "children": []
+          }
+        ]
+      }
+    }
+  ],
+  "by_tab": [
+    {
+      "raw": {
+        "t1": {
+          "pane_id": "a"
+        },
+        "t2": {
+          "horizontal": [
+            {
+              "pane_id": "b"
+            },
+            {
+              "pane_id": "c"
+            }
+          ]
+        },
+        "type": "snapshot",
+        "focused": "x"
+      },
+      "tabs": {
+        "t1": {
+          "kind": "pane",
+          "pane_id": "a",
+          "rect": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "signature": "p:a",
+          "pane_ids_in_order": [
+            "a"
+          ],
+          "first_child_ratio": null,
+          "children": []
+        },
+        "t2": {
+          "kind": "horizontal",
+          "pane_id": null,
+          "rect": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "signature": "h:p:b,p:c",
+          "pane_ids_in_order": [
+            "b",
+            "c"
+          ],
+          "first_child_ratio": 0.95,
+          "children": [
+            {
+              "kind": "pane",
+              "pane_id": "b",
+              "rect": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "signature": "p:b",
+              "pane_ids_in_order": [
+                "b"
+              ],
+              "first_child_ratio": null,
+              "children": []
+            },
+            {
+              "kind": "pane",
+              "pane_id": "c",
+              "rect": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "signature": "p:c",
+              "pane_ids_in_order": [
+                "c"
+              ],
+              "first_child_ratio": null,
+              "children": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "raw": {
+        "layouts": {
+          "tA": {
+            "pane_id": "p"
+          }
+        }
+      },
+      "tabs": {
+        "tA": {
+          "kind": "pane",
+          "pane_id": "p",
+          "rect": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "signature": "p:p",
+          "pane_ids_in_order": [
+            "p"
+          ],
+          "first_child_ratio": null,
+          "children": []
+        }
+      }
+    },
+    {
+      "raw": [
+        {
+          "tab_id": "t9",
+          "layout": {
+            "pane_id": "q"
+          }
+        },
+        {
+          "tab_id": "t8",
+          "vertical": [
+            {
+              "pane_id": "r"
+            },
+            {
+              "pane_id": "s"
+            }
+          ]
+        }
+      ],
+      "tabs": {
+        "t8": {
+          "kind": "vertical",
+          "pane_id": null,
+          "rect": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "signature": "v:p:r,p:s",
+          "pane_ids_in_order": [
+            "r",
+            "s"
+          ],
+          "first_child_ratio": 0.95,
+          "children": [
+            {
+              "kind": "pane",
+              "pane_id": "r",
+              "rect": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "signature": "p:r",
+              "pane_ids_in_order": [
+                "r"
+              ],
+              "first_child_ratio": null,
+              "children": []
+            },
+            {
+              "kind": "pane",
+              "pane_id": "s",
+              "rect": [
+                0,
+                0,
+                1,
+                1
+              ],
+              "signature": "p:s",
+              "pane_ids_in_order": [
+                "s"
+              ],
+              "first_child_ratio": null,
+              "children": []
+            }
+          ]
+        },
+        "t9": {
+          "kind": "pane",
+          "pane_id": "q",
+          "rect": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "signature": "p:q",
+          "pane_ids_in_order": [
+            "q"
+          ],
+          "first_child_ratio": null,
+          "children": []
+        }
+      }
+    },
+    {
+      "raw": {
+        "tabs": [
+          {
+            "tab_id": "tt",
+            "pane_id": "z"
+          }
+        ]
+      },
+      "tabs": {
+        "tt": {
+          "kind": "pane",
+          "pane_id": "z",
+          "rect": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "signature": "p:z",
+          "pane_ids_in_order": [
+            "z"
+          ],
+          "first_child_ratio": null,
+          "children": []
+        }
+      }
+    }
+  ],
+  "pane_rects": [
+    [
+      "a",
+      [
+        0,
+        0,
+        10,
+        5
+      ]
+    ],
+    [
+      "b",
+      [
+        0,
+        0,
+        8,
+        4
+      ]
+    ]
+  ]
+}

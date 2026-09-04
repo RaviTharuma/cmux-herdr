@@ -30,4 +30,5 @@ printf '%s\n' '#!/usr/bin/env bash' 'exec cmux-herdr "$@"' > ~/.local/bin/ch
 chmod +x ~/.local/bin/ch
 ```
 
-Keep wrappers thin; all logic stays in `bin/cmux-herdr` and `bridge/`.
+Keep wrappers thin; all runtime logic stays in `src/*.rs`, reached through the
+`bin/cmux-herdr` launcher.

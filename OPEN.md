@@ -42,7 +42,7 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - Sample LaunchAgent for continuous `watch` via `./scripts/install-watch-service.sh`
   (issue [#1](https://github.com/RaviTharuma/cmux-herdr/issues/1) closed).
 - Herdr **0.8** pane parsing: agent name under `agent_session.agent` when top-level `agent` is absent.
-- Hermetic stdlib `unittest` suite (`./scripts/test.sh`).
+- Hermetic Cargo checks (`./scripts/test.sh`).
 
 ## Explicit limitations (not bugs)
 
@@ -62,9 +62,9 @@ Cross-links: PR and issue reference each other; both point back here as the fall
    `%output`-style bytes into Ghostty; the plugin still polls `pane.read`.
 
 3. **Live apply runs in the plugin; Ghostty panels are still native.**
-   `bridge/cmux_herdr_live.py` is the ssh-tmux apply machine
-   (makePanel, output, drag, focus, size, attach/restore). Surfaces are
-   in-memory until native `TerminalPanel.processRemoteOutput` is wired.
+   `src/live.rs` is the ssh-tmux apply machine (makePanel, output, drag,
+   focus, size, attach/restore). Surfaces are in-memory until native
+   `TerminalPanel.processRemoteOutput` is wired.
    Restore **reattaches** (never a stale Bonsplit tree).
 
 4. **Flat outer workspace projection (not nested hierarchy).**
@@ -104,15 +104,14 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] v0.2 CLI pack: `doctor`, `read-pane` / `read-agent`, `focus-workspace` / `focus-agent`,
       hardened `focus-pane` (no zoom fallback).
 - [x] Upstream draft banners point at live #8737 / #8736 (prefer GitHub over local drafts).
-- [x] `./scripts/test.sh` — stdlib unittest only (no pytest).
+- [x] `./scripts/test.sh` — Cargo fmt, clippy, and test checks.
 - [x] Herdr 0.8 `agent_session.agent` parsing.
 - [x] Release artifacts for v0.1.0 (`VERSION`, `CHANGELOG.md`, `RELEASE.md`) — tag after merge per [RELEASE.md](./RELEASE.md).
 - [x] Userspace deep mirror: `mirror` / `attach-pane` / `watch --mirror` project
       Herdr tabs/panes into real cmux tabs/splits (idempotent `herdr-mirror:<pane_id>`
       keys). Not Ghostty PTY theft — extra viewers, like a second tmux client.
-- [x] **Persistent NDJSON session + engine:** `HerdrEventSession` for
-      `watch --tmux-parity`; `cmux_herdr_engine.py` is the Python twin of
-      `RemoteHerdrWindowMirror` (zoom/close/structure version/sizing/output
+- [x] **Persistent NDJSON session + engine:** `src/pump.rs` and `src/engine.rs`
+      provide `watch --tmux-parity` (zoom/close/structure version/sizing/output
       delta). Remaining plugin gap is PTY theft / divider-drag (native PR7).
 - [x] **tmux-parity plugin:** `mirror --tmux-parity` / `watch --tmux-parity` —
       layout tree, ratios, tab order, focus, prune, attach cbreak/SIGWINCH/ANSI.
@@ -121,18 +120,16 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       live apply host. Detach never calls `server.stop`.
 - [x] Single-writer guard when native attachment is live (`CMUX_HERDR_NATIVE_LIVE` /
       `native-live-<fingerprint>` marker; `CMUX_HERDR_FORCE_PLUGIN` escape hatch).
-- [x] **Dual-path handoff** (`bridge/cmux_herdr_handoff.py`): plugin and
-      native share one lease + one restore file. Dead pid / expired
-      heartbeat is stale (plugin may resume). `attach` / `observe` /
-      `restore` / `watch` yield when native owns; they do not start a
-      competing in-memory host. Host close still never `server.stop`.
-- [x] **Herdr control-surface parity** (`bridge/cmux_herdr_api.py`):
-      socket-first allowlisted RPC + CLI verbs for tabs/panes/workspaces/
-      agents/layout. Never `server.stop`. Control still works when native
-      owns the display lease.
-- [x] **Live SessionHost pump** (`bridge/cmux_herdr_pump.py`):
-      `watch --tmux-parity` routes `pane.read`, focus, and `agent_status`
-      into `LiveApplyHost`. Isolated per pane. Not Ghostty PTY theft.
+- [x] **Dual-path handoff** (`src/handoff.rs`): plugin and native share one
+      lease + one restore file. Dead pid / expired heartbeat is stale (plugin
+      may resume). `attach` / `observe` / `restore` / `watch` yield when native
+      owns; host close still never `server.stop`.
+- [x] **Herdr control-surface parity** (`src/api.rs`): socket-first allowlisted
+      RPC + CLI verbs for tabs/panes/workspaces/agents/layout. Never
+      `server.stop`. Control still works when native owns the display lease.
+- [x] **Live SessionHost pump** (`src/pump.rs`): `watch --tmux-parity` routes
+      `pane.read`, focus, and `agent_status` into `LiveApplyHost`. Isolated per
+      pane. Not Ghostty PTY theft.
 - [x] **Persistent RPC + input drain**: one Herdr socket for pump reads;
       first paint seeds; queued keys flush to `pane.send_*`; focus/split
       go socket-first. Doctor pings the API. `workspace.focused` does not
@@ -155,7 +152,7 @@ Cross-links: PR and issue reference each other; both point back here as the fall
 - [x] Single size-claim writer (no per-viewer SIGWINCH resize war).
 - [x] Fail-closed layout application (no orphan-tab fallback on split failure).
 - [x] Socket-first snapshot for `watch --tmux-parity` (CLI fan-out only on socket drop).
-- [x] **Bonsplit impose planner** (`bridge/cmux_herdr_impose.py`, Swift twin
+- [x] **Bonsplit impose planner** (`src/impose.rs`, Swift twin
       `RemoteHerdrImpose`): tmux +1 divider-cell fractions, targeted leaf
       expand/remove, `plan(w) <= w`, divider-drag hold/resolve. Plugin applies
       fractions via `set-ratio`.
@@ -163,19 +160,17 @@ Cross-links: PR and issue reference each other; both point back here as the fall
       `release-agent`, `clear-agent-authority`, `window-title`, `layout-apply`,
       `manifests`, `worktree`, `workspace-move` — see
       [docs/upstream/HERDR_BEYOND_TMUX.md](docs/upstream/HERDR_BEYOND_TMUX.md).
-- [x] **Host-apply verb list** (`bridge/cmux_herdr_host.py`): ordered
+- [x] **Host-apply verb list** (`src/host.rs`): ordered
       create→tree→impose→focus (tmux `makePanel` before rebuild). Fake host
-      proves the order. Native twin stays on a **separate** cmux-fork branch —
-      do not land it on #10045 from this plugin. See
-      [docs/upstream/LANES.md](docs/upstream/LANES.md).
-- [x] **Cmux-tmux control depth** (`bridge/cmux_herdr_control.py`):
-      named keys, input budget, focus rollback, adjacent pane, user
-      split, seed queue, agent-status activity, detach-on-host-close.
-- [x] **I/O + session host** (`bridge/cmux_herdr_io.py` /
-      `bridge/cmux_herdr_session.py`): isolated `route_output` /
-      `route_input`, provider-vs-user focus (no echo loop), session
-      create/close/reorder verbs. Native twins stay off #10045 until that
-      PR's review is idle.
+      proves the order. Native twin stays on a separate cmux-fork branch —
+      see [docs/upstream/LANES.md](docs/upstream/LANES.md).
+- [x] **Cmux-tmux control depth** (`src/control.rs`): named keys, input budget,
+      focus rollback, adjacent pane, user split, seed queue, agent-status
+      activity, detach-on-host-close.
+- [x] **I/O + session host** (`src/io.rs` / `src/session.rs`): isolated
+      `route_output` / `route_input`, provider-vs-user focus (no echo loop),
+      session create/close/reorder verbs. Native twins stay off #10045 until
+      that PR's review is idle.
 
 ### B. Native MVP PR (#8736) — open, merge UNSTABLE
 

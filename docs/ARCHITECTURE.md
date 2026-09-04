@@ -1,8 +1,9 @@
 # Architecture
 
-**cmux-herdr** is a released **cmux plugin for Herdr**: a Python 3.10+ CLI,
-an optional experimental custom sidebar leftover, and an agent skill. It is not an Xcode app, not a
-Swift package, and not something you compile.
+**cmux-herdr** is a released **cmux plugin for Herdr**: a Rust binary with
+CLI, sidebar, mirror engine, and opt-in update service, plus thin POSIX-sh
+launchers and an agent skill. Users install prebuilt checksum-verified assets;
+contributors use Cargo.
 
 ```text
 your Mac
@@ -18,14 +19,15 @@ plugin copies Herdr agent status into cmux sidebar pills and can create extra
 cmux tabs that *follow* Herdr panes. It cannot steal Herdr's real TTYs into
 Ghostty; that is native cmux work, tracked upstream.
 
-## There is no build
+## Build and distribution
 
-| People sometimes expect | What this repo actually does |
-|---|---|
-| `make`, `cmake`, `xcodebuild` | Nothing. There are no compiled artifacts. |
-| `pip install` / `npm install` | Nothing. Standard library only. |
-| A `.app` or Homebrew formula | Users: `cmux sidebar plugin install`. Contributors: `./scripts/install.sh`. |
-| `python3 -m py_compile` | Syntax check used by tests, **not** a compiler producing binaries. |
+The plugin manager runs `bin/cmux-herdr-fetch`, which detects one of four
+supported targets (`aarch64-apple-darwin`, `x86_64-apple-darwin`,
+`x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`), downloads the release
+binary and `SHA256SUMS` over HTTPS, verifies the checksum, and installs it
+atomically. `bin/cmux-herdr` and `bin/cmux-herdr-sidebar` are thin launchers.
+Users need neither Python nor Rust. Unusual architectures and offline
+development may use `cargo build --release` as a source fallback.
 
 Develop against the clone:
 
@@ -34,37 +36,29 @@ Develop against the clone:
 ./scripts/test.sh
 ```
 
-The official install is `cmux sidebar plugin install` (see `cmux-plugin.toml`).
-`scripts/install.sh` is contributor-only: it symlinks `bin/cmux-herdr` to
-`~/.local/bin` and copies the agent skill. It does not copy custom sidebars.
-
 ## How the CLI is assembled
 
 ```text
-bin/cmux-herdr          argparse CLI (adds the repo root to sys.path)
+cmux-herdr (Rust binary)
         │
-        └── import bridge.cmux_herdr_*
+        ├── CLI / sidebar / update-service
+        ├── socket + API + state + handoff
+        └── mirror / layout / live / lifecycle engines
                     ├── subprocess: `herdr` and `cmux` CLIs
                     └── Unix socket: Herdr NDJSON RPC (protocol 17)
+
 ```
+Runtime modules live in `src/*.rs`; `bin/*` only resolves and execs the binary.
 
 | Module | Job |
 |---|---|
-| `bridge/cmux_herdr_bridge.py` | Snapshot, status pills, fingerprints, `sync` |
-| `bridge/cmux_herdr_mirror.py` | Tab/pane mirror plan + `attach-pane` follower |
-| `bridge/cmux_herdr_layout.py` | Herdr layout tree → split plan |
-| `bridge/cmux_herdr_engine.py` | Reconcile engine (Python twin of native window mirror) |
-| `bridge/cmux_herdr_impose.py` | Divider / ratio planner |
-| `bridge/cmux_herdr_host.py` | Ordered apply verbs |
-| `bridge/cmux_herdr_io.py` | Pane I/O isolation |
-| `bridge/cmux_herdr_session.py` | Session-tab create/close/reorder |
-| `bridge/cmux_herdr_control.py` | Named keys, focus rollback, activity |
-| `bridge/cmux_herdr_lifecycle.py` | Attach / detach / restore |
-| `bridge/cmux_herdr_live.py` | In-memory apply host (Ghostty stand-in) |
-| `bridge/cmux_herdr_handoff.py` | Plugin ↔ native writer lease |
-| `bridge/cmux_herdr_api.py` | Allowlisted Herdr RPC (never `server.stop`) |
-| `bridge/cmux_herdr_socket.py` | Persistent NDJSON socket + `events.subscribe` |
-| `bridge/cmux_herdr_pump.py` | Event pump into the live host |
+| `src/model.rs`, `src/bridge.rs` | Snapshot and topology models, status pills, fingerprints |
+| `src/mirror.rs`, `src/layout.rs`, `src/impose.rs` | Tab/pane mirror and split planning |
+| `src/engine.rs`, `src/live.rs`, `src/host.rs`, `src/io.rs` | Reconcile and pane I/O |
+| `src/session.rs`, `src/control.rs`, `src/lifecycle.rs` | Session, focus, attach/detach/restore |
+| `src/api.rs`, `src/socket.rs`, `src/pump.rs` | Allowlisted RPC and event pump |
+| `src/state.rs`, `src/handoff.rs` | State store and writer lease |
+| `src/update.rs` | Opt-in `update-service` and platform registration |
 
 Version comes from the `VERSION` file at the repo root.
 `cmux-herdr --version` reads that file.
@@ -98,8 +92,8 @@ if a native cmux build wrote a lease there.
 | `./scripts/test.sh` | Yes | Yes |
 | `--version` / `--help` / most of `doctor` | Yes | Yes (`doctor` skips LaunchAgent) |
 
-CI runs the hermetic suite on Ubuntu with fake `herdr`/`cmux` scripts. That is
-enough to catch Python regressions. Dogfood the product on a Mac.
+CI runs the hermetic Cargo suite on Ubuntu with fake `herdr`/`cmux` scripts. That
+is enough to catch Rust regressions. Dogfood the product on a Mac.
 
 ## Optional extras
 

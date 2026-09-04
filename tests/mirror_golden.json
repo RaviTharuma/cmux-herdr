@@ -1,0 +1,1533 @@
+{
+  "case_count": 27,
+  "cases": [
+    {
+      "inputs": {
+        "current_tab_id": "w2:t1",
+        "current_workspace_id": null,
+        "scope": "current-tab",
+        "snapshot": {
+          "layouts": {
+            "w2:t1": {
+              "height": 24,
+              "horizontal": [
+                {
+                  "height": 24,
+                  "pane": "w2:p-left",
+                  "width": 40,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "height": 24,
+                  "pane": "w2:p-right",
+                  "width": 40,
+                  "x": 41,
+                  "y": 0
+                }
+              ],
+              "width": 81,
+              "x": 0,
+              "y": 0
+            }
+          },
+          "panes": [
+            {
+              "height": 24,
+              "label": "Right",
+              "pane_id": "w2:p-right",
+              "tab_id": "w2:t1",
+              "width": 40,
+              "workspace_id": "w2",
+              "x": 41,
+              "y": 0
+            },
+            {
+              "focused": true,
+              "height": 24,
+              "label": "Left",
+              "pane_id": "w2:p-left",
+              "tab_id": "w2:t1",
+              "width": 40,
+              "workspace_id": "w2",
+              "x": 0,
+              "y": 0,
+              "zoomed": true
+            }
+          ],
+          "tabs": [
+            {
+              "label": "Agents",
+              "number": 1,
+              "tab_id": "w2:t1",
+              "workspace_id": "w2"
+            }
+          ],
+          "workspaces": []
+        },
+        "use_layout": true
+      },
+      "name": "normal-layout-order-focus-zoom",
+      "op": "desired_mirrors",
+      "output": {
+        "ok": [
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": true,
+            "key": "herdr-mirror:w2:p-left",
+            "pane_id": "w2:p-left",
+            "role": "tab-root",
+            "split_direction": "down",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": 1,
+            "title": "Agents",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": true
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "key": "herdr-mirror:w2:p-right",
+            "pane_id": "w2:p-right",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p-left",
+            "split_ratio": {
+              "__f64_bits": 4602567619181847640
+            },
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": 1,
+            "title": "Right",
+            "visible": false,
+            "workspace_id": "w2",
+            "zoomed": false
+          }
+        ]
+      }
+    },
+    {
+      "inputs": {
+        "current_tab_id": null,
+        "current_workspace_id": null,
+        "scope": "all",
+        "snapshot": {
+          "layouts": {},
+          "panes": [],
+          "tabs": [],
+          "workspaces": []
+        },
+        "use_layout": true
+      },
+      "name": "empty-all",
+      "op": "desired_mirrors",
+      "output": {
+        "ok": []
+      }
+    },
+    {
+      "inputs": {
+        "current_tab_id": null,
+        "current_workspace_id": "w2",
+        "scope": "workspace",
+        "snapshot": {
+          "layouts": {},
+          "panes": [
+            {
+              "agent": "claude",
+              "pane_id": "w3:p1",
+              "tab_id": "w3:t1",
+              "workspace_id": "w3"
+            },
+            {
+              "pane_id": "w2:p2",
+              "tab_id": "w2:t2",
+              "terminal_title": "  Shell  ",
+              "workspace_id": "w2"
+            },
+            {
+              "agent": "codex",
+              "agent_status": "",
+              "pane_id": "w2:p1",
+              "tab_id": "w2:t1",
+              "workspace_id": "w2"
+            }
+          ],
+          "tabs": [
+            {
+              "label": "Second",
+              "number": 2,
+              "tab_id": "w2:t2",
+              "workspace_id": "w2"
+            },
+            {
+              "label": "First",
+              "number": 1,
+              "tab_id": "w2:t1",
+              "workspace_id": "w2"
+            }
+          ]
+        },
+        "use_layout": false
+      },
+      "name": "workspace-filter",
+      "op": "desired_mirrors",
+      "output": {
+        "ok": [
+          {
+            "agent": "codex",
+            "agent_status": "unknown",
+            "focused": false,
+            "key": "herdr-mirror:w2:p1",
+            "pane_id": "w2:p1",
+            "role": "tab-root",
+            "split_direction": "down",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": 1,
+            "title": "First",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "key": "herdr-mirror:w2:p2",
+            "pane_id": "w2:p2",
+            "role": "tab-root",
+            "split_direction": "down",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "w2:t2",
+            "tab_index": 1,
+            "tab_number": 2,
+            "title": "Second",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          }
+        ]
+      }
+    },
+    {
+      "inputs": {
+        "current_tab_id": null,
+        "current_workspace_id": null,
+        "scope": "all",
+        "snapshot": {
+          "layouts": "broken",
+          "panes": [
+            {
+              "height": 10,
+              "label": "",
+              "pane_id": "p-bottom",
+              "tab_id": "t",
+              "width": 20,
+              "workspace_id": "w",
+              "x": 0,
+              "y": 11
+            },
+            {
+              "focused": false,
+              "height": 10,
+              "pane_id": "p-top",
+              "tab_id": "t",
+              "terminal_title": " Top ",
+              "width": 20,
+              "workspace_id": "w",
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "tabs": [
+            {
+              "label": "",
+              "number": 0,
+              "tab_id": "t",
+              "workspace_id": "w"
+            }
+          ]
+        },
+        "use_layout": true
+      },
+      "name": "malformed-layout-geometry-fallback",
+      "op": "desired_mirrors",
+      "output": {
+        "ok": [
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "key": "herdr-mirror:p-top",
+            "pane_id": "p-top",
+            "role": "tab-root",
+            "split_direction": "down",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "t",
+            "tab_index": 0,
+            "tab_number": 0,
+            "title": "Top",
+            "visible": true,
+            "workspace_id": "w",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "key": "herdr-mirror:p-bottom",
+            "pane_id": "p-bottom",
+            "role": "split",
+            "split_direction": "down",
+            "split_from_pane_id": "p-top",
+            "split_ratio": {
+              "__f64_bits": 4602249904922421150
+            },
+            "tab_id": "t",
+            "tab_index": 0,
+            "tab_number": 0,
+            "title": "p-bottom",
+            "visible": true,
+            "workspace_id": "w",
+            "zoomed": false
+          }
+        ]
+      }
+    },
+    {
+      "inputs": {
+        "current_tab_id": null,
+        "current_workspace_id": null,
+        "scope": "all",
+        "snapshot": {
+          "layouts": {},
+          "panes": [
+            {
+              "pane_id": "p-z",
+              "tab_id": "z",
+              "workspace_id": "w"
+            },
+            {
+              "pane_id": "p-b",
+              "tab_id": "b",
+              "workspace_id": "w"
+            },
+            {
+              "pane_id": "p-a",
+              "tab_id": "a",
+              "workspace_id": "w"
+            }
+          ],
+          "tabs": [
+            {
+              "label": "Bee",
+              "number": 2,
+              "tab_id": "b",
+              "workspace_id": "w"
+            },
+            {
+              "label": "Aye",
+              "number": 1,
+              "tab_id": "a",
+              "workspace_id": "w"
+            }
+          ]
+        },
+        "use_layout": false
+      },
+      "name": "tab-order-known-before-unknown",
+      "op": "desired_mirrors",
+      "output": {
+        "ok": [
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "key": "herdr-mirror:p-a",
+            "pane_id": "p-a",
+            "role": "tab-root",
+            "split_direction": "down",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "a",
+            "tab_index": 0,
+            "tab_number": 1,
+            "title": "Aye",
+            "visible": true,
+            "workspace_id": "w",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "key": "herdr-mirror:p-b",
+            "pane_id": "p-b",
+            "role": "tab-root",
+            "split_direction": "down",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "b",
+            "tab_index": 1,
+            "tab_number": 2,
+            "title": "Bee",
+            "visible": true,
+            "workspace_id": "w",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "key": "herdr-mirror:p-z",
+            "pane_id": "p-z",
+            "role": "tab-root",
+            "split_direction": "down",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "z",
+            "tab_index": 2,
+            "tab_number": null,
+            "title": "p-z",
+            "visible": true,
+            "workspace_id": "w",
+            "zoomed": false
+          }
+        ]
+      }
+    },
+    {
+      "inputs": {
+        "current_tab_id": null,
+        "current_workspace_id": null,
+        "scope": "current-tab",
+        "snapshot": {
+          "panes": [],
+          "tabs": []
+        },
+        "use_layout": true
+      },
+      "name": "missing-current-tab-errors",
+      "op": "desired_mirrors",
+      "output": {
+        "error": "scope current-tab needs HERDR_TAB_ID or --tab (or pass --all / --herdr-workspace)"
+      }
+    },
+    {
+      "inputs": {
+        "current_tab_id": null,
+        "current_workspace_id": null,
+        "scope": "nonsense",
+        "snapshot": {
+          "panes": [],
+          "tabs": []
+        },
+        "use_layout": true
+      },
+      "name": "invalid-scope-errors",
+      "op": "desired_mirrors",
+      "output": {
+        "error": "scope must be current-tab, workspace, or all"
+      }
+    },
+    {
+      "inputs": {
+        "desired": [
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": true,
+            "pane_id": "w2:p1",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Agents",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "pane_id": "w2:p2",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_ratio": 0.4,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Reviewer",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          }
+        ],
+        "engine": null,
+        "existing": {},
+        "live_surface_ids": null,
+        "prune": false,
+        "sync_focus": false,
+        "sync_order": false,
+        "sync_ratios": false
+      },
+      "name": "empty-existing-creates",
+      "op": "plan_mirror",
+      "output": {
+        "actions": [
+          {
+            "key": "herdr-mirror:w2:p1",
+            "op": "create_tab",
+            "pane_id": "w2:p1",
+            "ratio": null,
+            "reason": "missing tab-root surface",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Agents"
+          },
+          {
+            "key": "herdr-mirror:w2:p2",
+            "op": "create_split",
+            "pane_id": "w2:p2",
+            "ratio": {
+              "__f64_bits": 4600877379321698714
+            },
+            "reason": "missing split surface",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_from_surface_id": null,
+            "surface_id": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Reviewer"
+          }
+        ],
+        "creates": [
+          "w2:p1",
+          "w2:p2"
+        ],
+        "desired_count": 2,
+        "focuses": [],
+        "keeps": [],
+        "moves": [],
+        "prunes": [],
+        "ratio_updates": [],
+        "renames": [],
+        "scope": "current-tab"
+      }
+    },
+    {
+      "inputs": {
+        "desired": [
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": true,
+            "pane_id": "w2:p1",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Agents",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "pane_id": "w2:p2",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_ratio": 0.4,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Reviewer",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          }
+        ],
+        "engine": null,
+        "existing": {
+          "gone": {
+            "cmux_surface_id": "s-old",
+            "role": "split",
+            "tab_id": "old",
+            "title": "Gone"
+          },
+          "w2:p1": {
+            "cmux_surface_id": "s1",
+            "role": "tab-root",
+            "tab_id": "w2:t1",
+            "tab_index": 3,
+            "title": "Old"
+          },
+          "w2:p2": {
+            "cmux_surface_id": "s2",
+            "role": "split",
+            "split_ratio": 0.5,
+            "tab_id": "w2:t1",
+            "title": "Reviewer"
+          }
+        },
+        "live_surface_ids": [
+          "s-old",
+          "s1",
+          "s2"
+        ],
+        "prune": true,
+        "sync_focus": true,
+        "sync_order": true,
+        "sync_ratios": true
+      },
+      "name": "full-sync-prune-rename",
+      "op": "plan_mirror",
+      "output": {
+        "actions": [
+          {
+            "key": "herdr-mirror:w2:p1",
+            "op": "rename",
+            "pane_id": "w2:p1",
+            "ratio": null,
+            "reason": "title changed",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s1",
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Agents"
+          },
+          {
+            "key": "herdr-mirror:w2:p2",
+            "op": "keep",
+            "pane_id": "w2:p2",
+            "ratio": {
+              "__f64_bits": 4600877379321698714
+            },
+            "reason": "",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_from_surface_id": null,
+            "surface_id": "s2",
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Reviewer"
+          },
+          {
+            "key": "herdr-mirror:gone",
+            "op": "prune",
+            "pane_id": "gone",
+            "ratio": null,
+            "reason": "herdr pane gone",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s-old",
+            "tab_id": "old",
+            "tab_index": null,
+            "title": "Gone"
+          },
+          {
+            "key": "herdr-mirror:w2:p2",
+            "op": "set_ratio",
+            "pane_id": "w2:p2",
+            "ratio": {
+              "__f64_bits": 4600877379321698714
+            },
+            "reason": "layout ratio",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_from_surface_id": null,
+            "surface_id": "s2",
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Reviewer"
+          },
+          {
+            "key": "herdr-mirror:w2:p1",
+            "op": "move_tab",
+            "pane_id": "w2:p1",
+            "ratio": null,
+            "reason": "herdr tab order",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s1",
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Agents"
+          },
+          {
+            "key": "herdr-mirror:w2:p1",
+            "op": "focus",
+            "pane_id": "w2:p1",
+            "ratio": null,
+            "reason": "herdr focused pane",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s1",
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Agents"
+          }
+        ],
+        "creates": [],
+        "desired_count": 2,
+        "focuses": [
+          "w2:p1"
+        ],
+        "keeps": [
+          "w2:p2"
+        ],
+        "moves": [
+          "w2:p1"
+        ],
+        "prunes": [
+          "gone"
+        ],
+        "ratio_updates": [
+          "w2:p2"
+        ],
+        "renames": [
+          "w2:p1"
+        ],
+        "scope": "current-tab"
+      }
+    },
+    {
+      "inputs": {
+        "desired": [
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": true,
+            "pane_id": "w2:p1",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Agents",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "pane_id": "w2:p2",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_ratio": 0.4,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Reviewer",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          }
+        ],
+        "engine": null,
+        "existing": {
+          "w2:p1": {
+            "cmux_surface_id": "s1",
+            "focused": true,
+            "role": "tab-root",
+            "tab_index": 0,
+            "title": "Agents"
+          },
+          "w2:p2": {
+            "cmux_surface_id": "s2",
+            "role": "split",
+            "split_ratio": 0.4,
+            "title": "Reviewer"
+          }
+        },
+        "live_surface_ids": [
+          "s1",
+          "s2"
+        ],
+        "prune": true,
+        "sync_focus": true,
+        "sync_order": true,
+        "sync_ratios": true
+      },
+      "name": "idempotent-full-sync",
+      "op": "plan_mirror",
+      "output": {
+        "actions": [
+          {
+            "key": "herdr-mirror:w2:p1",
+            "op": "keep",
+            "pane_id": "w2:p1",
+            "ratio": null,
+            "reason": "",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s1",
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Agents"
+          },
+          {
+            "key": "herdr-mirror:w2:p2",
+            "op": "keep",
+            "pane_id": "w2:p2",
+            "ratio": {
+              "__f64_bits": 4600877379321698714
+            },
+            "reason": "",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_from_surface_id": null,
+            "surface_id": "s2",
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Reviewer"
+          }
+        ],
+        "creates": [],
+        "desired_count": 2,
+        "focuses": [],
+        "keeps": [
+          "w2:p1",
+          "w2:p2"
+        ],
+        "moves": [],
+        "prunes": [],
+        "ratio_updates": [],
+        "renames": [],
+        "scope": "current-tab"
+      }
+    },
+    {
+      "inputs": {
+        "desired": [
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": true,
+            "pane_id": "w2:p1",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Agents",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "pane_id": "w2:p2",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_ratio": 0.4,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Reviewer",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          }
+        ],
+        "engine": null,
+        "existing": [
+          "not",
+          "a",
+          "map"
+        ],
+        "live_surface_ids": [],
+        "prune": true,
+        "sync_focus": false,
+        "sync_order": false,
+        "sync_ratios": false
+      },
+      "name": "malformed-existing-top-level",
+      "op": "plan_mirror",
+      "output": {
+        "actions": [
+          {
+            "key": "herdr-mirror:w2:p1",
+            "op": "create_tab",
+            "pane_id": "w2:p1",
+            "ratio": null,
+            "reason": "missing tab-root surface",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Agents"
+          },
+          {
+            "key": "herdr-mirror:w2:p2",
+            "op": "create_split",
+            "pane_id": "w2:p2",
+            "ratio": {
+              "__f64_bits": 4600877379321698714
+            },
+            "reason": "missing split surface",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_from_surface_id": null,
+            "surface_id": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Reviewer"
+          }
+        ],
+        "creates": [
+          "w2:p1",
+          "w2:p2"
+        ],
+        "desired_count": 2,
+        "focuses": [],
+        "keeps": [],
+        "moves": [],
+        "prunes": [],
+        "ratio_updates": [],
+        "renames": [],
+        "scope": "current-tab"
+      }
+    },
+    {
+      "inputs": {
+        "desired": [
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": true,
+            "pane_id": "p1",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "t",
+            "tab_index": 1,
+            "tab_number": null,
+            "title": "Changed",
+            "visible": true,
+            "workspace_id": "w",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "pane_id": "p2",
+            "role": "split",
+            "split_direction": "down",
+            "split_from_pane_id": null,
+            "split_ratio": 1.0,
+            "tab_id": "t",
+            "tab_index": 1,
+            "tab_number": null,
+            "title": "Child",
+            "visible": true,
+            "workspace_id": "w",
+            "zoomed": false
+          }
+        ],
+        "engine": null,
+        "existing": {
+          "gone": {
+            "cmux_surface_id": 7,
+            "key": [],
+            "role": 0,
+            "tab_id": false,
+            "title": 0
+          },
+          "p1": {
+            "cmux_surface_id": "s1",
+            "focused": [],
+            "tab_index": true,
+            "title": "Old",
+            "title_lock": [
+              0
+            ]
+          },
+          "p2": {
+            "cmux_surface_id": "s2",
+            "focused": [
+              0
+            ],
+            "split_ratio": true,
+            "title": 0
+          }
+        },
+        "live_surface_ids": [
+          "s1",
+          "s2"
+        ],
+        "prune": true,
+        "sync_focus": true,
+        "sync_order": true,
+        "sync_ratios": true
+      },
+      "name": "truthiness-and-int-equality",
+      "op": "plan_mirror",
+      "output": {
+        "actions": [
+          {
+            "key": "herdr-mirror:p1",
+            "op": "keep",
+            "pane_id": "p1",
+            "ratio": null,
+            "reason": "",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s1",
+            "tab_id": "t",
+            "tab_index": 1,
+            "title": "Changed"
+          },
+          {
+            "key": "herdr-mirror:p2",
+            "op": "keep",
+            "pane_id": "p2",
+            "ratio": {
+              "__f64_bits": 4607182418800017408
+            },
+            "reason": "",
+            "role": "split",
+            "split_direction": "down",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s2",
+            "tab_id": "t",
+            "tab_index": 1,
+            "title": "Child"
+          },
+          {
+            "key": "herdr-mirror:gone",
+            "op": "prune",
+            "pane_id": "gone",
+            "ratio": null,
+            "reason": "herdr pane gone",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": null,
+            "tab_id": "",
+            "tab_index": null,
+            "title": "gone"
+          },
+          {
+            "key": "herdr-mirror:p1",
+            "op": "focus",
+            "pane_id": "p1",
+            "ratio": null,
+            "reason": "herdr focused pane",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s1",
+            "tab_id": "t",
+            "tab_index": 1,
+            "title": "Changed"
+          }
+        ],
+        "creates": [],
+        "desired_count": 2,
+        "focuses": [
+          "p1"
+        ],
+        "keeps": [
+          "p1",
+          "p2"
+        ],
+        "moves": [],
+        "prunes": [
+          "gone"
+        ],
+        "ratio_updates": [],
+        "renames": [],
+        "scope": "current-tab"
+      }
+    },
+    {
+      "inputs": {
+        "desired": [
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": true,
+            "pane_id": "w2:p1",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_ratio": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Agents",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          },
+          {
+            "agent": null,
+            "agent_status": "unknown",
+            "focused": false,
+            "pane_id": "w2:p2",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_ratio": 0.4,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "tab_number": null,
+            "title": "Reviewer",
+            "visible": true,
+            "workspace_id": "w2",
+            "zoomed": false
+          }
+        ],
+        "engine": {
+          "closed_pane_ids": [
+            "closed"
+          ],
+          "created_pane_ids": [],
+          "protected_pane_ids": [
+            "w2:p2",
+            "protected"
+          ],
+          "structure_changed_tabs": [
+            "w2:t1"
+          ]
+        },
+        "existing": {
+          "closed": {
+            "cmux_surface_id": "s3",
+            "role": "split",
+            "tab_id": "w2:t1",
+            "title": "Closed"
+          },
+          "protected": {
+            "cmux_surface_id": "s4",
+            "role": "split",
+            "tab_id": "w2:t1",
+            "title": "Protected"
+          },
+          "w2:p1": {
+            "cmux_surface_id": "s1",
+            "role": "tab-root",
+            "tab_id": "w2:t1",
+            "title": "Agents"
+          },
+          "w2:p2": {
+            "cmux_surface_id": "dead",
+            "role": "split",
+            "tab_id": "w2:t1",
+            "title": "Reviewer"
+          }
+        },
+        "live_surface_ids": [
+          "s1",
+          "s3",
+          "s4"
+        ],
+        "prune": true,
+        "sync_focus": false,
+        "sync_order": false,
+        "sync_ratios": false
+      },
+      "name": "engine-protects-and-closes",
+      "op": "plan_mirror",
+      "output": {
+        "actions": [
+          {
+            "key": "herdr-mirror:w2:p1",
+            "op": "keep",
+            "pane_id": "w2:p1",
+            "ratio": null,
+            "reason": "",
+            "role": "tab-root",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s1",
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Agents"
+          },
+          {
+            "key": "herdr-mirror:w2:p2",
+            "op": "create_split",
+            "pane_id": "w2:p2",
+            "ratio": {
+              "__f64_bits": 4600877379321698714
+            },
+            "reason": "missing split surface",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": "w2:p1",
+            "split_from_surface_id": "s1",
+            "surface_id": null,
+            "tab_id": "w2:t1",
+            "tab_index": 0,
+            "title": "Reviewer"
+          },
+          {
+            "key": "herdr-mirror:closed",
+            "op": "prune",
+            "pane_id": "closed",
+            "ratio": null,
+            "reason": "herdr pane gone",
+            "role": "split",
+            "split_direction": "right",
+            "split_from_pane_id": null,
+            "split_from_surface_id": null,
+            "surface_id": "s3",
+            "tab_id": "w2:t1",
+            "tab_index": null,
+            "title": "Closed"
+          }
+        ],
+        "creates": [
+          "w2:p2"
+        ],
+        "desired_count": 2,
+        "focuses": [],
+        "keeps": [
+          "w2:p1"
+        ],
+        "moves": [],
+        "prunes": [
+          "closed"
+        ],
+        "ratio_updates": [],
+        "renames": [],
+        "scope": "current-tab"
+      }
+    },
+    {
+      "inputs": {
+        "stdout": "{\"surface_id\":\"abc\"}"
+      },
+      "name": "plain-object",
+      "op": "parse_cmux_json",
+      "output": {
+        "ok": {
+          "surface_id": "abc"
+        }
+      }
+    },
+    {
+      "inputs": {
+        "stdout": "OK\n{\"surface_id\":\"abc\"}\n"
+      },
+      "name": "ok-prefix",
+      "op": "parse_cmux_json",
+      "output": {
+        "ok": {
+          "surface_id": "abc"
+        }
+      }
+    },
+    {
+      "inputs": {
+        "stdout": "  \n"
+      },
+      "name": "empty",
+      "op": "parse_cmux_json",
+      "output": {
+        "ok": null
+      }
+    },
+    {
+      "inputs": {
+        "stdout": "OK\nnot json"
+      },
+      "name": "noise-no-json",
+      "op": "parse_cmux_json",
+      "output": {
+        "ok": null
+      }
+    },
+    {
+      "inputs": {
+        "stdout": "notice\n[1,true,null]\ntrailing"
+      },
+      "name": "array-after-noise",
+      "op": "parse_cmux_json",
+      "output": {
+        "ok": [
+          1,
+          true,
+          null
+        ]
+      }
+    },
+    {
+      "inputs": {
+        "pane_id": "w2:p34"
+      },
+      "name": "key-'w2:p34'",
+      "op": "mirror_key_for_pane",
+      "output": "herdr-mirror:w2:p34"
+    },
+    {
+      "inputs": {
+        "pane_id": ""
+      },
+      "name": "key-''",
+      "op": "mirror_key_for_pane",
+      "output": "herdr-mirror:"
+    },
+    {
+      "inputs": {
+        "pane_id": " ünicode:pane "
+      },
+      "name": "key-' ünicode:pane '",
+      "op": "mirror_key_for_pane",
+      "output": "herdr-mirror: ünicode:pane "
+    },
+    {
+      "inputs": {
+        "result": {
+          "desired_count": 2,
+          "plan": {
+            "actions": [
+              {
+                "op": "create_tab",
+                "pane_id": "w2:p1",
+                "reason": "missing",
+                "title": "Agents"
+              }
+            ],
+            "created": [
+              "w2:p1"
+            ],
+            "dry_run": true,
+            "errors": [],
+            "focused": [],
+            "kept": [
+              "w2:p2"
+            ],
+            "moved": [],
+            "pruned": [],
+            "ratios": [],
+            "renamed": []
+          },
+          "scope": "current-tab",
+          "workspace": "workspace:9"
+        }
+      },
+      "name": "dry-run-actions",
+      "op": "format_mirror_plan",
+      "output": "herdr → cmux mirror  scope=current-tab  desired=2  cmux_ws=workspace:9  DRY-RUN\n  created 1: w2:p1\n  renamed 0: \n  kept    1\n  pruned  0: \n  ratios  0\n  moved   0\n  focused 0\n  actions:\n    create_tab   w2:p1  Agents  missing"
+    },
+    {
+      "inputs": {
+        "result": {
+          "native_live": true,
+          "writer": "native"
+        }
+      },
+      "name": "native-skip",
+      "op": "format_mirror_plan",
+      "output": "herdr → cmux mirror  SKIPPED (native attachment live; writer=native)  set CMUX_HERDR_FORCE_PLUGIN=1 to force plugin projection"
+    },
+    {
+      "inputs": {
+        "result": {
+          "desired_count": 0,
+          "engine": {
+            "order_changed": false,
+            "structure_changed_tabs": [
+              "t2",
+              "t1"
+            ]
+          },
+          "live": {
+            "make_panel": [
+              "p1"
+            ],
+            "tabs": {
+              "t": {}
+            }
+          },
+          "plan": {
+            "actions": [],
+            "errors": [
+              "bad one",
+              "bad two"
+            ]
+          },
+          "scope": "all",
+          "tmux_parity": true,
+          "workspace": ""
+        }
+      },
+      "name": "errors-engine-live",
+      "op": "format_mirror_plan",
+      "output": "herdr → cmux mirror  scope=all  desired=0  cmux_ws=-  tmux-parity\n  created 0: \n  renamed 0: \n  kept    0\n  pruned  0: \n  ratios  0\n  moved   0\n  focused 0\n  live    panels=1 tabs=1\n  engine  structure_changed_tabs=['t2', 't1'] order_changed=False\n  errors  2\n    bad one\n    bad two"
+    },
+    {
+      "name": "truthy-nonstring-tab-metadata",
+      "op": "desired_mirrors",
+      "inputs": {
+        "snapshot": {
+          "panes": [
+            {
+              "pane_id": "p-true",
+              "tab_id": "t-true",
+              "workspace_id": "w"
+            },
+            {
+              "pane_id": "p-false",
+              "tab_id": "t-false",
+              "workspace_id": "w"
+            }
+          ],
+          "tabs": [
+            {
+              "tab_id": "t-true",
+              "workspace_id": "w",
+              "label": true,
+              "number": true
+            },
+            {
+              "tab_id": "t-false",
+              "workspace_id": "w",
+              "label": 7,
+              "number": false
+            }
+          ],
+          "layouts": {}
+        },
+        "scope": "all",
+        "current_tab_id": null,
+        "current_workspace_id": null,
+        "use_layout": false
+      },
+      "output": {
+        "ok": [
+          {
+            "pane_id": "p-false",
+            "tab_id": "t-false",
+            "workspace_id": "w",
+            "title": "7",
+            "role": "tab-root",
+            "split_direction": "down",
+            "agent": null,
+            "agent_status": "unknown",
+            "split_ratio": null,
+            "split_from_pane_id": null,
+            "tab_number": false,
+            "tab_index": 0,
+            "focused": false,
+            "zoomed": false,
+            "visible": true,
+            "key": "herdr-mirror:p-false"
+          },
+          {
+            "pane_id": "p-true",
+            "tab_id": "t-true",
+            "workspace_id": "w",
+            "title": "True",
+            "role": "tab-root",
+            "split_direction": "down",
+            "agent": null,
+            "agent_status": "unknown",
+            "split_ratio": null,
+            "split_from_pane_id": null,
+            "tab_number": true,
+            "tab_index": 1,
+            "focused": false,
+            "zoomed": false,
+            "visible": true,
+            "key": "herdr-mirror:p-true"
+          }
+        ]
+      }
+    },
+    {
+      "name": "format-null-desired-count",
+      "op": "format_mirror_plan",
+      "inputs": {
+        "result": {
+          "scope": "all",
+          "desired_count": null,
+          "workspace": null,
+          "plan": {}
+        }
+      },
+      "output": "herdr → cmux mirror  scope=all  desired=None  cmux_ws=-\n  created 0: \n  renamed 0: \n  kept    0\n  pruned  0: \n  ratios  0\n  moved   0\n  focused 0"
+    },
+    {
+      "name": "format-string-desired-count",
+      "op": "format_mirror_plan",
+      "inputs": {
+        "result": {
+          "scope": "all",
+          "desired_count": "many",
+          "workspace": null,
+          "plan": {}
+        }
+      },
+      "output": "herdr → cmux mirror  scope=all  desired=many  cmux_ws=-\n  created 0: \n  renamed 0: \n  kept    0\n  pruned  0: \n  ratios  0\n  moved   0\n  focused 0"
+    }
+  ]
+}

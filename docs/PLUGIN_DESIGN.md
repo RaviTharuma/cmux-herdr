@@ -9,9 +9,7 @@ When **Herdr runs nested inside cmux**, outer cmux users and agents only see one
 
 ## Two-path strategy
 
-| Path | What | When |
-|------|------|------|
-| **This plugin** | Released pack: CLI + bridge + sidebar + agent skill + LaunchAgent | Install today; no cmux source patch |
+| **This plugin** | Released pack: Rust CLI/sidebar/mirror binary + thin launchers + agent skill + LaunchAgent | Install today; no cmux source patch |
 | **Upstream native** | First-class nested topology inside cmux.app | Requires cmux changes; plugin stays as fallback |
 
 This repository implements the plugin. It must not depend on unmerged cmux patches.
@@ -38,18 +36,19 @@ This repository implements the plugin. It must not depend on unmerged cmux patch
 
 ### Components
 
-1. **`bridge/cmux_herdr_bridge.py`** — pure-ish library:
-   - `fetch_panes` / `fetch_snapshot`
-   - `map_status_to_style`
-   - `resolve_cmux_workspace` (nested env is often wrong)
-   - `sync_to_cmux`
-2. **`bin/cmux-herdr`** — user CLI (`status`, `tree`, `sync`, `watch`, `api`, focus helpers, …)
-3. **`bridge/cmux_herdr_api.py`** — socket-first allowlisted Herdr RPC (never `server.stop`)
-4. **`bridge/cmux_herdr_pump.py`** — SessionHost-style event pump into `LiveApplyHost`
-5. **`sidebars/herdr.js`** (+ `herdr.swift` fallback) — interpreted custom sidebar named Herdr: live `workspaces` (reorder, select, context menu), host Ghostty/cmux theme tokens, and live statuses / tabs. `.js` wins for drag. No iframe, no CLI cheat-sheet. Agent pills still come from `cmux-herdr watch`.
-6. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy
-7. **`cmux-plugin.toml` + `bin/cmux-herdr-sidebar`** — official plugin-manager install
-8. **`scripts/install.sh` / `uninstall.sh`** — contributor symlink CLI + optional JS/Swift sidebar + skill
+1. **`src/*.rs`** — Rust runtime: snapshot/status bridge, API/socket, mirror,
+   layout, live engine, lifecycle, handoff, and state.
+2. **`bin/cmux-herdr`** — thin POSIX-sh launcher for the user CLI.
+3. **`bin/cmux-herdr-sidebar`** — thin launcher passing `sidebar` to the binary;
+   invoked by the manifest.
+4. **`bin/cmux-herdr-fetch`** — plugin-manager bootstrap: selects one of four
+   targets, downloads and verifies the release binary, and installs atomically.
+5. **`agent-skill/SKILL.md`** — teaches agents the dual hierarchy.
+6. **`cmux-plugin.toml`** — official plugin-manager manifest.
+7. **`scripts/install.sh` / `uninstall.sh`** — contributor setup wrappers.
+
+The optional `update-service` subcommand is disabled by default and manages its
+own opt-in service installation.
 
 ## Why status pills plus optional tab/pane mirror
 
