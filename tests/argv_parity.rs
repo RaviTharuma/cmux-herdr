@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 //! Golden parity: Rust `build_cli_argv` must match the Python bridge output
 //! byte-for-byte across a battery captured from `cmux_herdr_api.build_cli_argv`.
 //!
@@ -12,10 +14,10 @@ use serde_json::Value;
 // The binary crate is named `cmux-herdr`; its lib target is not exposed, so we
 // re-declare the two pure modules we need. They have no cross-module deps for
 // `build_cli_argv`.
-#[path = "../src/socket.rs"]
-mod socket;
 #[path = "../src/api.rs"]
 mod api;
+#[path = "../src/socket.rs"]
+mod socket;
 
 #[test]
 fn argv_matches_python_golden() {

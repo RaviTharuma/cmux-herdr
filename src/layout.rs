@@ -257,23 +257,43 @@ fn pane_id_from(raw: &Value) -> Option<String> {
 fn looks_like_split(raw: &Value, kind: &str) -> bool {
     if matches!(
         kind,
-        "split" | "hsplit" | "vsplit" | "horizontal" | "vertical" | "row" | "column" | "cols"
+        "split"
+            | "hsplit"
+            | "vsplit"
+            | "horizontal"
+            | "vertical"
+            | "row"
+            | "column"
+            | "cols"
             | "rows"
     ) {
         return true;
     }
-    ["children", "first", "second", "horizontal", "vertical", "nodes"]
-        .iter()
-        .any(|k| raw.get(*k).is_some())
+    [
+        "children",
+        "first",
+        "second",
+        "horizontal",
+        "vertical",
+        "nodes",
+    ]
+    .iter()
+    .any(|k| raw.get(*k).is_some())
 }
 
 fn normalize_direction(text: &str) -> Option<String> {
     let text = text.to_lowercase();
     let text = text.trim();
-    if matches!(text, "horizontal" | "hsplit" | "h" | "row" | "cols" | "right" | "left" | "x") {
+    if matches!(
+        text,
+        "horizontal" | "hsplit" | "h" | "row" | "cols" | "right" | "left" | "x"
+    ) {
         return Some("horizontal".into());
     }
-    if matches!(text, "vertical" | "vsplit" | "v" | "column" | "rows" | "down" | "up" | "y") {
+    if matches!(
+        text,
+        "vertical" | "vsplit" | "v" | "column" | "rows" | "down" | "up" | "y"
+    ) {
         return Some("vertical".into());
     }
     if text == "split" {
@@ -368,17 +388,17 @@ fn parse_layout_object(raw: &Value) -> Option<LayoutNode> {
         return Some(LayoutNode::leaf(pane_id, rect));
     }
 
-    let dir_input: String = match py_or(raw, &["direction", "dir", "axis"]).filter(|v| truthy(Some(v)))
-    {
-        Some(v) => value_to_str(v),
-        None => {
-            if kind != "split" {
-                kind.clone()
-            } else {
-                String::new()
+    let dir_input: String =
+        match py_or(raw, &["direction", "dir", "axis"]).filter(|v| truthy(Some(v))) {
+            Some(v) => value_to_str(v),
+            None => {
+                if kind != "split" {
+                    kind.clone()
+                } else {
+                    String::new()
+                }
             }
-        }
-    };
+        };
     let direction = normalize_direction(&dir_input);
 
     let children_raw = py_or(raw, &["children", "nodes", "panes"]);
@@ -533,7 +553,11 @@ fn bsp(items: Vec<(String, LayoutRect)>) -> LayoutNode {
             }
         }
         Some((left, right, axis)) => {
-            let kind = if axis == "x" { "horizontal" } else { "vertical" };
+            let kind = if axis == "x" {
+                "horizontal"
+            } else {
+                "vertical"
+            };
             LayoutNode {
                 kind: kind.into(),
                 pane_id: None,
@@ -544,7 +568,11 @@ fn bsp(items: Vec<(String, LayoutRect)>) -> LayoutNode {
     }
 }
 
-type Partition = (Vec<(String, LayoutRect)>, Vec<(String, LayoutRect)>, &'static str);
+type Partition = (
+    Vec<(String, LayoutRect)>,
+    Vec<(String, LayoutRect)>,
+    &'static str,
+);
 
 fn partition_axis(items: &[(String, LayoutRect)], axis: &'static str) -> Option<Partition> {
     let start = |r: &LayoutRect| if axis == "x" { r.x } else { r.y };
@@ -712,8 +740,24 @@ mod tests {
     #[test]
     fn bsp_from_rects() {
         let items = vec![
-            ("a".to_string(), LayoutRect { x: 0, y: 0, width: 50, height: 40 }),
-            ("b".to_string(), LayoutRect { x: 50, y: 0, width: 50, height: 40 }),
+            (
+                "a".to_string(),
+                LayoutRect {
+                    x: 0,
+                    y: 0,
+                    width: 50,
+                    height: 40,
+                },
+            ),
+            (
+                "b".to_string(),
+                LayoutRect {
+                    x: 50,
+                    y: 0,
+                    width: 50,
+                    height: 40,
+                },
+            ),
         ];
         let node = tree_from_rects(&items).unwrap();
         assert_eq!(node.kind, "horizontal");

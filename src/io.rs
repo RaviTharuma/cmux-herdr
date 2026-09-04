@@ -163,11 +163,18 @@ impl PaneIORouter {
         if data.is_empty() {
             return None;
         }
-        let cleaned = self.title_filters.entry(pane_id.into()).or_default().filter(data);
+        let cleaned = self
+            .title_filters
+            .entry(pane_id.into())
+            .or_default()
+            .filter(data);
         if cleaned.is_empty() {
             return None;
         }
-        self.buffers.entry(surface_id.clone()).or_default().extend_from_slice(&cleaned);
+        self.buffers
+            .entry(surface_id.clone())
+            .or_default()
+            .extend_from_slice(&cleaned);
         self.log.push(format!("out:{pane_id}:{}", cleaned.len()));
         Some(SurfaceWrite {
             pane_id: pane_id.into(),
@@ -179,10 +186,8 @@ impl PaneIORouter {
 
     pub fn route_output_text(&mut self, pane_id: &str, current: &str) -> Option<SurfaceWrite> {
         let surface_id = self.surfaces.get(pane_id)?.clone();
-        let (chunk, full_redraw) = output_delta(
-            self.last_snapshot.get(pane_id).map(String::as_str),
-            current,
-        );
+        let (chunk, full_redraw) =
+            output_delta(self.last_snapshot.get(pane_id).map(String::as_str), current);
         self.last_snapshot.insert(pane_id.into(), current.into());
         if chunk.is_empty() && !full_redraw {
             return None;
@@ -198,7 +203,10 @@ impl PaneIORouter {
             if encoded.is_empty() {
                 return None;
             }
-            self.buffers.entry(surface_id.clone()).or_default().extend_from_slice(&encoded);
+            self.buffers
+                .entry(surface_id.clone())
+                .or_default()
+                .extend_from_slice(&encoded);
         }
         self.log.push(format!(
             "out-text:{pane_id}:redraw={}:{}",
@@ -218,7 +226,10 @@ impl PaneIORouter {
             return None;
         }
         self.log.push(format!("in:{pane_id}:{}", data.len()));
-        Some(InputSend { pane_id: pane_id.into(), data: data.to_vec() })
+        Some(InputSend {
+            pane_id: pane_id.into(),
+            data: data.to_vec(),
+        })
     }
 
     pub fn route_input_to_focus(&mut self, data: &[u8]) -> Option<InputSend> {
@@ -287,7 +298,8 @@ impl PaneIORouter {
         }
         self.cwd_by_pane.insert(pane_id.into(), trimmed.into());
         let apply_to_tab = self.active_pane_id.as_deref() == Some(pane_id);
-        self.log.push(format!("cwd:{pane_id}:tab={}", i32::from(apply_to_tab)));
+        self.log
+            .push(format!("cwd:{pane_id}:tab={}", i32::from(apply_to_tab)));
         Some(CwdUpdate {
             pane_id: pane_id.into(),
             tab_id: tab_id.into(),

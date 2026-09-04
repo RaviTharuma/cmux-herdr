@@ -676,15 +676,16 @@ pub fn build_cli_argv(method: &str, params: &Value) -> Option<Vec<String>> {
         if view.is_empty() {
             return None;
         }
-        return Some(vec!["agent".into(), "view".into(), "set".into(), pane, view]);
-    }
-    if method == "agent.view.clear" && !pane.is_empty() {
         return Some(vec![
             "agent".into(),
             "view".into(),
-            "clear".into(),
+            "set".into(),
             pane,
+            view,
         ]);
+    }
+    if method == "agent.view.clear" && !pane.is_empty() {
+        return Some(vec!["agent".into(), "view".into(), "clear".into(), pane]);
     }
     if method == "client.window_title.set" {
         let title = s(params, "title");
@@ -853,7 +854,11 @@ fn build_pane_split(params: &Value, pane: &str, direction: &str) -> Option<Vec<S
     } else {
         argv.push("--current".into());
     }
-    let dir = if direction.is_empty() { "right" } else { direction };
+    let dir = if direction.is_empty() {
+        "right"
+    } else {
+        direction
+    };
     argv.extend(["--direction".into(), dir.into()]);
     if let Some(ratio) = non_null(params.get("ratio")) {
         argv.extend(["--ratio".into(), num_str(ratio)]);
@@ -1116,7 +1121,9 @@ impl<'r> HerdrApi<'r> {
     fn resolved_socket_path(&self) -> Option<String> {
         let mut path = self.socket_path.clone().or_else(socket_path_from_env);
         if path.is_none() {
-            path = std::env::var("HERDR_SOCKET_PATH").ok().filter(|p| !p.is_empty());
+            path = std::env::var("HERDR_SOCKET_PATH")
+                .ok()
+                .filter(|p| !p.is_empty());
         }
         let path = path?;
         if path.is_empty() || !Path::new(&path).exists() {

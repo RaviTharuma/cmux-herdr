@@ -21,10 +21,23 @@ pub const KIND_METADATA: &str = "metadata";
 pub const KIND_OTHER: &str = "other";
 
 const TOPOLOGY_EVENTS: &[&str] = &[
-    "workspace.created", "workspace.updated", "workspace.renamed", "workspace.moved",
-    "workspace.reordered", "workspace.closed", "tab.created", "tab.closed", "tab.renamed",
-    "tab.moved", "pane.created", "pane.closed", "pane.moved", "pane.exited", "pane.resized",
-    "layout.updated", "layout.changed",
+    "workspace.created",
+    "workspace.updated",
+    "workspace.renamed",
+    "workspace.moved",
+    "workspace.reordered",
+    "workspace.closed",
+    "tab.created",
+    "tab.closed",
+    "tab.renamed",
+    "tab.moved",
+    "pane.created",
+    "pane.closed",
+    "pane.moved",
+    "pane.exited",
+    "pane.resized",
+    "layout.updated",
+    "layout.changed",
 ];
 const OUTPUT_EVENTS: &[&str] = &["pane.updated", "pane.output_matched"];
 const FOCUS_EVENTS: &[&str] = &["pane.focused", "tab.focused", "workspace.focused"];
@@ -58,7 +71,10 @@ impl Default for PumpResult {
 
 impl PumpResult {
     pub fn new(kind: &str) -> Self {
-        Self { kind: kind.into(), ..Self::default() }
+        Self {
+            kind: kind.into(),
+            ..Self::default()
+        }
     }
 
     pub fn to_json(&self) -> Value {
@@ -102,7 +118,10 @@ pub fn unwrap_event(obj: Option<&Value>) -> Value {
         return Value::Object(event.clone());
     }
     if let Some(Value::Object(params)) = object.get("params") {
-        if truthy(params.get("type")) || truthy(params.get("pane_id")) || truthy(params.get("event")) {
+        if truthy(params.get("type"))
+            || truthy(params.get("pane_id"))
+            || truthy(params.get("event"))
+        {
             return Value::Object(params.clone());
         }
     }
@@ -113,7 +132,11 @@ pub fn event_type(obj: Option<&Value>) -> String {
     let body = unwrap_event(obj);
     if let Some(object) = body.as_object() {
         for key in ["type", "event", "name"] {
-            if let Some(value) = object.get(key).and_then(Value::as_str).filter(|value| !value.is_empty()) {
+            if let Some(value) = object
+                .get(key)
+                .and_then(Value::as_str)
+                .filter(|value| !value.is_empty())
+            {
                 return value.to_string();
             }
         }
@@ -184,7 +207,12 @@ pub struct MemoryTransport {
 
 impl MemoryTransport {
     pub fn new(reads: HashMap<String, String>, panes: HashMap<String, Value>) -> Self {
-        Self { reads, panes, read_calls: Vec::new(), sent: Vec::new() }
+        Self {
+            reads,
+            panes,
+            read_calls: Vec::new(),
+            sent: Vec::new(),
+        }
     }
 }
 
@@ -195,7 +223,11 @@ impl PumpTransport for MemoryTransport {
     }
 
     fn pane_info(&mut self, pane_id: &str) -> Value {
-        self.panes.get(pane_id).cloned().filter(Value::is_object).unwrap_or_else(|| json!({}))
+        self.panes
+            .get(pane_id)
+            .cloned()
+            .filter(Value::is_object)
+            .unwrap_or_else(|| json!({}))
     }
 
     fn send_text(&mut self, pane_id: &str, text: &str) {
@@ -222,8 +254,14 @@ impl<'a> ApiTransport<'a> {
 impl PumpTransport for ApiTransport<'_> {
     fn read_pane(&mut self, pane_id: &str) -> String {
         let attempts = [
-            (json!({"pane_id": pane_id, "source": "recent", "lines": 200, "ansi": true}), true),
-            (json!({"pane_id": pane_id, "source": "recent", "lines": 200}), false),
+            (
+                json!({"pane_id": pane_id, "source": "recent", "lines": 200, "ansi": true}),
+                true,
+            ),
+            (
+                json!({"pane_id": pane_id, "source": "recent", "lines": 200}),
+                false,
+            ),
         ];
         for (params, socket_only) in attempts {
             if let Ok(result) = self.api.call("pane.read", params, socket_only) {
@@ -246,11 +284,19 @@ impl PumpTransport for ApiTransport<'_> {
     }
 
     fn send_text(&mut self, pane_id: &str, text: &str) {
-        let _ = self.api.call("pane.send_text", json!({"pane_id": pane_id, "text": text}), false);
+        let _ = self.api.call(
+            "pane.send_text",
+            json!({"pane_id": pane_id, "text": text}),
+            false,
+        );
     }
 
     fn send_keys(&mut self, pane_id: &str, keys: &str) {
-        let _ = self.api.call("pane.send_keys", json!({"pane_id": pane_id, "keys": keys}), false);
+        let _ = self.api.call(
+            "pane.send_keys",
+            json!({"pane_id": pane_id, "keys": keys}),
+            false,
+        );
     }
 
     fn close(&mut self) {
@@ -266,7 +312,11 @@ pub struct LivePump<T: PumpTransport> {
 
 impl<T: PumpTransport> LivePump<T> {
     pub fn new(transport: T) -> Self {
-        Self { transport, windows_builder: None, log: Vec::new() }
+        Self {
+            transport,
+            windows_builder: None,
+            log: Vec::new(),
+        }
     }
 
     pub fn with_windows_builder(
@@ -283,7 +333,11 @@ impl<T: PumpTransport> LivePump<T> {
         host: Option<&mut LiveApplyHost>,
     ) -> PumpResult {
         let Some(host) = host else {
-            return PumpResult { kind: KIND_OTHER.into(), log: "no_host".into(), ..PumpResult::default() };
+            return PumpResult {
+                kind: KIND_OTHER.into(),
+                log: "no_host".into(),
+                ..PumpResult::default()
+            };
         };
         let kind = classify_event(event);
         let body = unwrap_event(event);
@@ -308,7 +362,11 @@ impl<T: PumpTransport> LivePump<T> {
             KIND_STATUS => self.route_status(host, &pane_id, &body),
             KIND_METADATA => {
                 self.log.push("metadata".into());
-                PumpResult { kind: kind.into(), log: "metadata".into(), ..PumpResult::default() }
+                PumpResult {
+                    kind: kind.into(),
+                    log: "metadata".into(),
+                    ..PumpResult::default()
+                }
             }
             _ => PumpResult {
                 kind: kind.into(),
@@ -321,7 +379,11 @@ impl<T: PumpTransport> LivePump<T> {
 
     pub fn poll(&mut self, host: Option<&mut LiveApplyHost>) -> PumpResult {
         let Some(host) = host else {
-            return PumpResult { kind: KIND_OUTPUT.into(), log: "no_host".into(), ..PumpResult::default() };
+            return PumpResult {
+                kind: KIND_OUTPUT.into(),
+                log: "no_host".into(),
+                ..PumpResult::default()
+            };
         };
         let pane_ids = host.live_pane_ids();
         let mut routed = 0;
@@ -331,7 +393,8 @@ impl<T: PumpTransport> LivePump<T> {
             }
         }
         let flushed = self.flush_input(host);
-        self.log.push(format!("poll:{routed}/{} in:{flushed}", pane_ids.len()));
+        self.log
+            .push(format!("poll:{routed}/{} in:{flushed}", pane_ids.len()));
         PumpResult {
             kind: KIND_OUTPUT.into(),
             routed_output: routed > 0,
@@ -369,11 +432,21 @@ impl<T: PumpTransport> LivePump<T> {
 
     pub fn resync(&mut self, host: Option<&mut LiveApplyHost>, log: &str) -> PumpResult {
         let Some(host) = host else {
-            return PumpResult { kind: KIND_TOPOLOGY.into(), resync: true, log: "no_host".into(), ..PumpResult::default() };
+            return PumpResult {
+                kind: KIND_TOPOLOGY.into(),
+                resync: true,
+                log: "no_host".into(),
+                ..PumpResult::default()
+            };
         };
         let Some(builder) = self.windows_builder.as_mut() else {
             self.log.push("resync:no_builder".into());
-            return PumpResult { kind: KIND_TOPOLOGY.into(), resync: true, log: "no_builder".into(), ..PumpResult::default() };
+            return PumpResult {
+                kind: KIND_TOPOLOGY.into(),
+                resync: true,
+                log: "no_builder".into(),
+                ..PumpResult::default()
+            };
         };
         let windows = builder();
         let _ = host.apply_session(&windows);
@@ -390,7 +463,11 @@ impl<T: PumpTransport> LivePump<T> {
 
     fn route_output(&mut self, host: &mut LiveApplyHost, pane_id: &str) -> PumpResult {
         if pane_id.is_empty() {
-            return PumpResult { kind: KIND_OUTPUT.into(), log: "missing_pane".into(), ..PumpResult::default() };
+            return PumpResult {
+                kind: KIND_OUTPUT.into(),
+                log: "missing_pane".into(),
+                ..PumpResult::default()
+            };
         }
         let routed = self.paint(host, pane_id);
         PumpResult {
@@ -412,14 +489,29 @@ impl<T: PumpTransport> LivePump<T> {
             let tab_id = event_string(body, &["tab_id"]);
             if !tab_id.is_empty() && host.apply_tab_focus(&tab_id) {
                 self.log.push(format!("tab_focus:{tab_id}"));
-                return PumpResult { kind: KIND_FOCUS.into(), focused: true, log: "tab_focus".into(), ..PumpResult::default() };
+                return PumpResult {
+                    kind: KIND_FOCUS.into(),
+                    focused: true,
+                    log: "tab_focus".into(),
+                    ..PumpResult::default()
+                };
             }
             let workspace_id = event_string(body, &["workspace_id"]);
             if !workspace_id.is_empty() && host.apply_workspace_focus(&workspace_id) {
                 self.log.push(format!("workspace_focus:{workspace_id}"));
-                return PumpResult { kind: KIND_FOCUS.into(), focused: true, log: "workspace_focus".into(), ..PumpResult::default() };
+                return PumpResult {
+                    kind: KIND_FOCUS.into(),
+                    focused: true,
+                    log: "workspace_focus".into(),
+                    ..PumpResult::default()
+                };
             }
-            return PumpResult { kind: KIND_FOCUS.into(), resync: true, log: "focus_resync".into(), ..PumpResult::default() };
+            return PumpResult {
+                kind: KIND_FOCUS.into(),
+                resync: true,
+                log: "focus_resync".into(),
+                ..PumpResult::default()
+            };
         }
         let applied = host.apply_provider_focus(&target);
         let cwd = event_string(body, &["foreground_cwd", "cwd"]);
@@ -436,21 +528,38 @@ impl<T: PumpTransport> LivePump<T> {
         }
     }
 
-    fn route_status(&mut self, host: &mut LiveApplyHost, pane_id: &str, body: &Value) -> PumpResult {
+    fn route_status(
+        &mut self,
+        host: &mut LiveApplyHost,
+        pane_id: &str,
+        body: &Value,
+    ) -> PumpResult {
         if pane_id.is_empty() {
-            return PumpResult { kind: KIND_STATUS.into(), log: "missing_pane".into(), ..PumpResult::default() };
+            return PumpResult {
+                kind: KIND_STATUS.into(),
+                log: "missing_pane".into(),
+                ..PumpResult::default()
+            };
         }
         let mut status = event_string(body, &["agent_status", "status", "state"]);
         if status.is_empty() {
             status = "unknown".into();
         }
         let name = event_string(body, &["agent", "display_agent", "label"]);
-        host.note_agent_status(pane_id, &status, (!name.is_empty()).then_some(name.as_str()));
+        host.note_agent_status(
+            pane_id,
+            &status,
+            (!name.is_empty()).then_some(name.as_str()),
+        );
         let info = self.transport.pane_info(pane_id);
         if status == "unknown" {
             if let Some(extracted) = extract_agent_status(&info) {
                 status = extracted;
-                host.note_agent_status(pane_id, &status, (!name.is_empty()).then_some(name.as_str()));
+                host.note_agent_status(
+                    pane_id,
+                    &status,
+                    (!name.is_empty()).then_some(name.as_str()),
+                );
             }
         }
         let mut cwd = event_string(&info, &["foreground_cwd", "cwd"]);
@@ -476,7 +585,11 @@ impl<T: PumpTransport> LivePump<T> {
     }
 }
 
-pub fn watch_followup(result: Option<&PumpResult>, had_event: bool, event_gap: bool) -> &'static str {
+pub fn watch_followup(
+    result: Option<&PumpResult>,
+    had_event: bool,
+    event_gap: bool,
+) -> &'static str {
     if event_gap {
         return "project";
     }

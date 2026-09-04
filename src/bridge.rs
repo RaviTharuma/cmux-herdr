@@ -82,8 +82,8 @@ pub fn run_cmd(
     env: Option<&[(&str, &str)]>,
 ) -> std::io::Result<CmdOutput> {
     use std::io::Read;
-    use std::process::Stdio;
     use std::os::unix::process::CommandExt;
+    use std::process::Stdio;
 
     let (program, rest) = args
         .split_first()
@@ -99,8 +99,8 @@ pub fn run_cmd(
         }
     }
     let mut child = cmd.spawn()?;
-    let process_group = rustix::process::Pid::from_raw(child.id() as i32)
-        .expect("child process id is positive");
+    let process_group =
+        rustix::process::Pid::from_raw(child.id() as i32).expect("child process id is positive");
     let mut stdout = child.stdout.take().expect("piped stdout");
     let mut stderr = child.stderr.take().expect("piped stderr");
     let stdout_reader = std::thread::spawn(move || {
@@ -118,10 +118,8 @@ pub fn run_cmd(
             break status;
         }
         if std::time::Instant::now() >= deadline {
-            let _ = rustix::process::kill_process_group(
-                process_group,
-                rustix::process::Signal::Kill,
-            );
+            let _ =
+                rustix::process::kill_process_group(process_group, rustix::process::Signal::Kill);
             let _ = child.wait();
             let _ = stdout_reader.join();
             let _ = stderr_reader.join();
@@ -224,14 +222,19 @@ pub fn herdr_available() -> bool {
     if which("herdr").is_none() {
         return false;
     }
-    if let Some(sock) = std::env::var("HERDR_SOCKET_PATH").ok().filter(|s| !s.is_empty()) {
+    if let Some(sock) = std::env::var("HERDR_SOCKET_PATH")
+        .ok()
+        .filter(|s| !s.is_empty())
+    {
         if std::path::Path::new(&sock).exists() {
             return true;
         }
     }
     match run_cmd(&["herdr", "status"], Duration::from_secs(5), None) {
         Ok(proc) => proc.returncode == 0,
-        Err(_) => std::env::var("HERDR_ENV").map(|v| !v.is_empty()).unwrap_or(false),
+        Err(_) => std::env::var("HERDR_ENV")
+            .map(|v| !v.is_empty())
+            .unwrap_or(false),
     }
 }
 
@@ -240,12 +243,19 @@ pub fn cmux_available() -> bool {
     if which("cmux").is_none() {
         return false;
     }
-    if let Some(sock) = std::env::var("CMUX_SOCKET_PATH").ok().filter(|s| !s.is_empty()) {
+    if let Some(sock) = std::env::var("CMUX_SOCKET_PATH")
+        .ok()
+        .filter(|s| !s.is_empty())
+    {
         if std::path::Path::new(&sock).exists() {
             return true;
         }
     }
-    match run_cmd(&["cmux", "identify", "--json"], Duration::from_secs(5), None) {
+    match run_cmd(
+        &["cmux", "identify", "--json"],
+        Duration::from_secs(5),
+        None,
+    ) {
         Ok(proc) => proc.returncode == 0,
         Err(_) => false,
     }
@@ -397,7 +407,9 @@ pub fn fetch_snapshot_via_socket(api: &mut HerdrApi) -> Option<Snapshot> {
 /// (`_herdr_api`). Transport errors on `open` are swallowed (CLI fallback
 /// still works).
 pub fn herdr_api<'r>() -> HerdrApi<'r> {
-    let socket_path = std::env::var("HERDR_SOCKET_PATH").ok().filter(|s| !s.is_empty());
+    let socket_path = std::env::var("HERDR_SOCKET_PATH")
+        .ok()
+        .filter(|s| !s.is_empty());
     let mut api = HerdrApi::new(socket_path, DEFAULT_TIMEOUT);
     let _: std::result::Result<(), ApiError> = api.open();
     api
@@ -454,13 +466,9 @@ mod tests {
 
     #[test]
     fn run_cmd_enforces_timeout() {
-        let err = run_cmd(
-            &["sh", "-c", "sleep 1"],
-            Duration::from_millis(20),
-            None,
-        )
-        .err()
-        .expect("command should time out");
+        let err = run_cmd(&["sh", "-c", "sleep 1"], Duration::from_millis(20), None)
+            .err()
+            .expect("command should time out");
         assert_eq!(err.kind(), std::io::ErrorKind::TimedOut);
     }
 

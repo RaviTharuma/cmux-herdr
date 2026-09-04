@@ -7,7 +7,7 @@ use std::process::Command;
 
 use sha2::{Digest, Sha256};
 
-const VERSION: &str = "0.6.1";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const TARGET: &str = "x86_64-unknown-linux-gnu";
 const PAYLOAD: &[u8] = b"verified cmux-herdr binary\n";
 
@@ -21,11 +21,8 @@ fn fixture_for(os: &str, arch: &str) -> (tempfile::TempDir, PathBuf, PathBuf) {
     let root = tmp.path();
     fs::create_dir_all(root.join("bin")).unwrap();
     fs::write(root.join("VERSION"), format!("{VERSION}\n")).unwrap();
-    let source = fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/bin/cmux-herdr-fetch"
-    ))
-    .unwrap();
+    let source =
+        fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/bin/cmux-herdr-fetch")).unwrap();
     let fetch = root.join("bin/cmux-herdr-fetch");
     write_executable(&fetch, &source);
     let fake_bin = root.join("fake-bin");
@@ -81,7 +78,10 @@ fn run_fetch(fetch: &Path, fake_bin: &Path) -> std::process::Output {
     Command::new("sh")
         .arg(fetch)
         .env("PATH", format!("{}:{system_path}", fake_bin.display()))
-        .env("CMUX_HERDR_RELEASE_BASE_URL", "https://example.invalid/releases")
+        .env(
+            "CMUX_HERDR_RELEASE_BASE_URL",
+            "https://example.invalid/releases",
+        )
         .output()
         .unwrap()
 }
@@ -100,7 +100,10 @@ fn installs_verified_asset_atomically_and_executable() {
     );
     let installed = tmp.path().join(".cmux-herdr/bin/cmux-herdr");
     assert_eq!(fs::read(&installed).unwrap(), PAYLOAD);
-    assert_ne!(fs::metadata(installed).unwrap().permissions().mode() & 0o111, 0);
+    assert_ne!(
+        fs::metadata(installed).unwrap().permissions().mode() & 0o111,
+        0
+    );
 }
 
 #[test]
@@ -114,10 +117,7 @@ fn maps_all_release_platforms_to_expected_assets() {
     let hash = format!("{:x}", Sha256::digest(PAYLOAD));
     for (os, arch, target) in cases {
         let (tmp, fetch, fake_bin) = fixture_for(os, arch);
-        write_executable(
-            &fake_bin.join("curl"),
-            &curl_script_for(&hash, target),
-        );
+        write_executable(&fake_bin.join("curl"), &curl_script_for(&hash, target));
         let output = run_fetch(&fetch, &fake_bin);
         assert!(
             output.status.success(),
@@ -152,7 +152,10 @@ fn rejects_non_https_release_base_before_touching_install() {
     let output = Command::new("sh")
         .arg(fetch)
         .env("PATH", format!("{}:/usr/bin:/bin", fake_bin.display()))
-        .env("CMUX_HERDR_RELEASE_BASE_URL", "http://example.invalid/releases")
+        .env(
+            "CMUX_HERDR_RELEASE_BASE_URL",
+            "http://example.invalid/releases",
+        )
         .output()
         .unwrap();
     assert!(!output.status.success());
@@ -201,14 +204,16 @@ fn unsupported_platform_without_cargo_keeps_existing_install() {
     let output = Command::new("sh")
         .arg(fetch)
         .env("PATH", format!("{}:/usr/bin:/bin", fake_bin.display()))
-        .env("CMUX_HERDR_RELEASE_BASE_URL", "https://example.invalid/releases")
+        .env(
+            "CMUX_HERDR_RELEASE_BASE_URL",
+            "https://example.invalid/releases",
+        )
         .output()
         .unwrap();
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("unsupported platform"));
     assert_eq!(fs::read(installed).unwrap(), b"existing-good-binary");
 }
-
 
 #[test]
 fn refuses_symlinked_install_directory() {
@@ -220,6 +225,8 @@ fn refuses_symlinked_install_directory() {
 
     let output = run_fetch(&fetch, &fake_bin);
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("refusing symlinked install directory"));
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("refusing symlinked install directory")
+    );
     assert!(fs::read_dir(redirected.path()).unwrap().next().is_none());
 }

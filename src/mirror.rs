@@ -21,7 +21,10 @@ use crate::control::encode_named_key;
 use crate::engine::{self, HerdrWindow, WindowMirrorState};
 use crate::handoff;
 use crate::impose::specs_with_impose_fractions;
-use crate::layout::{layouts_by_tab_id, pane_is_zoomed, pane_rects_from_dicts, parse_layout, tree_from_rects, LayoutNode, SplitSpec};
+use crate::layout::{
+    layouts_by_tab_id, pane_is_zoomed, pane_rects_from_dicts, parse_layout, tree_from_rects,
+    LayoutNode, SplitSpec,
+};
 use crate::model::{Pane, Snapshot, Tab};
 use crate::socket::EventSession;
 use crate::state::{self, SystemEnv};
@@ -106,7 +109,10 @@ impl Default for MirrorPlan {
 
 impl MirrorPlan {
     fn matching(&self, operation: &str) -> Vec<&MirrorAction> {
-        self.actions.iter().filter(|action| action.op == operation).collect()
+        self.actions
+            .iter()
+            .filter(|action| action.op == operation)
+            .collect()
     }
 
     pub fn creates(&self) -> Vec<&MirrorAction> {
@@ -154,7 +160,10 @@ fn tab_label(tab: Option<&Tab>) -> Option<String> {
     if let Some(raw) = tab.raw.get("label") {
         return truthy(Some(raw)).then(|| python_str(Some(raw)));
     }
-    tab.label.as_deref().filter(|value| !value.is_empty()).map(str::to_string)
+    tab.label
+        .as_deref()
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
 }
 
 fn pane_title(pane: &Pane, tab: Option<&Tab>, role: &str) -> String {
@@ -177,7 +186,11 @@ fn pane_title(pane: &Pane, tab: Option<&Tab>, role: &str) -> String {
 }
 
 fn split_direction_for_index(index: usize) -> &'static str {
-    if index % 2 == 1 { "right" } else { "down" }
+    if index % 2 == 1 {
+        "right"
+    } else {
+        "down"
+    }
 }
 
 fn tab_layout_node(snapshot: &Snapshot, tab_id: &str, members: &[&Pane]) -> Option<LayoutNode> {
@@ -209,9 +222,10 @@ fn truncate_chars(value: String, limit: usize) -> String {
 fn tab_number_for_sort(tab: &Tab) -> i64 {
     match tab.raw.get("number") {
         Some(Value::Bool(value)) => i64::from(*value),
-        Some(Value::Number(value)) if value.is_i64() || value.is_u64() => {
-            value.as_i64().or_else(|| value.as_u64().and_then(|v| i64::try_from(v).ok())).unwrap_or(1_000_000_000)
-        }
+        Some(Value::Number(value)) if value.is_i64() || value.is_u64() => value
+            .as_i64()
+            .or_else(|| value.as_u64().and_then(|v| i64::try_from(v).ok()))
+            .unwrap_or(1_000_000_000),
         _ => tab.number.unwrap_or(1_000_000_000),
     }
 }
@@ -225,7 +239,9 @@ pub fn desired_mirrors(
     use_layout: bool,
 ) -> Result<Vec<DesiredMirror>, MirrorError> {
     if !matches!(scope, "current-tab" | "workspace" | "all") {
-        return Err(MirrorError("scope must be current-tab, workspace, or all".to_string()));
+        return Err(MirrorError(
+            "scope must be current-tab, workspace, or all".to_string(),
+        ));
     }
 
     let tabs_by_id: HashMap<&str, &Tab> = snapshot
@@ -234,7 +250,11 @@ pub fn desired_mirrors(
         .filter(|tab| !tab.tab_id.is_empty())
         .map(|tab| (tab.tab_id.as_str(), tab))
         .collect();
-    let mut panes: Vec<&Pane> = snapshot.panes.iter().filter(|pane| !pane.pane_id.is_empty()).collect();
+    let mut panes: Vec<&Pane> = snapshot
+        .panes
+        .iter()
+        .filter(|pane| !pane.pane_id.is_empty())
+        .collect();
 
     if scope == "current-tab" {
         let environment = env::var("HERDR_TAB_ID").ok();
@@ -250,21 +270,30 @@ pub fn desired_mirrors(
         let workspace_id = current_workspace_id
             .filter(|value| !value.is_empty())
             .or_else(|| environment.as_deref().filter(|value| !value.is_empty()))
-            .ok_or_else(|| MirrorError(
-                "scope workspace needs HERDR_WORKSPACE_ID or --herdr-workspace".to_string(),
-            ))?;
+            .ok_or_else(|| {
+                MirrorError(
+                    "scope workspace needs HERDR_WORKSPACE_ID or --herdr-workspace".to_string(),
+                )
+            })?;
         panes.retain(|pane| pane.workspace_id == workspace_id);
     }
 
     let mut grouped: HashMap<String, Vec<&Pane>> = HashMap::new();
     for pane in panes {
-        let tab_id = if pane.tab_id.is_empty() { &pane.pane_id } else { &pane.tab_id };
+        let tab_id = if pane.tab_id.is_empty() {
+            &pane.pane_id
+        } else {
+            &pane.tab_id
+        };
         grouped.entry(tab_id.clone()).or_default().push(pane);
     }
 
     let mut ordered_tab_ids: Vec<String> = grouped.keys().cloned().collect();
     ordered_tab_ids.sort_by(|left, right| {
-        match (tabs_by_id.get(left.as_str()), tabs_by_id.get(right.as_str())) {
+        match (
+            tabs_by_id.get(left.as_str()),
+            tabs_by_id.get(right.as_str()),
+        ) {
             (Some(left_tab), Some(right_tab)) => tab_number_for_sort(left_tab)
                 .cmp(&tab_number_for_sort(right_tab))
                 .then_with(|| left.cmp(right)),
@@ -295,11 +324,18 @@ pub fn desired_mirrors(
             .map(|(index, pane_id)| (pane_id.as_str(), index))
             .collect();
         members.sort_by(|left, right| {
-            match (order_index.get(left.pane_id.as_str()), order_index.get(right.pane_id.as_str())) {
-                (Some(left_index), Some(right_index)) => left_index.cmp(right_index).then_with(|| left.pane_id.cmp(&right.pane_id)),
+            match (
+                order_index.get(left.pane_id.as_str()),
+                order_index.get(right.pane_id.as_str()),
+            ) {
+                (Some(left_index), Some(right_index)) => left_index
+                    .cmp(right_index)
+                    .then_with(|| left.pane_id.cmp(&right.pane_id)),
                 (Some(_), None) => Ordering::Less,
                 (None, Some(_)) => Ordering::Greater,
-                (None, None) => (!left.focused).cmp(&!right.focused).then_with(|| left.pane_id.cmp(&right.pane_id)),
+                (None, None) => (!left.focused)
+                    .cmp(&!right.focused)
+                    .then_with(|| left.pane_id.cmp(&right.pane_id)),
             }
         });
 
@@ -322,11 +358,19 @@ pub fn desired_mirrors(
                     .map(|value| value.direction.clone())
                     .unwrap_or_else(|| split_direction_for_index(index).to_string()),
                 agent: pane.agent.clone(),
-                agent_status: if pane.agent_status.is_empty() { "unknown".to_string() } else { pane.agent_status.clone() },
+                agent_status: if pane.agent_status.is_empty() {
+                    "unknown".to_string()
+                } else {
+                    pane.agent_status.clone()
+                },
                 split_ratio: spec.and_then(|value| value.ratio),
                 split_from_pane_id: spec.map(|value| value.split_from_pane_id.clone()),
                 tab_number: tab.and_then(|value| {
-                    value.raw.get("number").cloned().filter(|raw| !raw.is_null())
+                    value
+                        .raw
+                        .get("number")
+                        .cloned()
+                        .filter(|raw| !raw.is_null())
                         .or_else(|| value.number.map(|number| json!(number)))
                 }),
                 tab_index: Some(tab_index as i64),
@@ -351,7 +395,11 @@ fn truthy(value: Option<&Value>) -> bool {
 }
 
 fn python_repr_string(text: &str) -> String {
-    let quote = if text.contains('\'') && !text.contains('"') { '"' } else { '\'' };
+    let quote = if text.contains('\'') && !text.contains('"') {
+        '"'
+    } else {
+        '\''
+    };
     let mut output = String::with_capacity(text.len() + 2);
     output.push(quote);
     for character in text.chars() {
@@ -390,7 +438,11 @@ fn python_repr(value: &Value) -> String {
         Value::String(value) => python_repr_string(value),
         Value::Array(values) => format!(
             "[{}]",
-            values.iter().map(python_repr).collect::<Vec<_>>().join(", ")
+            values
+                .iter()
+                .map(python_repr)
+                .collect::<Vec<_>>()
+                .join(", ")
         ),
         Value::Object(values) => format!(
             "{{{}}}",
@@ -412,17 +464,32 @@ fn python_str(value: Option<&Value>) -> String {
 }
 
 fn value_or_default_string(value: Option<&Value>, default: &str) -> String {
-    if truthy(value) { python_str(value) } else { default.to_string() }
+    if truthy(value) {
+        python_str(value)
+    } else {
+        default.to_string()
+    }
 }
 
 fn string_set(value: Option<&Value>) -> HashSet<String> {
     value
         .and_then(Value::as_array)
-        .map(|values| values.iter().filter_map(Value::as_str).map(str::to_string).collect())
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
-fn base_action(item: &DesiredMirror, op: &str, surface: Option<String>, reason: &str) -> MirrorAction {
+fn base_action(
+    item: &DesiredMirror,
+    op: &str,
+    surface: Option<String>,
+    reason: &str,
+) -> MirrorAction {
     MirrorAction {
         op: op.to_string(),
         pane_id: item.pane_id.clone(),
@@ -451,9 +518,9 @@ fn python_numeric_equals(value: Option<&Value>, expected: f64) -> bool {
 fn python_int(value: Option<&Value>) -> Option<i64> {
     match value {
         Some(Value::Bool(value)) => Some(i64::from(*value)),
-        Some(Value::Number(value)) if value.is_i64() || value.is_u64() => {
-            value.as_i64().or_else(|| value.as_u64().and_then(|raw| i64::try_from(raw).ok()))
-        }
+        Some(Value::Number(value)) if value.is_i64() || value.is_u64() => value
+            .as_i64()
+            .or_else(|| value.as_u64().and_then(|raw| i64::try_from(raw).ok())),
         _ => None,
     }
 }
@@ -474,7 +541,9 @@ pub fn plan_mirror(
     let desired_ids: HashSet<&str> = desired.iter().map(|item| item.pane_id.as_str()).collect();
     let mut tab_root_surface: HashMap<String, String> = HashMap::new();
     let mut actions = Vec::new();
-    let engine_hints = engine.and_then(Value::as_object).filter(|value| !value.is_empty());
+    let engine_hints = engine
+        .and_then(Value::as_object)
+        .filter(|value| !value.is_empty());
     let protected = string_set(engine_hints.and_then(|value| value.get("protected_pane_ids")));
     let engine_closed = string_set(engine_hints.and_then(|value| value.get("closed_pane_ids")));
     let engine_created = engine_hints.map(|value| string_set(value.get("created_pane_ids")));
@@ -491,7 +560,9 @@ pub fn plan_mirror(
 
     for item in desired {
         let surface = mapped_surface(&item.pane_id);
-        let entry = existing_mirrors.and_then(|values| values.get(&item.pane_id)).and_then(Value::as_object);
+        let entry = existing_mirrors
+            .and_then(|values| values.get(&item.pane_id))
+            .and_then(Value::as_object);
         let prior_title = value_or_default_string(entry.and_then(|value| value.get("title")), "");
         let title_locked = truthy(entry.and_then(|value| value.get("title_lock")));
         if item.role == "tab-root" {
@@ -500,7 +571,7 @@ pub fn plan_mirror(
             }
         }
         if let Some(surface) = surface {
-            if prior_title != "" && prior_title != item.title && !title_locked {
+            if !prior_title.is_empty() && prior_title != item.title && !title_locked {
                 actions.push(base_action(item, "rename", Some(surface), "title changed"));
             } else {
                 actions.push(base_action(item, "keep", Some(surface), ""));
@@ -514,7 +585,12 @@ pub fn plan_mirror(
             }
         }
         if item.role == "tab-root" {
-            actions.push(base_action(item, "create_tab", None, "missing tab-root surface"));
+            actions.push(base_action(
+                item,
+                "create_tab",
+                None,
+                "missing tab-root surface",
+            ));
         } else {
             let mut action = base_action(item, "create_split", None, "missing split surface");
             action.split_from_surface_id = tab_root_surface.get(&item.tab_id).cloned();
@@ -531,7 +607,10 @@ pub fn plan_mirror(
             if desired_ids.contains(pane_id.as_str()) || protected.contains(pane_id) {
                 continue;
             }
-            let Some(entry) = existing_mirrors.and_then(|values| values.get(pane_id)).and_then(Value::as_object) else {
+            let Some(entry) = existing_mirrors
+                .and_then(|values| values.get(pane_id))
+                .and_then(Value::as_object)
+            else {
                 continue;
             };
             if engine_hints.is_some() && !engine_closed.contains(pane_id) {
@@ -545,7 +624,10 @@ pub fn plan_mirror(
                 role: value_or_default_string(entry.get("role"), "split"),
                 split_direction: "right".to_string(),
                 key: value_or_default_string(entry.get("key"), &mirror_key_for_pane(pane_id)),
-                surface_id: entry.get("cmux_surface_id").and_then(Value::as_str).map(str::to_string),
+                surface_id: entry
+                    .get("cmux_surface_id")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
                 split_from_surface_id: None,
                 split_from_pane_id: None,
                 ratio: None,
@@ -557,21 +639,32 @@ pub fn plan_mirror(
 
     if sync_ratios {
         for item in desired {
-            let Some(ratio) = item.split_ratio.filter(|_| item.role == "split") else { continue };
-            let Some(surface) = mapped_surface(&item.pane_id) else { continue };
+            let Some(ratio) = item.split_ratio.filter(|_| item.role == "split") else {
+                continue;
+            };
+            let Some(surface) = mapped_surface(&item.pane_id) else {
+                continue;
+            };
             let prior = existing_mirrors
                 .and_then(|values| values.get(&item.pane_id))
                 .and_then(Value::as_object)
                 .and_then(|value| value.get("split_ratio"));
             if !python_numeric_equals(prior, ratio) {
-                actions.push(base_action(item, "set_ratio", Some(surface), "layout ratio"));
+                actions.push(base_action(
+                    item,
+                    "set_ratio",
+                    Some(surface),
+                    "layout ratio",
+                ));
             }
         }
     }
 
     if sync_order {
         for item in desired {
-            let Some(tab_index) = item.tab_index.filter(|_| item.role == "tab-root") else { continue };
+            let Some(tab_index) = item.tab_index.filter(|_| item.role == "tab-root") else {
+                continue;
+            };
             let surface = mapped_surface(&item.pane_id);
             let prior = existing_mirrors
                 .and_then(|values| values.get(&item.pane_id))
@@ -585,14 +678,23 @@ pub fn plan_mirror(
     }
 
     if sync_focus {
-        let focused = desired.iter().find(|item| item.focused).or_else(|| desired.iter().find(|item| item.zoomed));
+        let focused = desired
+            .iter()
+            .find(|item| item.focused)
+            .or_else(|| desired.iter().find(|item| item.zoomed));
         let prior_focused = existing_mirrors.and_then(|values| {
             values.iter().find_map(|(pane_id, entry)| {
-                truthy(entry.as_object().and_then(|value| value.get("focused"))).then(|| pane_id.as_str())
+                truthy(entry.as_object().and_then(|value| value.get("focused")))
+                    .then_some(pane_id.as_str())
             })
         });
         if let Some(item) = focused.filter(|item| prior_focused != Some(item.pane_id.as_str())) {
-            actions.push(base_action(item, "focus", mapped_surface(&item.pane_id), "herdr focused pane"));
+            actions.push(base_action(
+                item,
+                "focus",
+                mapped_surface(&item.pane_id),
+                "herdr focused pane",
+            ));
         }
     }
 
@@ -644,7 +746,12 @@ fn string_sequence(value: Option<&Value>) -> Vec<String> {
     }
     value
         .and_then(Value::as_array)
-        .map(|values| values.iter().map(|value| value.as_str().unwrap_or("").to_string()).collect())
+        .map(|values| {
+            values
+                .iter()
+                .map(|value| value.as_str().unwrap_or("").to_string())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -652,7 +759,9 @@ fn string_sequence(value: Option<&Value>) -> Vec<String> {
 pub fn format_mirror_plan(result: &Value) -> String {
     let result = result.as_object();
     let get = |key: &str| result.and_then(|value| value.get(key));
-    if truthy(get("native_live")) || get("skipped_reason").and_then(Value::as_str) == Some("native_live") {
+    if truthy(get("native_live"))
+        || get("skipped_reason").and_then(Value::as_str) == Some("native_live")
+    {
         let writer = value_or_default_string(get("writer"), "native");
         return format!(
             "herdr → cmux mirror  SKIPPED (native attachment live; writer={writer})  set CMUX_HERDR_FORCE_PLUGIN=1 to force plugin projection"
@@ -666,7 +775,8 @@ pub fn format_mirror_plan(result: &Value) -> String {
         .map(|value| python_str(Some(value)))
         .unwrap_or_else(|| "0".to_string());
     let workspace = value_or_default_string(get("workspace"), "-");
-    let mut first = format!("herdr → cmux mirror  scope={scope}  desired={desired_count}  cmux_ws={workspace}");
+    let mut first =
+        format!("herdr → cmux mirror  scope={scope}  desired={desired_count}  cmux_ws={workspace}");
     if truthy(plan_get("dry_run")) {
         first.push_str("  DRY-RUN");
     }
@@ -686,7 +796,10 @@ pub fn format_mirror_plan(result: &Value) -> String {
     if truthy(get("tmux_parity")) {
         lines[0].push_str("  tmux-parity");
     }
-    if let Some(live) = get("live").and_then(Value::as_object).filter(|value| !value.is_empty()) {
+    if let Some(live) = get("live")
+        .and_then(Value::as_object)
+        .filter(|value| !value.is_empty())
+    {
         lines.push(format!(
             "  live    panels={} tabs={}",
             sequence_len(live.get("make_panel")),
@@ -694,8 +807,13 @@ pub fn format_mirror_plan(result: &Value) -> String {
         ));
     }
     if let Some(engine) = get("engine").and_then(Value::as_object) {
-        if engine.get("structure_changed_tabs").is_some_and(|value| !value.is_null()) {
-            let changed = engine.get("structure_changed_tabs").filter(|value| truthy(Some(value)));
+        if engine
+            .get("structure_changed_tabs")
+            .is_some_and(|value| !value.is_null())
+        {
+            let changed = engine
+                .get("structure_changed_tabs")
+                .filter(|value| truthy(Some(value)));
             lines.push(format!(
                 "  engine  structure_changed_tabs={} order_changed={}",
                 changed.map_or_else(|| "[]".to_string(), |value| python_str(Some(value))),
@@ -703,14 +821,20 @@ pub fn format_mirror_plan(result: &Value) -> String {
             ));
         }
     }
-    let errors = plan_get("errors").and_then(Value::as_array).cloned().unwrap_or_default();
+    let errors = plan_get("errors")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
     if !errors.is_empty() {
         lines.push(format!("  errors  {}", errors.len()));
         for error in errors.iter().take(12) {
             lines.push(format!("    {}", python_str(Some(error))));
         }
     }
-    let actions = plan_get("actions").and_then(Value::as_array).cloned().unwrap_or_default();
+    let actions = plan_get("actions")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
     if !actions.is_empty() {
         lines.push("  actions:".to_string());
         for action in actions.iter().take(40) {
@@ -719,7 +843,11 @@ pub fn format_mirror_plan(result: &Value) -> String {
             let pane_id = python_str(action.and_then(|value| value.get("pane_id")));
             let title = value_or_default_string(action.and_then(|value| value.get("title")), "");
             let reason = value_or_default_string(action.and_then(|value| value.get("reason")), "");
-            lines.push(format!("    {op:<12} {pane_id}  {title}  {reason}").trim_end().to_string());
+            lines.push(
+                format!("    {op:<12} {pane_id}  {title}  {reason}")
+                    .trim_end()
+                    .to_string(),
+            );
         }
     }
     lines.join("\n")
@@ -814,11 +942,17 @@ fn window_state_from_mirrors(
     let mut surfaces = HashMap::new();
     let mut version = 0;
     for (pane_id, entry) in existing.as_object().into_iter().flatten() {
-        let Some(entry) = entry.as_object() else { continue };
+        let Some(entry) = entry.as_object() else {
+            continue;
+        };
         if value_or_default_string(entry.get("tab_id"), "") != tab_id {
             continue;
         }
-        if let Some(surface) = entry.get("cmux_surface_id").and_then(Value::as_str).filter(|value| !value.is_empty()) {
+        if let Some(surface) = entry
+            .get("cmux_surface_id")
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+        {
             surfaces.insert(pane_id.clone(), surface.to_string());
         }
         if let Some(raw_version) = python_int(entry.get("layout_structure_version")) {
@@ -883,7 +1017,9 @@ pub fn reconcile_engine_for_desired(
     let session = engine::reconcile_session(&windows, &previous_tabs);
     let closed_tabs: HashSet<&str> = session.closed_tab_ids.iter().map(String::as_str).collect();
     for (pane_id, entry) in existing.as_object().into_iter().flatten() {
-        let Some(entry) = entry.as_object() else { continue };
+        let Some(entry) = entry.as_object() else {
+            continue;
+        };
         let tab_id = value_or_default_string(entry.get("tab_id"), "");
         if closed_tabs.contains(tab_id.as_str()) {
             closed.push(pane_id.clone());
@@ -943,7 +1079,9 @@ pub fn cmux_json_with<R: CmuxRunner>(
     }
     let output = runner.run(&with_json, workspace)?;
     if output.returncode == 0 {
-        return match parse_cmux_json(&output.stdout).map_err(|error| MirrorError(error.to_string()))? {
+        return match parse_cmux_json(&output.stdout)
+            .map_err(|error| MirrorError(error.to_string()))?
+        {
             Some(parsed) => Ok(parsed),
             None => Ok(json!({"ok": true, "stdout": output.stdout.trim()})),
         };
@@ -963,17 +1101,29 @@ pub fn cmux_json(args: &[String], workspace: Option<&str>) -> Result<Value, Mirr
 }
 
 fn extract_cmux_id(payload: &Value, keys: &[&str]) -> Option<String> {
-    if let Some(text) = payload.as_str().map(str::trim).filter(|text| !text.is_empty()) {
+    if let Some(text) = payload
+        .as_str()
+        .map(str::trim)
+        .filter(|text| !text.is_empty())
+    {
         return Some(text.to_string());
     }
     let object = payload.as_object()?;
     for key in keys {
-        if let Some(text) = object.get(*key).and_then(Value::as_str).map(str::trim).filter(|text| !text.is_empty()) {
+        if let Some(text) = object
+            .get(*key)
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+        {
             return Some(text.to_string());
         }
     }
     for key in ["result", "payload", "surface", "pane", "terminal"] {
-        if let Some(found) = object.get(key).and_then(|value| extract_cmux_id(value, keys)) {
+        if let Some(found) = object
+            .get(key)
+            .and_then(|value| extract_cmux_id(value, keys))
+        {
             return Some(found);
         }
     }
@@ -990,10 +1140,28 @@ fn create_terminal_with<R: CmuxRunner>(
 ) -> Result<Value, MirrorError> {
     let mut attempts = Vec::new();
     if let Some(pane) = pane {
-        attempts.push(vec!["create-terminal", "--key", key, "--name", name, "--command", command, "--pane", pane]);
+        attempts.push(vec![
+            "create-terminal",
+            "--key",
+            key,
+            "--name",
+            name,
+            "--command",
+            command,
+            "--pane",
+            pane,
+        ]);
     }
     attempts.extend([
-        vec!["create-terminal", "--key", key, "--name", name, "--command", command],
+        vec![
+            "create-terminal",
+            "--key",
+            key,
+            "--name",
+            name,
+            "--command",
+            command,
+        ],
         vec!["run", "--key", key, "--name", name, "--command", command],
         vec!["run", "--name", name, "--command", command],
     ]);
@@ -1001,17 +1169,30 @@ fn create_terminal_with<R: CmuxRunner>(
     for attempt in attempts {
         let args: Vec<String> = attempt.into_iter().map(str::to_string).collect();
         match cmux_json_with(runner, &args, workspace) {
-            Ok(payload) => return Ok(json!({
-                "cmux_surface_id": extract_cmux_id(&payload, &["surface_id", "surface_ref", "id", "pane_id", "terminal_id"]),
-                "cmux_pane_id": extract_cmux_id(&payload, &["pane_id", "pane_ref", "pane"]),
-                "payload": payload,
-                "args": args,
-            })),
+            Ok(payload) => {
+                return Ok(json!({
+                    "cmux_surface_id": extract_cmux_id(&payload, &["surface_id", "surface_ref", "id", "pane_id", "terminal_id"]),
+                    "cmux_pane_id": extract_cmux_id(&payload, &["pane_id", "pane_ref", "pane"]),
+                    "payload": payload,
+                    "args": args,
+                }))
+            }
             Err(error) => errors.push(error.to_string()),
         }
     }
-    let tail = errors.iter().rev().take(3).cloned().collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>();
-    Err(MirrorError(format!("could not create cmux terminal for mirror key {key}: {}", tail.join(" | "))))
+    let tail = errors
+        .iter()
+        .rev()
+        .take(3)
+        .cloned()
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>();
+    Err(MirrorError(format!(
+        "could not create cmux terminal for mirror key {key}: {}",
+        tail.join(" | ")
+    )))
 }
 
 pub fn create_terminal(
@@ -1030,7 +1211,11 @@ fn split_pane_with<R: CmuxRunner>(
     direction: &str,
     workspace: Option<&str>,
 ) -> Result<Value, MirrorError> {
-    let dir = if direction == "right" { "right" } else { "down" };
+    let dir = if direction == "right" {
+        "right"
+    } else {
+        "down"
+    };
     let attempts = if direction == "right" {
         vec![
             vec!["split", "--pane", from_surface, "--dir", dir],
@@ -1048,20 +1233,37 @@ fn split_pane_with<R: CmuxRunner>(
     for attempt in attempts {
         let args: Vec<String> = attempt.into_iter().map(str::to_string).collect();
         match cmux_json_with(runner, &args, workspace) {
-            Ok(payload) => return Ok(json!({
-                "cmux_surface_id": extract_cmux_id(&payload, &["surface_id", "surface_ref", "id"]),
-                "cmux_pane_id": extract_cmux_id(&payload, &["pane_id", "pane_ref", "id"]),
-                "payload": payload,
-                "args": args,
-            })),
+            Ok(payload) => {
+                return Ok(json!({
+                    "cmux_surface_id": extract_cmux_id(&payload, &["surface_id", "surface_ref", "id"]),
+                    "cmux_pane_id": extract_cmux_id(&payload, &["pane_id", "pane_ref", "id"]),
+                    "payload": payload,
+                    "args": args,
+                }))
+            }
             Err(error) => errors.push(error.to_string()),
         }
     }
-    let tail = errors.iter().rev().take(3).cloned().collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>();
-    Err(MirrorError(format!("could not split cmux surface {from_surface}: {}", tail.join(" | "))))
+    let tail = errors
+        .iter()
+        .rev()
+        .take(3)
+        .cloned()
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect::<Vec<_>>();
+    Err(MirrorError(format!(
+        "could not split cmux surface {from_surface}: {}",
+        tail.join(" | ")
+    )))
 }
 
-pub fn split_pane(from_surface: &str, direction: &str, workspace: Option<&str>) -> Result<Value, MirrorError> {
+pub fn split_pane(
+    from_surface: &str,
+    direction: &str,
+    workspace: Option<&str>,
+) -> Result<Value, MirrorError> {
     split_pane_with(&mut SystemCmuxRunner, from_surface, direction, workspace)
 }
 
@@ -1080,63 +1282,150 @@ fn attempt_cmux_commands<R: CmuxRunner>(
     Err(last.unwrap_or_else(|| MirrorError("no cmux command attempts".to_string())))
 }
 
-fn rename_surface_with<R: CmuxRunner>(runner: &mut R, surface: &str, title: &str, workspace: Option<&str>) -> Result<(), MirrorError> {
-    attempt_cmux_commands(runner, vec![
-        vec!["rename-surface".into(), surface.into(), title.into()],
-        vec!["rename-surface".into(), "--surface".into(), surface.into(), "--name".into(), title.into()],
-    ], workspace)
+fn rename_surface_with<R: CmuxRunner>(
+    runner: &mut R,
+    surface: &str,
+    title: &str,
+    workspace: Option<&str>,
+) -> Result<(), MirrorError> {
+    attempt_cmux_commands(
+        runner,
+        vec![
+            vec!["rename-surface".into(), surface.into(), title.into()],
+            vec![
+                "rename-surface".into(),
+                "--surface".into(),
+                surface.into(),
+                "--name".into(),
+                title.into(),
+            ],
+        ],
+        workspace,
+    )
 }
 
-pub fn rename_surface(surface: &str, title: &str, workspace: Option<&str>) -> Result<(), MirrorError> {
+pub fn rename_surface(
+    surface: &str,
+    title: &str,
+    workspace: Option<&str>,
+) -> Result<(), MirrorError> {
     rename_surface_with(&mut SystemCmuxRunner, surface, title, workspace)
 }
 
-fn close_surface_with<R: CmuxRunner>(runner: &mut R, surface: &str, workspace: Option<&str>) -> Result<(), MirrorError> {
-    attempt_cmux_commands(runner, vec![
-        vec!["close-surface".into(), surface.into()],
-        vec!["close-surface".into(), "--surface".into(), surface.into()],
-        vec!["close-terminal".into(), surface.into()],
-    ], workspace)
+fn close_surface_with<R: CmuxRunner>(
+    runner: &mut R,
+    surface: &str,
+    workspace: Option<&str>,
+) -> Result<(), MirrorError> {
+    attempt_cmux_commands(
+        runner,
+        vec![
+            vec!["close-surface".into(), surface.into()],
+            vec!["close-surface".into(), "--surface".into(), surface.into()],
+            vec!["close-terminal".into(), surface.into()],
+        ],
+        workspace,
+    )
 }
 
 pub fn close_surface(surface: &str, workspace: Option<&str>) -> Result<(), MirrorError> {
     close_surface_with(&mut SystemCmuxRunner, surface, workspace)
 }
 
-fn set_split_ratio_with<R: CmuxRunner>(runner: &mut R, surface: &str, ratio: f64, workspace: Option<&str>) -> Result<(), MirrorError> {
+fn set_split_ratio_with<R: CmuxRunner>(
+    runner: &mut R,
+    surface: &str,
+    ratio: f64,
+    workspace: Option<&str>,
+) -> Result<(), MirrorError> {
     let ratio = format!("{:.4}", ratio.clamp(0.05, 0.95));
-    attempt_cmux_commands(runner, vec![
-        vec!["set-ratio".into(), "--pane".into(), surface.into(), "--ratio".into(), ratio.clone()],
-        vec!["set-split-ratio".into(), "--pane".into(), surface.into(), "--ratio".into(), ratio.clone()],
-        vec!["set-ratio".into(), surface.into(), ratio.clone()],
-        vec!["apply-layout".into(), "--pane".into(), surface.into(), "--ratio".into(), ratio],
-    ], workspace)
+    attempt_cmux_commands(
+        runner,
+        vec![
+            vec![
+                "set-ratio".into(),
+                "--pane".into(),
+                surface.into(),
+                "--ratio".into(),
+                ratio.clone(),
+            ],
+            vec![
+                "set-split-ratio".into(),
+                "--pane".into(),
+                surface.into(),
+                "--ratio".into(),
+                ratio.clone(),
+            ],
+            vec!["set-ratio".into(), surface.into(), ratio.clone()],
+            vec![
+                "apply-layout".into(),
+                "--pane".into(),
+                surface.into(),
+                "--ratio".into(),
+                ratio,
+            ],
+        ],
+        workspace,
+    )
 }
 
-pub fn set_split_ratio(surface: &str, ratio: f64, workspace: Option<&str>) -> Result<(), MirrorError> {
+pub fn set_split_ratio(
+    surface: &str,
+    ratio: f64,
+    workspace: Option<&str>,
+) -> Result<(), MirrorError> {
     set_split_ratio_with(&mut SystemCmuxRunner, surface, ratio, workspace)
 }
 
-fn move_tab_with<R: CmuxRunner>(runner: &mut R, surface: &str, index: i64, workspace: Option<&str>) -> Result<(), MirrorError> {
+fn move_tab_with<R: CmuxRunner>(
+    runner: &mut R,
+    surface: &str,
+    index: i64,
+    workspace: Option<&str>,
+) -> Result<(), MirrorError> {
     let index = index.max(0).to_string();
-    attempt_cmux_commands(runner, vec![
-        vec!["move-tab".into(), "--surface".into(), surface.into(), "--index".into(), index.clone()],
-        vec!["move-tab".into(), surface.into(), index.clone()],
-        vec!["move-tab".into(), "--pane".into(), surface.into(), "--to".into(), index],
-    ], workspace)
+    attempt_cmux_commands(
+        runner,
+        vec![
+            vec![
+                "move-tab".into(),
+                "--surface".into(),
+                surface.into(),
+                "--index".into(),
+                index.clone(),
+            ],
+            vec!["move-tab".into(), surface.into(), index.clone()],
+            vec![
+                "move-tab".into(),
+                "--pane".into(),
+                surface.into(),
+                "--to".into(),
+                index,
+            ],
+        ],
+        workspace,
+    )
 }
 
 pub fn move_tab(surface: &str, index: i64, workspace: Option<&str>) -> Result<(), MirrorError> {
     move_tab_with(&mut SystemCmuxRunner, surface, index, workspace)
 }
 
-fn focus_surface_with<R: CmuxRunner>(runner: &mut R, surface: &str, workspace: Option<&str>) -> Result<(), MirrorError> {
-    attempt_cmux_commands(runner, vec![
-        vec!["focus-surface".into(), surface.into()],
-        vec!["select-pane".into(), surface.into()],
-        vec!["focus".into(), "--surface".into(), surface.into()],
-        vec!["focus-pane".into(), surface.into()],
-    ], workspace)
+fn focus_surface_with<R: CmuxRunner>(
+    runner: &mut R,
+    surface: &str,
+    workspace: Option<&str>,
+) -> Result<(), MirrorError> {
+    attempt_cmux_commands(
+        runner,
+        vec![
+            vec!["focus-surface".into(), surface.into()],
+            vec!["select-pane".into(), surface.into()],
+            vec!["focus".into(), "--surface".into(), surface.into()],
+            vec!["focus-pane".into(), surface.into()],
+        ],
+        workspace,
+    )
 }
 
 pub fn focus_surface(surface: &str, workspace: Option<&str>) -> Result<(), MirrorError> {
@@ -1147,7 +1436,10 @@ fn collect_ids(node: &Value, found: &mut HashSet<String>) {
     match node {
         Value::Object(object) => {
             for (key, value) in object {
-                if matches!(key.as_str(), "surface_id" | "surface_ref" | "id" | "terminal_id" | "pane_id") {
+                if matches!(
+                    key.as_str(),
+                    "surface_id" | "surface_ref" | "id" | "terminal_id" | "pane_id"
+                ) {
                     if let Some(text) = value.as_str().filter(|text| !text.is_empty()) {
                         found.insert(text.to_string());
                     }
@@ -1161,8 +1453,19 @@ fn collect_ids(node: &Value, found: &mut HashSet<String>) {
     }
 }
 
-pub fn list_live_surface_ids_with<R: CmuxRunner>(runner: &mut R, workspace: Option<&str>) -> Option<HashSet<String>> {
-    for args in [vec!["tree".to_string()], vec!["list-terminals".to_string()], vec!["ids".to_string(), "--kind".to_string(), "surface".to_string()]] {
+pub fn list_live_surface_ids_with<R: CmuxRunner>(
+    runner: &mut R,
+    workspace: Option<&str>,
+) -> Option<HashSet<String>> {
+    for args in [
+        vec!["tree".to_string()],
+        vec!["list-terminals".to_string()],
+        vec![
+            "ids".to_string(),
+            "--kind".to_string(),
+            "surface".to_string(),
+        ],
+    ] {
         if let Ok(payload) = cmux_json_with(runner, &args, workspace) {
             let mut found = HashSet::new();
             collect_ids(&payload, &mut found);
@@ -1190,16 +1493,24 @@ pub fn load_mirrors() -> Value {
 pub fn save_mirrors(mirrors: &Value, workspace: Option<&str>) -> Result<(), MirrorError> {
     let fingerprint = state::collect_host_fingerprint(&SystemEnv);
     let mut association = state::load_association_map(&SystemEnv, &fingerprint);
-    association["mirrors"] = mirrors.as_object().cloned().map(Value::Object).unwrap_or_else(|| json!({}));
+    association["mirrors"] = mirrors
+        .as_object()
+        .cloned()
+        .map(Value::Object)
+        .unwrap_or_else(|| json!({}));
     if let Some(workspace) = workspace.filter(|value| !value.is_empty()) {
         association["cmux_workspace"] = json!(workspace);
     }
-    state::save_association_map(&SystemEnv, &association, &fingerprint).map_err(|error| MirrorError(error.to_string()))
+    state::save_association_map(&SystemEnv, &association, &fingerprint)
+        .map_err(|error| MirrorError(error.to_string()))
 }
 
 pub fn size_authority_path() -> PathBuf {
     let fingerprint = state::collect_host_fingerprint(&SystemEnv);
-    state::state_dir(&SystemEnv).join(format!("size-authority-{}", state::parent_key(&fingerprint)))
+    state::state_dir(&SystemEnv).join(format!(
+        "size-authority-{}",
+        state::parent_key(&fingerprint)
+    ))
 }
 
 pub fn write_size_authority(pane_id: Option<&str>) -> Result<(), MirrorError> {
@@ -1214,17 +1525,22 @@ pub fn write_size_authority(pane_id: Option<&str>) -> Result<(), MirrorError> {
     let directory = state::state_dir(&SystemEnv);
     fs::create_dir_all(&directory).map_err(|error| MirrorError(error.to_string()))?;
     let temporary = path.with_extension("tmp");
-    fs::write(&temporary, format!("{}\n", pane_id.unwrap().trim())).map_err(|error| MirrorError(error.to_string()))?;
+    fs::write(&temporary, format!("{}\n", pane_id.unwrap().trim()))
+        .map_err(|error| MirrorError(error.to_string()))?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&temporary, fs::Permissions::from_mode(0o600)).map_err(|error| MirrorError(error.to_string()))?;
+        fs::set_permissions(&temporary, fs::Permissions::from_mode(0o600))
+            .map_err(|error| MirrorError(error.to_string()))?;
     }
     fs::rename(temporary, path).map_err(|error| MirrorError(error.to_string()))
 }
 
 pub fn read_size_authority() -> Option<String> {
-    fs::read_to_string(size_authority_path()).ok().map(|value| value.trim().to_string()).filter(|value| !value.is_empty())
+    fs::read_to_string(size_authority_path())
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
 }
 
 pub fn may_claim_client_size(pane_id: &str) -> bool {
@@ -1248,7 +1564,11 @@ pub fn may_claim_client_size(pane_id: &str) -> bool {
 
 fn attach_argv(pane_id: &str) -> Vec<String> {
     let executable = bridge::which("cmux-herdr")
-        .or_else(|| std::env::current_exe().ok().map(|path| path.to_string_lossy().into_owned()))
+        .or_else(|| {
+            std::env::current_exe()
+                .ok()
+                .map(|path| path.to_string_lossy().into_owned())
+        })
         .unwrap_or_else(|| "cmux-herdr".to_string());
     vec![executable, "attach-pane".to_string(), pane_id.to_string()]
 }
@@ -1268,7 +1588,10 @@ fn action_json(action: &MirrorAction) -> Value {
 }
 
 fn now_seconds() -> f64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|duration| duration.as_secs_f64()).unwrap_or(0.0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs_f64())
+        .unwrap_or(0.0)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1299,8 +1622,15 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
     let mut tab_root_surface = HashMap::new();
     for entry in mirrors.values().filter_map(Value::as_object) {
         if entry.get("role").and_then(Value::as_str) == Some("tab-root") {
-            if let Some(surface) = entry.get("cmux_surface_id").and_then(Value::as_str).filter(|value| !value.is_empty()) {
-                tab_root_surface.insert(value_or_default_string(entry.get("tab_id"), ""), surface.to_string());
+            if let Some(surface) = entry
+                .get("cmux_surface_id")
+                .and_then(Value::as_str)
+                .filter(|value| !value.is_empty())
+            {
+                tab_root_surface.insert(
+                    value_or_default_string(entry.get("tab_id"), ""),
+                    surface.to_string(),
+                );
             }
         }
     }
@@ -1323,7 +1653,9 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
                 "rename" => {
                     if let Some(surface) = action.surface_id.as_deref() {
                         rename_surface_with(runner, surface, &action.title, workspace)?;
-                        mirrors.entry(action.pane_id.clone()).or_insert_with(|| json!({}))["title"] = json!(action.title);
+                        mirrors
+                            .entry(action.pane_id.clone())
+                            .or_insert_with(|| json!({}))["title"] = json!(action.title);
                         renamed.push(action.pane_id.clone());
                     }
                 }
@@ -1335,24 +1667,42 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
                     }
                 }
                 "set_ratio" => {
-                    if let (Some(surface), Some(ratio)) = (action.surface_id.as_deref(), action.ratio) {
+                    if let (Some(surface), Some(ratio)) =
+                        (action.surface_id.as_deref(), action.ratio)
+                    {
                         set_split_ratio_with(runner, surface, ratio, workspace)?;
-                        mirrors.entry(action.pane_id.clone()).or_insert_with(|| json!({}))["split_ratio"] = json!(ratio);
+                        mirrors
+                            .entry(action.pane_id.clone())
+                            .or_insert_with(|| json!({}))["split_ratio"] = json!(ratio);
                         ratios.push(action.pane_id.clone());
                     }
                 }
                 "move_tab" => {
                     if let Some(index) = action.tab_index {
-                        let surface = action.surface_id.clone().or_else(|| mirrors.get(&action.pane_id).and_then(|entry| entry.get("cmux_surface_id")).and_then(Value::as_str).map(str::to_string));
+                        let surface = action.surface_id.clone().or_else(|| {
+                            mirrors
+                                .get(&action.pane_id)
+                                .and_then(|entry| entry.get("cmux_surface_id"))
+                                .and_then(Value::as_str)
+                                .map(str::to_string)
+                        });
                         if let Some(surface) = surface {
                             move_tab_with(runner, &surface, index, workspace)?;
-                            mirrors.entry(action.pane_id.clone()).or_insert_with(|| json!({}))["tab_index"] = json!(index);
+                            mirrors
+                                .entry(action.pane_id.clone())
+                                .or_insert_with(|| json!({}))["tab_index"] = json!(index);
                             moved.push(action.pane_id.clone());
                         }
                     }
                 }
                 "focus" => {
-                    let surface = action.surface_id.clone().or_else(|| mirrors.get(&action.pane_id).and_then(|entry| entry.get("cmux_surface_id")).and_then(Value::as_str).map(str::to_string));
+                    let surface = action.surface_id.clone().or_else(|| {
+                        mirrors
+                            .get(&action.pane_id)
+                            .and_then(|entry| entry.get("cmux_surface_id"))
+                            .and_then(Value::as_str)
+                            .map(str::to_string)
+                    });
                     if let Some(surface) = surface {
                         focus_surface_with(runner, &surface, workspace)?;
                     }
@@ -1366,7 +1716,9 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
                 "create_tab" | "create_split" => {
                     let command = attach_argv(&action.pane_id).join(" ");
                     let mut created_info = if action.op == "create_split" {
-                        let split_from = action.split_from_pane_id.as_ref()
+                        let split_from = action
+                            .split_from_pane_id
+                            .as_ref()
                             .and_then(|pane_id| mirrors.get(pane_id))
                             .and_then(|entry| entry.get("cmux_surface_id"))
                             .and_then(Value::as_str)
@@ -1374,23 +1726,54 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
                             .or_else(|| action.split_from_surface_id.clone())
                             .or_else(|| tab_root_surface.get(&action.tab_id).cloned());
                         let Some(split_from) = split_from else {
-                            return Err(MirrorError(format!("no split-from surface (refusing orphan-tab fallback)")));
+                            return Err(MirrorError(
+                                "no split-from surface (refusing orphan-tab fallback)".to_string(),
+                            ));
                         };
-                        let split = split_pane_with(runner, &split_from, &action.split_direction, workspace)
-                            .map_err(|error| MirrorError(format!("{error} (refusing orphan-tab fallback)")))?;
-                        let pane = split.get("cmux_pane_id").or_else(|| split.get("cmux_surface_id")).and_then(Value::as_str);
-                        let mut created = create_terminal_with(runner, &action.key, &action.title, &command, workspace, pane)?;
+                        let split = split_pane_with(
+                            runner,
+                            &split_from,
+                            &action.split_direction,
+                            workspace,
+                        )
+                        .map_err(|error| {
+                            MirrorError(format!("{error} (refusing orphan-tab fallback)"))
+                        })?;
+                        let pane = split
+                            .get("cmux_pane_id")
+                            .or_else(|| split.get("cmux_surface_id"))
+                            .and_then(Value::as_str);
+                        let mut created = create_terminal_with(
+                            runner,
+                            &action.key,
+                            &action.title,
+                            &command,
+                            workspace,
+                            pane,
+                        )?;
                         if created.get("cmux_surface_id").is_none_or(Value::is_null) {
-                            created["cmux_surface_id"] = split.get("cmux_surface_id").cloned().unwrap_or(Value::Null);
+                            created["cmux_surface_id"] =
+                                split.get("cmux_surface_id").cloned().unwrap_or(Value::Null);
                         }
                         if created.get("cmux_pane_id").is_none_or(Value::is_null) {
-                            created["cmux_pane_id"] = split.get("cmux_pane_id").cloned().unwrap_or(Value::Null);
+                            created["cmux_pane_id"] =
+                                split.get("cmux_pane_id").cloned().unwrap_or(Value::Null);
                         }
                         created
                     } else {
-                        create_terminal_with(runner, &action.key, &action.title, &command, workspace, None)?
+                        create_terminal_with(
+                            runner,
+                            &action.key,
+                            &action.title,
+                            &command,
+                            workspace,
+                            None,
+                        )?
                     };
-                    let surface = created_info.get_mut("cmux_surface_id").and_then(|value| value.as_str()).map(str::to_string);
+                    let surface = created_info
+                        .get_mut("cmux_surface_id")
+                        .and_then(|value| value.as_str())
+                        .map(str::to_string);
                     if action.role == "tab-root" {
                         if let Some(surface) = surface.as_deref() {
                             tab_root_surface.insert(action.tab_id.clone(), surface.to_string());
@@ -1414,9 +1797,12 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
                     }));
                     if let Some(states) = engine_states.as_deref_mut() {
                         if let Some(state) = states.get_mut(&action.tab_id) {
-                            mirrors.get_mut(&action.pane_id).unwrap()["layout_structure_version"] = json!(state.layout_structure_version);
+                            mirrors.get_mut(&action.pane_id).unwrap()["layout_structure_version"] =
+                                json!(state.layout_structure_version);
                             if let Some(surface) = surface.as_deref() {
-                                state.surface_id_by_pane_id.insert(action.pane_id.clone(), surface.to_string());
+                                state
+                                    .surface_id_by_pane_id
+                                    .insert(action.pane_id.clone(), surface.to_string());
                             }
                         }
                     }
@@ -1424,7 +1810,9 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
                         if let (Some(surface), Some(ratio)) = (surface.as_deref(), action.ratio) {
                             match set_split_ratio_with(runner, surface, ratio, workspace) {
                                 Ok(()) => ratios.push(action.pane_id.clone()),
-                                Err(error) => errors.push(format!("set_ratio {}: {error}", action.pane_id)),
+                                Err(error) => {
+                                    errors.push(format!("set_ratio {}: {error}", action.pane_id))
+                                }
                             }
                         }
                     }
@@ -1440,14 +1828,27 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
     }
 
     if !dry_run {
-        if let Some(states) = engine_states.as_deref_mut() {
+        if let Some(states) = engine_states {
             for (pane_id, entry) in &mut mirrors {
-                let Some(entry) = entry.as_object_mut() else { continue };
+                let Some(entry) = entry.as_object_mut() else {
+                    continue;
+                };
                 let tab_id = value_or_default_string(entry.get("tab_id"), "");
-                let Some(state) = states.get_mut(&tab_id) else { continue };
-                entry.insert("layout_structure_version".into(), json!(state.layout_structure_version));
-                if let Some(surface) = entry.get("cmux_surface_id").and_then(Value::as_str).filter(|value| !value.is_empty()) {
-                    state.surface_id_by_pane_id.insert(pane_id.clone(), surface.to_string());
+                let Some(state) = states.get_mut(&tab_id) else {
+                    continue;
+                };
+                entry.insert(
+                    "layout_structure_version".into(),
+                    json!(state.layout_structure_version),
+                );
+                if let Some(surface) = entry
+                    .get("cmux_surface_id")
+                    .and_then(Value::as_str)
+                    .filter(|value| !value.is_empty())
+                {
+                    state
+                        .surface_id_by_pane_id
+                        .insert(pane_id.clone(), surface.to_string());
                 }
             }
         }
@@ -1485,7 +1886,16 @@ pub fn apply_mirror_plan(
     log: bool,
     engine_states: Option<&mut HashMap<String, WindowMirrorState>>,
 ) -> Result<Value, MirrorError> {
-    apply_mirror_plan_with(plan, existing, workspace, dry_run, log, engine_states, &mut SystemCmuxRunner, true)
+    apply_mirror_plan_with(
+        plan,
+        existing,
+        workspace,
+        dry_run,
+        log,
+        engine_states,
+        &mut SystemCmuxRunner,
+        true,
+    )
 }
 
 fn fingerprint_json() -> Value {
@@ -1502,17 +1912,26 @@ pub fn resolve_cmux_workspace(explicit: Option<&str>) -> Option<String> {
     if let Some(workspace) = explicit.filter(|value| !value.is_empty()) {
         return Some(workspace.to_string());
     }
-    if let Some(workspace) = env::var("CMUX_WORKSPACE_ID").ok().filter(|value| !value.is_empty()) {
+    if let Some(workspace) = env::var("CMUX_WORKSPACE_ID")
+        .ok()
+        .filter(|value| !value.is_empty())
+    {
         return Some(workspace);
     }
     let fingerprint = state::collect_host_fingerprint(&SystemEnv);
     let association = state::load_association_map(&SystemEnv, &fingerprint);
-    if let Some(workspace) = association.get("cmux_workspace").and_then(Value::as_str).filter(|value| !value.is_empty()) {
+    if let Some(workspace) = association
+        .get("cmux_workspace")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+    {
         return Some(workspace.to_string());
     }
     for args in [vec!["identify".to_string()], vec!["focused".to_string()]] {
         if let Ok(payload) = cmux_json(&args, None) {
-            if let Some(workspace) = extract_cmux_id(&payload, &["workspace_id", "workspace_ref", "workspace"]) {
+            if let Some(workspace) =
+                extract_cmux_id(&payload, &["workspace_id", "workspace_ref", "workspace"])
+            {
                 return Some(workspace);
             }
         }
@@ -1527,7 +1946,10 @@ fn focused_surface_with<R: CmuxRunner>(runner: &mut R, workspace: Option<&str>) 
         vec!["identify".to_string()],
     ] {
         if let Ok(payload) = cmux_json_with(runner, &args, workspace) {
-            if let Some(surface) = extract_cmux_id(&payload, &["surface_id", "surface_ref", "focused_surface_id", "id"]) {
+            if let Some(surface) = extract_cmux_id(
+                &payload,
+                &["surface_id", "surface_ref", "focused_surface_id", "id"],
+            ) {
                 return Some(surface);
             }
         }
@@ -1535,20 +1957,33 @@ fn focused_surface_with<R: CmuxRunner>(runner: &mut R, workspace: Option<&str>) 
     None
 }
 
-pub fn sync_focus_from_cmux(mirrors: &mut Value, workspace: Option<&str>) -> Result<(), MirrorError> {
-    let Some(surface) = focused_surface_with(&mut SystemCmuxRunner, workspace) else { return Ok(()) };
-    let Some(entries) = mirrors.as_object_mut() else { return Ok(()) };
+pub fn sync_focus_from_cmux(
+    mirrors: &mut Value,
+    workspace: Option<&str>,
+) -> Result<(), MirrorError> {
+    let Some(surface) = focused_surface_with(&mut SystemCmuxRunner, workspace) else {
+        return Ok(());
+    };
+    let Some(entries) = mirrors.as_object_mut() else {
+        return Ok(());
+    };
     let selected = entries.iter().find_map(|(pane_id, entry)| {
         (entry.get("cmux_surface_id").and_then(Value::as_str) == Some(surface.as_str()))
             .then(|| (pane_id.clone(), truthy(entry.get("focused"))))
     });
-    let Some((pane_id, already_focused)) = selected else { return Ok(()) };
+    let Some((pane_id, already_focused)) = selected else {
+        return Ok(());
+    };
     if already_focused {
         return Ok(());
     }
     let mut api = bridge::herdr_api();
-    bridge::herdr_rpc(&mut api, "agent.focus", json!({"target": pane_id, "pane_id": pane_id}))
-        .map_err(|error| MirrorError(error.to_string()))?;
+    bridge::herdr_rpc(
+        &mut api,
+        "agent.focus",
+        json!({"target": pane_id, "pane_id": pane_id}),
+    )
+    .map_err(|error| MirrorError(error.to_string()))?;
     for (other_id, entry) in entries.iter_mut() {
         if let Some(entry) = entry.as_object_mut() {
             entry.insert("focused".into(), json!(other_id == &pane_id));
@@ -1558,23 +1993,49 @@ pub fn sync_focus_from_cmux(mirrors: &mut Value, workspace: Option<&str>) -> Res
 }
 
 fn status_keys_with<R: CmuxRunner>(runner: &mut R, workspace: &str) -> Vec<String> {
-    let Ok(output) = runner.run(&["list-status".to_string()], Some(workspace)) else { return Vec::new() };
+    let Ok(output) = runner.run(&["list-status".to_string()], Some(workspace)) else {
+        return Vec::new();
+    };
     if output.returncode != 0 {
         return Vec::new();
     }
-    output.stdout.lines().filter_map(|line| {
-        line.split_once('=').map(|(key, _)| key.trim()).filter(|key| key.starts_with("herdr:")).map(str::to_string)
-    }).collect()
+    output
+        .stdout
+        .lines()
+        .filter_map(|line| {
+            line.split_once('=')
+                .map(|(key, _)| key.trim())
+                .filter(|key| key.starts_with("herdr:"))
+                .map(str::to_string)
+        })
+        .collect()
 }
 
 fn sync_status_to_cmux(snapshot: &Snapshot, workspace: &str, log: bool) -> Value {
-    let tabs: HashMap<String, Tab> = snapshot.tabs.iter().map(|tab| (tab.tab_id.clone(), tab.clone())).collect();
+    let tabs: HashMap<String, Tab> = snapshot
+        .tabs
+        .iter()
+        .map(|tab| (tab.tab_id.clone(), tab.clone()))
+        .collect();
     let fingerprint = state::collect_host_fingerprint(&SystemEnv);
     let prior_state = state::load_association_map(&SystemEnv, &fingerprint);
     let previous = prior_state.get("panes").unwrap_or(&Value::Null);
-    let mut panes: Vec<&Pane> = snapshot.panes.iter().filter(|pane| pane.agent.as_ref().is_some_and(|agent| !agent.is_empty())).collect();
+    let mut panes: Vec<&Pane> = snapshot
+        .panes
+        .iter()
+        .filter(|pane| pane.agent.as_ref().is_some_and(|agent| !agent.is_empty()))
+        .collect();
     if panes.is_empty() {
-        panes = snapshot.panes.iter().filter(|pane| matches!(pane.agent_status.as_str(), "working" | "idle" | "done" | "blocked")).collect();
+        panes = snapshot
+            .panes
+            .iter()
+            .filter(|pane| {
+                matches!(
+                    pane.agent_status.as_str(),
+                    "working" | "idle" | "done" | "blocked"
+                )
+            })
+            .collect();
     }
     let mut applied = Vec::new();
     let mut errors = Vec::new();
@@ -1587,10 +2048,15 @@ fn sync_status_to_cmux(snapshot: &Snapshot, workspace: &str, log: bool) -> Value
         let prior = state::prior_for_pane(pane, previous);
         let payload = crate::status::status_write_payload(pane, Some(&tabs), Some(prior));
         let args = vec![
-            "set-status".to_string(), key.clone(), payload["value"].as_str().unwrap_or("").to_string(),
-            "--icon".to_string(), payload["icon"].as_str().unwrap_or("").to_string(),
-            "--color".to_string(), payload["color"].as_str().unwrap_or("").to_string(),
-            "--priority".to_string(), payload["priority"].as_i64().unwrap_or(0).to_string(),
+            "set-status".to_string(),
+            key.clone(),
+            payload["value"].as_str().unwrap_or("").to_string(),
+            "--icon".to_string(),
+            payload["icon"].as_str().unwrap_or("").to_string(),
+            "--color".to_string(),
+            payload["color"].as_str().unwrap_or("").to_string(),
+            "--priority".to_string(),
+            payload["priority"].as_i64().unwrap_or(0).to_string(),
         ];
         match runner.run(&args, Some(workspace)) {
             Ok(output) if output.returncode == 0 => {
@@ -1606,7 +2072,10 @@ fn sync_status_to_cmux(snapshot: &Snapshot, workspace: &str, log: bool) -> Value
         if desired.contains(&key) {
             continue;
         }
-        if runner.run(&["clear-status".to_string(), key.clone()], Some(workspace)).is_ok_and(|output| output.returncode == 0) {
+        if runner
+            .run(&["clear-status".to_string(), key.clone()], Some(workspace))
+            .is_ok_and(|output| output.returncode == 0)
+        {
             stale.push(key);
         }
     }
@@ -1615,7 +2084,8 @@ fn sync_status_to_cmux(snapshot: &Snapshot, workspace: &str, log: bool) -> Value
         snapshot,
         Some(workspace),
         Some(&Value::Object(write_meta)),
-    ).unwrap_or(Value::Null);
+    )
+    .unwrap_or(Value::Null);
     let summary = format!("herdr sync: {} panes → cmux ws={workspace}", applied.len());
     if log {
         let _ = runner.run(&["log".to_string(), summary.clone()], Some(workspace));
@@ -1639,7 +2109,11 @@ fn sync_status_to_cmux(snapshot: &Snapshot, workspace: &str, log: bool) -> Value
 fn live_report(windows: &[HerdrWindow]) -> Result<Value, MirrorError> {
     let host = crate::live::apply_live_windows(windows, None, true).map_err(MirrorError)?;
     let tabs: Vec<String> = host.windows.keys().cloned().collect();
-    let make_panel: Vec<String> = host.windows.values().flat_map(|window| window.surfaces.keys().cloned()).collect();
+    let make_panel: Vec<String> = host
+        .windows
+        .values()
+        .flat_map(|window| window.surfaces.keys().cloned())
+        .collect();
     Ok(json!({
         "tabs": tabs,
         "make_panel": make_panel,
@@ -1699,38 +2173,87 @@ pub fn mirror_to_cmux_with_snapshot(
     let (scope, prune, use_layout, sync_focus, sync_order, sync_ratios) = if tmux_parity {
         ("all", true, true, true, true, true)
     } else {
-        (scope, prune, use_layout, sync_focus, sync_order, sync_ratios)
+        (
+            scope,
+            prune,
+            use_layout,
+            sync_focus,
+            sync_order,
+            sync_ratios,
+        )
     };
     let desired = desired_mirrors(snapshot, scope, tab, herdr_workspace, use_layout)?;
-    let resolved_workspace = if dry_run { workspace.map(str::to_string) } else { resolve_cmux_workspace(workspace) };
+    let resolved_workspace = if dry_run {
+        workspace.map(str::to_string)
+    } else {
+        resolve_cmux_workspace(workspace)
+    };
     if !dry_run && resolved_workspace.is_none() {
-        return Err(MirrorError("could not resolve cmux workspace for mirror".to_string()));
+        return Err(MirrorError(
+            "could not resolve cmux workspace for mirror".to_string(),
+        ));
     }
     let existing = load_mirrors();
     let mut engine = reconcile_engine_for_desired(snapshot, &desired, &existing);
     let hints = engine.planner_hints();
-    let live_ids = if dry_run { None } else { list_live_surface_ids(resolved_workspace.as_deref()) };
+    let live_ids = if dry_run {
+        None
+    } else {
+        list_live_surface_ids(resolved_workspace.as_deref())
+    };
     let mut plan = plan_mirror(
-        &desired, &existing, live_ids.as_ref(), prune, sync_focus, sync_order, sync_ratios, Some(&hints),
+        &desired,
+        &existing,
+        live_ids.as_ref(),
+        prune,
+        sync_focus,
+        sync_order,
+        sync_ratios,
+        Some(&hints),
     );
     plan.scope = scope.to_string();
     let mut applied = apply_mirror_plan(
-        &plan, &existing, resolved_workspace.as_deref(), dry_run, log, Some(&mut engine.states),
+        &plan,
+        &existing,
+        resolved_workspace.as_deref(),
+        dry_run,
+        log,
+        Some(&mut engine.states),
     )?;
     if sync_focus && !dry_run {
-        let _ = sync_focus_from_cmux(&mut applied["mirrors"], resolved_workspace.as_deref()).map_err(|error| {
-            if let Some(errors) = applied["errors"].as_array_mut() {
-                errors.push(json!(format!("focus reverse: {error}")));
-            }
-            error
-        });
-        let focused = applied["mirrors"].as_object().and_then(|mirrors| mirrors.iter().find_map(|(pane_id, entry)| truthy(entry.get("focused")).then(|| pane_id.clone())))
-            .or_else(|| desired.iter().find(|item| item.focused).or_else(|| desired.first()).map(|item| item.pane_id.clone()));
+        let _ = sync_focus_from_cmux(&mut applied["mirrors"], resolved_workspace.as_deref())
+            .map_err(|error| {
+                if let Some(errors) = applied["errors"].as_array_mut() {
+                    errors.push(json!(format!("focus reverse: {error}")));
+                }
+                error
+            });
+        let focused = applied["mirrors"]
+            .as_object()
+            .and_then(|mirrors| {
+                mirrors.iter().find_map(|(pane_id, entry)| {
+                    truthy(entry.get("focused")).then(|| pane_id.clone())
+                })
+            })
+            .or_else(|| {
+                desired
+                    .iter()
+                    .find(|item| item.focused)
+                    .or_else(|| desired.first())
+                    .map(|item| item.pane_id.clone())
+            });
         write_size_authority(focused.as_deref())?;
     }
-    let live = if tmux_parity { live_report(&engine.windows)? } else { Value::Null };
+    let live = if tmux_parity {
+        live_report(&engine.windows)?
+    } else {
+        Value::Null
+    };
     let status_summary = if sync_status && !dry_run {
-        resolved_workspace.as_deref().map(|workspace| sync_status_to_cmux(snapshot, workspace, log)).unwrap_or(Value::Null)
+        resolved_workspace
+            .as_deref()
+            .map(|workspace| sync_status_to_cmux(snapshot, workspace, log))
+            .unwrap_or(Value::Null)
     } else {
         Value::Null
     };
@@ -1774,10 +2297,23 @@ pub fn mirror_to_cmux(
     log: bool,
 ) -> Result<Value, MirrorError> {
     let mut api = bridge::herdr_api();
-    let snapshot = bridge::fetch_snapshot(&mut api).map_err(|error| MirrorError(error.to_string()))?;
+    let snapshot =
+        bridge::fetch_snapshot(&mut api).map_err(|error| MirrorError(error.to_string()))?;
     mirror_to_cmux_with_snapshot(
-        &snapshot, scope, workspace, herdr_workspace, tab, prune, sync_status, use_layout,
-        sync_focus, sync_order, sync_ratios, tmux_parity, dry_run, log,
+        &snapshot,
+        scope,
+        workspace,
+        herdr_workspace,
+        tab,
+        prune,
+        sync_status,
+        use_layout,
+        sync_focus,
+        sync_order,
+        sync_ratios,
+        tmux_parity,
+        dry_run,
+        log,
     )
 }
 
@@ -1786,14 +2322,24 @@ pub fn send_pane_text(pane_id: &str, text: &str) -> Result<(), MirrorError> {
         return Ok(());
     }
     let mut api = bridge::herdr_api();
-    if bridge::herdr_rpc(&mut api, "pane.send_text", json!({"pane_id": pane_id, "text": text})).is_ok() {
+    if bridge::herdr_rpc(
+        &mut api,
+        "pane.send_text",
+        json!({"pane_id": pane_id, "text": text}),
+    )
+    .is_ok()
+    {
         return Ok(());
     }
     if bridge::which("herdr").is_none() {
         return Err(MirrorError("herdr not found on PATH".to_string()));
     }
-    let output = bridge::run_cmd(&["herdr", "pane", "send-text", pane_id, text], Duration::from_secs(5), None)
-        .map_err(|error| MirrorError(error.to_string()))?;
+    let output = bridge::run_cmd(
+        &["herdr", "pane", "send-text", pane_id, text],
+        Duration::from_secs(5),
+        None,
+    )
+    .map_err(|error| MirrorError(error.to_string()))?;
     if output.returncode == 0 {
         return Ok(());
     }
@@ -1804,14 +2350,25 @@ pub fn send_pane_text(pane_id: &str, text: &str) -> Result<(), MirrorError> {
     } else {
         output.returncode.to_string()
     };
-    Err(MirrorError(if detail.is_empty() { format!("herdr pane send-text failed for {pane_id}") } else { detail }))
+    Err(MirrorError(if detail.is_empty() {
+        format!("herdr pane send-text failed for {pane_id}")
+    } else {
+        detail
+    }))
 }
 
 pub fn send_pane_named_key(pane_id: &str, name: &str) -> Result<Value, MirrorError> {
-    let item = encode_named_key(pane_id, name).ok_or_else(|| MirrorError(format!("unknown key name: {name}")))?;
+    let item = encode_named_key(pane_id, name)
+        .ok_or_else(|| MirrorError(format!("unknown key name: {name}")))?;
     if let Some(key) = item.key.as_deref() {
         let mut api = bridge::herdr_api();
-        if bridge::herdr_rpc(&mut api, "pane.send_keys", json!({"pane_id": pane_id, "keys": key, "key": key})).is_ok() {
+        if bridge::herdr_rpc(
+            &mut api,
+            "pane.send_keys",
+            json!({"pane_id": pane_id, "keys": key, "key": key}),
+        )
+        .is_ok()
+        {
             return Ok(json!({"pane_id": pane_id, "key": key, "via": "send_keys"}));
         }
     }
@@ -1820,7 +2377,9 @@ pub fn send_pane_named_key(pane_id: &str, name: &str) -> Result<Value, MirrorErr
         send_pane_text(pane_id, &text)?;
         return Ok(json!({"pane_id": pane_id, "key": item.key, "via": "csi"}));
     }
-    Err(MirrorError(format!("could not send key {name} to {pane_id}")))
+    Err(MirrorError(format!(
+        "could not send key {name} to {pane_id}"
+    )))
 }
 
 pub fn read_pane_text(pane_id: &str, lines: i64, ansi: bool) -> Result<String, MirrorError> {
@@ -1849,17 +2408,44 @@ pub fn read_pane_text(pane_id: &str, lines: i64, ansi: bool) -> Result<String, M
     let lines_text = lines.to_string();
     let mut attempts = Vec::new();
     if ansi {
-        attempts.push(vec!["pane", "read", pane_id, "--source", "recent-unwrapped", "--lines", &lines_text, "--ansi"]);
-        attempts.push(vec!["pane", "read", pane_id, "--source", "recent", "--lines", &lines_text, "--raw"]);
+        attempts.push(vec![
+            "pane",
+            "read",
+            pane_id,
+            "--source",
+            "recent-unwrapped",
+            "--lines",
+            &lines_text,
+            "--ansi",
+        ]);
+        attempts.push(vec![
+            "pane",
+            "read",
+            pane_id,
+            "--source",
+            "recent",
+            "--lines",
+            &lines_text,
+            "--raw",
+        ]);
     }
-    attempts.push(vec!["pane", "read", pane_id, "--source", "recent-unwrapped", "--lines", &lines_text]);
+    attempts.push(vec![
+        "pane",
+        "read",
+        pane_id,
+        "--source",
+        "recent-unwrapped",
+        "--lines",
+        &lines_text,
+    ]);
     let mut last_error = None;
     for args in attempts {
         match bridge::herdr_json(&args) {
             Ok(payload) => {
                 let text = extract_read_text(&payload);
                 return if text.is_empty() {
-                    serde_json::to_string_pretty(&payload).map_err(|error| MirrorError(error.to_string()))
+                    serde_json::to_string_pretty(&payload)
+                        .map_err(|error| MirrorError(error.to_string()))
                 } else {
                     Ok(text)
                 };
@@ -1868,10 +2454,20 @@ pub fn read_pane_text(pane_id: &str, lines: i64, ansi: bool) -> Result<String, M
         }
     }
     let output = bridge::run_cmd(
-        &["herdr", "pane", "read", pane_id, "--source", "recent-unwrapped", "--lines", &lines_text],
+        &[
+            "herdr",
+            "pane",
+            "read",
+            pane_id,
+            "--source",
+            "recent-unwrapped",
+            "--lines",
+            &lines_text,
+        ],
         Duration::from_secs(8),
         None,
-    ).map_err(|error| MirrorError(error.to_string()))?;
+    )
+    .map_err(|error| MirrorError(error.to_string()))?;
     if output.returncode != 0 {
         let detail = if !output.stderr.trim().is_empty() {
             output.stderr.trim().to_string()
@@ -1886,11 +2482,7 @@ pub fn read_pane_text(pane_id: &str, lines: i64, ansi: bool) -> Result<String, M
 }
 
 /// Herdr 0.8 exposes edge resize, not a one-shot PTY claim-size RPC.
-pub fn resize_herdr_pane(pane_id: &str, cols: i64, rows: i64) {
-    if pane_id.is_empty() || cols <= 0 || rows <= 0 {
-        return;
-    }
-}
+pub fn resize_herdr_pane(_pane_id: &str, _cols: i64, _rows: i64) {}
 
 pub fn resize_pane_from_tty(pane_id: &str) -> Result<Option<Value>, MirrorError> {
     if !may_claim_client_size(pane_id) {
@@ -1901,14 +2493,20 @@ pub fn resize_pane_from_tty(pane_id: &str) -> Result<Option<Value>, MirrorError>
     if output.returncode != 0 {
         return Ok(None);
     }
-    let dimensions: Vec<i64> = output.stdout.split_whitespace().filter_map(|value| value.parse().ok()).collect();
+    let dimensions: Vec<i64> = output
+        .stdout
+        .split_whitespace()
+        .filter_map(|value| value.parse().ok())
+        .collect();
     if dimensions.len() != 2 {
         return Ok(None);
     }
     let rows = dimensions[0];
     let cols = dimensions[1];
     resize_herdr_pane(pane_id, cols, rows);
-    Ok(Some(json!({"pane_id": pane_id, "cols": cols, "rows": rows})))
+    Ok(Some(
+        json!({"pane_id": pane_id, "cols": cols, "rows": rows}),
+    ))
 }
 
 #[cfg(unix)]
@@ -2021,21 +2619,29 @@ where
         let text = match read_once() {
             Ok(text) => text,
             Err(error) => {
-                writeln!(stdout, "\ncmux-herdr: pane {pane_id} gone ({error})").map_err(|error| MirrorError(error.to_string()))?;
-                stdout.flush().map_err(|error| MirrorError(error.to_string()))?;
+                writeln!(stdout, "\ncmux-herdr: pane {pane_id} gone ({error})")
+                    .map_err(|error| MirrorError(error.to_string()))?;
+                stdout
+                    .flush()
+                    .map_err(|error| MirrorError(error.to_string()))?;
                 break Ok(1);
             }
         };
         let (chunk, full_redraw) = engine::output_delta(last.as_deref(), &text);
         if last.is_none() || full_redraw {
-            write!(stdout, "\x1b[H\x1b[2J{header}{text}").map_err(|error| MirrorError(error.to_string()))?;
+            write!(stdout, "\x1b[H\x1b[2J{header}{text}")
+                .map_err(|error| MirrorError(error.to_string()))?;
             if !text.ends_with('\n') {
                 writeln!(stdout).map_err(|error| MirrorError(error.to_string()))?;
             }
-            stdout.flush().map_err(|error| MirrorError(error.to_string()))?;
+            stdout
+                .flush()
+                .map_err(|error| MirrorError(error.to_string()))?;
         } else if !chunk.is_empty() {
             write!(stdout, "{chunk}").map_err(|error| MirrorError(error.to_string()))?;
-            stdout.flush().map_err(|error| MirrorError(error.to_string()))?;
+            stdout
+                .flush()
+                .map_err(|error| MirrorError(error.to_string()))?;
         }
         last = Some(text);
         if send_input {
@@ -2063,7 +2669,14 @@ pub fn attach_pane_loop(
 ) -> Result<i32, MirrorError> {
     let mut output = io::stdout();
     attach_pane_loop_with(
-        pane_id, interval, lines, send_input, raw_tty, follow_resize, ansi, None,
+        pane_id,
+        interval,
+        lines,
+        send_input,
+        raw_tty,
+        follow_resize,
+        ansi,
+        None,
         || read_pane_text(pane_id, lines, ansi),
         std::thread::sleep,
         &mut output,
@@ -2072,7 +2685,10 @@ pub fn attach_pane_loop(
 
 pub fn wait_herdr_event(timeout: f64) -> bool {
     let timeout = Duration::from_secs_f64(timeout.max(0.0));
-    let Some(mut session) = EventSession::try_open(None, Duration::from_secs_f64(timeout.as_secs_f64().max(0.1))) else {
+    let Some(mut session) = EventSession::try_open(
+        None,
+        Duration::from_secs_f64(timeout.as_secs_f64().max(0.1)),
+    ) else {
         std::thread::sleep(Duration::from_secs_f64(timeout.as_secs_f64().max(0.05)));
         return false;
     };
@@ -2091,19 +2707,45 @@ mod tests {
         let plan = MirrorPlan {
             actions: vec![
                 MirrorAction {
-                    op: "create_tab".into(), pane_id: "p1".into(), title: "one".into(), tab_id: "t".into(),
-                    role: "tab-root".into(), split_direction: "right".into(), key: "k1".into(), surface_id: None,
-                    split_from_surface_id: None, split_from_pane_id: None, ratio: None, tab_index: None, reason: String::new(),
+                    op: "create_tab".into(),
+                    pane_id: "p1".into(),
+                    title: "one".into(),
+                    tab_id: "t".into(),
+                    role: "tab-root".into(),
+                    split_direction: "right".into(),
+                    key: "k1".into(),
+                    surface_id: None,
+                    split_from_surface_id: None,
+                    split_from_pane_id: None,
+                    ratio: None,
+                    tab_index: None,
+                    reason: String::new(),
                 },
                 MirrorAction {
-                    op: "create_split".into(), pane_id: "p2".into(), title: "two".into(), tab_id: "t".into(),
-                    role: "split".into(), split_direction: "right".into(), key: "k2".into(), surface_id: None,
-                    split_from_surface_id: None, split_from_pane_id: None, ratio: None, tab_index: None, reason: String::new(),
+                    op: "create_split".into(),
+                    pane_id: "p2".into(),
+                    title: "two".into(),
+                    tab_id: "t".into(),
+                    role: "split".into(),
+                    split_direction: "right".into(),
+                    key: "k2".into(),
+                    surface_id: None,
+                    split_from_surface_id: None,
+                    split_from_pane_id: None,
+                    ratio: None,
+                    tab_index: None,
+                    reason: String::new(),
                 },
             ],
             ..MirrorPlan::default()
         };
-        assert_eq!(plan.creates().iter().map(|action| action.pane_id.as_str()).collect::<Vec<_>>(), vec!["p1", "p2"]);
+        assert_eq!(
+            plan.creates()
+                .iter()
+                .map(|action| action.pane_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["p1", "p2"]
+        );
     }
 
     #[test]
@@ -2112,7 +2754,8 @@ mod tests {
         let snapshot = snapshot_from_session_payload(&json!({
             "panes": [{"pane_id": "p", "tab_id": "t", "workspace_id": "w"}],
             "tabs": [{"tab_id": "t", "workspace_id": "w", "label": title}],
-        })).unwrap();
+        }))
+        .unwrap();
         let desired = desired_mirrors(&snapshot, "all", None, None, false).unwrap();
         assert_eq!(desired[0].title.chars().count(), 80);
         assert!(desired[0].title.chars().all(|character| character == 'é'));
@@ -2130,7 +2773,13 @@ mod tests {
             false,
             None,
         );
-        assert_eq!(plan.prunes().iter().map(|action| action.pane_id.as_str()).collect::<Vec<_>>(), vec!["a", "z"]);
+        assert_eq!(
+            plan.prunes()
+                .iter()
+                .map(|action| action.pane_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["a", "z"]
+        );
     }
 
     #[test]
@@ -2166,39 +2815,77 @@ mod tests {
     #[test]
     fn cmux_json_retries_without_json_flag() {
         let mut runner = FakeCmuxRunner::default();
-        runner.replies.push_back(Ok(command_output(2, "", "unknown flag --json")));
-        runner.replies.push_back(Ok(command_output(0, "OK\n{\"surface_id\":\"s1\"}\n", "")));
-        let result = cmux_json_with(&mut runner, &["tree".to_string()], Some("workspace:1")).unwrap();
+        runner
+            .replies
+            .push_back(Ok(command_output(2, "", "unknown flag --json")));
+        runner
+            .replies
+            .push_back(Ok(command_output(0, "OK\n{\"surface_id\":\"s1\"}\n", "")));
+        let result =
+            cmux_json_with(&mut runner, &["tree".to_string()], Some("workspace:1")).unwrap();
         assert_eq!(result["surface_id"], "s1");
-        assert_eq!(runner.calls, vec![vec!["tree".to_string(), "--json".to_string()], vec!["tree".to_string()]]);
+        assert_eq!(
+            runner.calls,
+            vec![
+                vec!["tree".to_string(), "--json".to_string()],
+                vec!["tree".to_string()]
+            ]
+        );
     }
 
     #[test]
     fn cmux_json_propagates_malformed_json_candidate() {
         let mut runner = FakeCmuxRunner::default();
-        runner.replies.push_back(Ok(command_output(0, "OK\n{broken", "")));
+        runner
+            .replies
+            .push_back(Ok(command_output(0, "OK\n{broken", "")));
         assert!(cmux_json_with(&mut runner, &["tree".to_string()], None).is_err());
     }
 
     #[test]
     fn live_surface_collection_ignores_empty_identifiers() {
         let mut found = HashSet::new();
-        collect_ids(&json!({"pane_id":"", "nested":[{"surface_id":""}]}), &mut found);
+        collect_ids(
+            &json!({"pane_id":"", "nested":[{"surface_id":""}]}),
+            &mut found,
+        );
         assert!(found.is_empty());
     }
 
     #[test]
     fn apply_split_failure_refuses_orphan_tab_fallback() {
         let desired = DesiredMirror {
-            pane_id: "p2".into(), tab_id: "t".into(), workspace_id: "w".into(), title: "Child".into(),
-            role: "split".into(), split_direction: "right".into(), agent: None, agent_status: "unknown".into(),
-            split_ratio: None, split_from_pane_id: Some("p1".into()), tab_number: None, tab_index: Some(0),
-            focused: false, zoomed: false, visible: true,
+            pane_id: "p2".into(),
+            tab_id: "t".into(),
+            workspace_id: "w".into(),
+            title: "Child".into(),
+            role: "split".into(),
+            split_direction: "right".into(),
+            agent: None,
+            agent_status: "unknown".into(),
+            split_ratio: None,
+            split_from_pane_id: Some("p1".into()),
+            tab_number: None,
+            tab_index: Some(0),
+            focused: false,
+            zoomed: false,
+            visible: true,
         };
-        let plan = plan_mirror(&[desired], &json!({"p1": {"pane_id":"p1", "tab_id":"t", "role":"tab-root", "cmux_surface_id":"s1"}}), None, false, false, false, false, None);
+        let plan = plan_mirror(
+            &[desired],
+            &json!({"p1": {"pane_id":"p1", "tab_id":"t", "role":"tab-root", "cmux_surface_id":"s1"}}),
+            None,
+            false,
+            false,
+            false,
+            false,
+            None,
+        );
         let mut runner = FakeCmuxRunner::default();
         for _ in 0..6 {
-            runner.replies.push_back(Ok(command_output(1, "", "split denied")));
+            runner
+                .replies
+                .push_back(Ok(command_output(1, "", "split denied")));
         }
         let result = apply_mirror_plan_with(
             &plan,
@@ -2206,8 +2893,14 @@ mod tests {
             Some("workspace:1"), false, false, None, &mut runner, false,
         ).unwrap();
         assert_eq!(result["created"], json!([]));
-        assert!(result["errors"][0].as_str().unwrap().contains("refusing orphan-tab fallback"));
-        assert!(runner.calls.iter().all(|args| !args.iter().any(|arg| arg == "create-terminal")));
+        assert!(result["errors"][0]
+            .as_str()
+            .unwrap()
+            .contains("refusing orphan-tab fallback"));
+        assert!(runner
+            .calls
+            .iter()
+            .all(|args| !args.iter().any(|arg| arg == "create-terminal")));
     }
 
     #[test]
@@ -2219,7 +2912,8 @@ mod tests {
             ],
             "tabs": [{"tab_id":"t", "workspace_id":"w", "label":"Agents", "number":1}],
             "layouts": {"t": {"horizontal":[{"pane_id":"p1"},{"pane_id":"p2"}]}}
-        })).unwrap();
+        }))
+        .unwrap();
         let desired = desired_mirrors(&snapshot, "all", None, None, true).unwrap();
         let result = reconcile_engine_for_desired(&snapshot, &desired, &json!({}));
         assert_eq!(result.protected_pane_ids, vec!["p1", "p2"]);

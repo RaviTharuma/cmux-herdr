@@ -1,13 +1,15 @@
+#![allow(dead_code, unused_imports)]
+
 //! Golden parity: Rust impose planning must match the Python bridge across a
 //! captured battery of tree, metrics, drag, and reconcile cases.
 use std::path::PathBuf;
 
 use serde_json::{json, Value};
 
-#[path = "../src/layout.rs"]
-mod layout;
 #[path = "../src/impose.rs"]
 mod impose;
+#[path = "../src/layout.rs"]
+mod layout;
 
 use impose::{
     DividerDragHold, DividerNode, ImposeMetrics, ImposePlan, ImposeSize, LeafExpansion,
@@ -43,10 +45,12 @@ fn optional_f64_json(value: Option<f64>) -> Value {
 }
 
 fn size_json(value: Option<ImposeSize>) -> Value {
-    value.map_or(Value::Null, |s| json!({
-        "width": f64_json(s.width),
-        "height": f64_json(s.height),
-    }))
+    value.map_or(Value::Null, |s| {
+        json!({
+            "width": f64_json(s.width),
+            "height": f64_json(s.height),
+        })
+    })
 }
 
 fn size_from(value: &Value) -> Option<ImposeSize> {
@@ -198,23 +202,38 @@ fn impose_matches_python_golden() {
             "clamp_ratio" => f64_json(impose::clamp_ratio(f64_from(&inputs["value"]).unwrap())),
             "divider_fraction" => {
                 let rest: Vec<i64> = inputs["rest_spans"]
-                    .as_array().unwrap().iter().map(|v| v.as_i64().unwrap()).collect();
-                f64_json(impose::divider_fraction(inputs["first_span"].as_i64().unwrap(), &rest))
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| v.as_i64().unwrap())
+                    .collect();
+                f64_json(impose::divider_fraction(
+                    inputs["first_span"].as_i64().unwrap(),
+                    &rest,
+                ))
             }
             "region_bounded_plan_parent" => size_json(impose::region_bounded_plan_parent(
-                size_from(&inputs["render"]), size_from(&inputs["region"]),
+                size_from(&inputs["render"]),
+                size_from(&inputs["region"]),
             )),
             "same_shape_and_pane_ids" => json!(impose::same_shape_and_pane_ids(
-                &parsed(&inputs["lhs"]), &parsed(&inputs["rhs"]),
+                &parsed(&inputs["lhs"]),
+                &parsed(&inputs["rhs"]),
             )),
-            "leaf_expansion" => expansion_json(impose::leaf_expansion(
-                &parsed(&inputs["old"]),
-                &parsed(&inputs["new"]),
-                inputs["added_pane_id"].as_str().unwrap(),
-            ).as_ref()),
+            "leaf_expansion" => expansion_json(
+                impose::leaf_expansion(
+                    &parsed(&inputs["old"]),
+                    &parsed(&inputs["new"]),
+                    inputs["added_pane_id"].as_str().unwrap(),
+                )
+                .as_ref(),
+            ),
             "tree_action" => {
                 let previous = (!inputs["previous"].is_null()).then(|| parsed(&inputs["previous"]));
-                action_json(&impose::tree_action(previous.as_ref(), &parsed(&inputs["rendered"])))
+                action_json(&impose::tree_action(
+                    previous.as_ref(),
+                    &parsed(&inputs["rendered"]),
+                ))
             }
             "binary_tree" => divider_json(&impose::binary_tree(
                 &parsed(&inputs["node"]),
@@ -223,7 +242,12 @@ fn impose_matches_python_golden() {
             )),
             "collect_fractions" => {
                 let tree = impose::binary_tree(&parsed(&inputs["node"]), None, None);
-                Value::Array(impose::collect_fractions(&tree).into_iter().map(f64_json).collect())
+                Value::Array(
+                    impose::collect_fractions(&tree)
+                        .into_iter()
+                        .map(f64_json)
+                        .collect(),
+                )
             }
             "begin_divider_drag" => hold_json(Some(&impose::begin_divider_drag(
                 inputs["split_key"].as_str().unwrap(),
@@ -233,9 +257,14 @@ fn impose_matches_python_golden() {
             "resolve_divider_hold" => {
                 let hold = hold_from(&inputs["hold"]);
                 let assigned = inputs["assigned_cells"].as_i64();
-                hold_json(impose::resolve_divider_hold(
-                    hold, assigned, inputs["split_still_exists"].as_bool().unwrap(),
-                ).as_ref())
+                hold_json(
+                    impose::resolve_divider_hold(
+                        hold,
+                        assigned,
+                        inputs["split_still_exists"].as_bool().unwrap(),
+                    )
+                    .as_ref(),
+                )
             }
             "end_divider_drag" => {
                 let (cells, should_send) = impose::end_divider_drag(
@@ -262,9 +291,12 @@ fn impose_matches_python_golden() {
                     hold.as_ref(),
                 ))
             }
-            "specs_with_impose_fractions" => json!(impose::specs_with_impose_fractions(
-                &parsed(&inputs["node"]),
-            ).iter().map(spec_json).collect::<Vec<_>>()),
+            "specs_with_impose_fractions" => json!(impose::specs_with_impose_fractions(&parsed(
+                &inputs["node"]
+            ),)
+            .iter()
+            .map(spec_json)
+            .collect::<Vec<_>>()),
             "plan_from_reconcile" => {
                 let result = FakeReconcile {
                     rendered_layout: parsed(&inputs["rendered"]),
@@ -285,11 +317,6 @@ fn impose_matches_python_golden() {
             }
             op => panic!("unknown golden operation {op}"),
         };
-        assert_eq!(
-            exact_floats(got),
-            case["output"],
-            "case {}",
-            case["name"]
-        );
+        assert_eq!(exact_floats(got), case["output"], "case {}", case["name"]);
     }
 }

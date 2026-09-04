@@ -108,8 +108,8 @@ pub fn host_actions(result: &ReconcileResult, plan: &ImposePlan) -> Vec<HostActi
         "keep" => actions.push(HostAction::new("keep_tree")),
         "expand_leaf" => {
             if let Some(expansion) = &plan.tree_action.expansion {
-                let mut action = HostAction::new("expand_leaf")
-                    .with_pane_id(expansion.new_pane_id.clone());
+                let mut action =
+                    HostAction::new("expand_leaf").with_pane_id(expansion.new_pane_id.clone());
                 action.split_from_pane_id = Some(expansion.existing_pane_id.clone());
                 action.orientation = Some(expansion.orientation.clone());
                 action.fraction = Some(expansion.fraction);
@@ -237,7 +237,10 @@ impl FakeBonsplitHost {
 }
 
 fn required<'a>(value: &'a Option<String>, message: &str) -> Result<&'a str, HostError> {
-    value.as_deref().filter(|item| !item.is_empty()).ok_or_else(|| HostError(message.to_string()))
+    value
+        .as_deref()
+        .filter(|item| !item.is_empty())
+        .ok_or_else(|| HostError(message.to_string()))
 }
 
 fn required_panes(action: &HostAction) -> Vec<&String> {

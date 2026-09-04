@@ -34,7 +34,10 @@ pub const DEFAULT_STYLE: Style = Style {
 /// done `checkmark.circle/#34c759/30`, blocked
 /// `exclamationmark.triangle/#ff3b30/90`, unknown `questionmark.circle/#8e8e93/10`.
 pub fn map_status_to_style(status: Option<&str>) -> Style {
-    let key = status.filter(|s| !s.is_empty()).unwrap_or("unknown").to_lowercase();
+    let key = status
+        .filter(|s| !s.is_empty())
+        .unwrap_or("unknown")
+        .to_lowercase();
     let key = key.trim();
     match key {
         "working" => Style {
@@ -78,7 +81,11 @@ pub fn status_value_for_pane(
     locked_title: Option<&str>,
     parent_tab_id: Option<&str>,
 ) -> String {
-    let agent = pane.agent.as_deref().filter(|a| !a.is_empty()).unwrap_or("agent");
+    let agent = pane
+        .agent
+        .as_deref()
+        .filter(|a| !a.is_empty())
+        .unwrap_or("agent");
     let status = pane.agent_status.to_lowercase();
     let mut parts = vec![format!("{agent}/{status}")];
 
@@ -140,12 +147,7 @@ pub fn status_write_payload(
     };
 
     let style = map_status_to_style(Some(&pane.agent_status));
-    let value = status_value_for_pane(
-        pane,
-        tabs_by_id,
-        locked.as_deref(),
-        parent_tab.as_deref(),
-    );
+    let value = status_value_for_pane(pane, tabs_by_id, locked.as_deref(), parent_tab.as_deref());
 
     json!({
         "value": value,

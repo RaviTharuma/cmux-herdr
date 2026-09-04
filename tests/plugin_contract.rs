@@ -15,19 +15,29 @@ fn executable(path: &Path) -> bool {
 fn manifest_uses_fetch_build_and_sidebar_launcher() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let text = fs::read_to_string(root.join("cmux-plugin.toml")).unwrap();
+    let version = fs::read_to_string(root.join("VERSION")).unwrap();
+    let version = version.trim();
+    assert_eq!(env!("CARGO_PKG_VERSION"), version);
     let doc = text.parse::<toml_edit::DocumentMut>().unwrap();
     assert_eq!(doc["plugin"]["name"].as_str(), Some("cmux-herdr"));
     assert_eq!(doc["plugin"]["kind"].as_str(), Some("sidebar"));
+    assert_eq!(doc["plugin"]["version"].as_str(), Some(version));
     assert_eq!(
-        doc["plugin"]["version"].as_str(),
-        Some(fs::read_to_string(root.join("VERSION")).unwrap().trim())
-    );
-    assert_eq!(
-        doc["run"]["command"].as_array().unwrap().get(0).unwrap().as_str(),
+        doc["run"]["command"]
+            .as_array()
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .as_str(),
         Some("bin/cmux-herdr-sidebar")
     );
     assert_eq!(
-        doc["build"]["command"].as_array().unwrap().get(0).unwrap().as_str(),
+        doc["build"]["command"]
+            .as_array()
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .as_str(),
         Some("bin/cmux-herdr-fetch")
     );
     for name in ["cmux-herdr", "cmux-herdr-sidebar", "cmux-herdr-fetch"] {
@@ -44,10 +54,13 @@ fn copy_executable(from: &Path, to: &Path) {
 }
 
 #[test]
-fn launchers_exec_one_cached_binary_with_sidebar_subcommand() {
+fn launchers_exec_cached_binary_and_resolve_symlink() {
+    // Keep direct and symlink execution in one test. Some overlay filesystems
+    // transiently return ETXTBSY when separate tests execute freshly copied
+    // scripts concurrently.
     let source = Path::new(env!("CARGO_MANIFEST_DIR"));
     let tmp = tempfile::tempdir().unwrap();
-    let root = tmp.path();
+    let root = tmp.path().join("checkout");
     fs::create_dir_all(root.join("bin")).unwrap();
     fs::create_dir_all(root.join(".cmux-herdr/bin")).unwrap();
     for name in ["cmux-herdr", "cmux-herdr-sidebar", "cmux-herdr-fetch"] {
@@ -69,32 +82,18 @@ fn launchers_exec_one_cached_binary_with_sidebar_subcommand() {
         .output()
         .unwrap();
     assert!(sidebar.status.success());
-    assert_eq!(String::from_utf8(sidebar.stdout).unwrap(), "sidebar --once\n");
-}
-
-#[test]
-fn cli_launcher_resolves_symlink_to_checkout() {
-    let source = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let tmp = tempfile::tempdir().unwrap();
-    let root = tmp.path().join("checkout");
-    fs::create_dir_all(root.join("bin")).unwrap();
-    fs::create_dir_all(root.join(".cmux-herdr/bin")).unwrap();
-    copy_executable(
-        &source.join("bin/cmux-herdr"),
-        &root.join("bin/cmux-herdr"),
+    assert_eq!(
+        String::from_utf8(sidebar.stdout).unwrap(),
+        "sidebar --once\n"
     );
-    // Fetch is not called because the cached runtime exists.
-    let runtime = root.join(".cmux-herdr/bin/cmux-herdr");
-    fs::write(&runtime, "#!/bin/sh\nprintf 'resolved:%s\\n' \"$*\"\n").unwrap();
-    fs::set_permissions(&runtime, fs::Permissions::from_mode(0o755)).unwrap();
+
     let link_dir = tmp.path().join("home/.local/bin");
     fs::create_dir_all(&link_dir).unwrap();
     std::os::unix::fs::symlink(root.join("bin/cmux-herdr"), link_dir.join("cmux-herdr")).unwrap();
-
-    let output = Command::new(link_dir.join("cmux-herdr"))
+    let linked = Command::new(link_dir.join("cmux-herdr"))
         .arg("tree")
         .output()
         .unwrap();
-    assert!(output.status.success());
-    assert_eq!(String::from_utf8(output.stdout).unwrap(), "resolved:tree\n");
+    assert!(linked.status.success());
+    assert_eq!(String::from_utf8(linked.stdout).unwrap(), "tree\n");
 }

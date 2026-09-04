@@ -20,9 +20,7 @@ use crate::engine::{
 };
 use crate::handoff;
 use crate::host::{host_actions, FakeBonsplitHost, HostAction};
-use crate::impose::{
-    begin_divider_drag, end_divider_drag, resolve_divider_hold, DividerDragHold,
-};
+use crate::impose::{begin_divider_drag, end_divider_drag, resolve_divider_hold, DividerDragHold};
 use crate::io::{CwdUpdate, PaneIORouter};
 use crate::lifecycle::{
     dispatch, pane_grid_payload, AttachWindowTarget, DiscoveredSession, LifecycleController,
@@ -141,7 +139,10 @@ impl LiveWindowMirror {
     }
 
     pub fn make_panel(&mut self, pane_id: &str) -> &mut GhosttySurface {
-        let needs_create = self.surfaces.get(pane_id).is_none_or(|surface| !surface.live);
+        let needs_create = self
+            .surfaces
+            .get(pane_id)
+            .is_none_or(|surface| !surface.live);
         if needs_create {
             if !self.surface_order.iter().any(|item| item == pane_id) {
                 self.surface_order.push(pane_id.into());
@@ -190,7 +191,11 @@ impl LiveWindowMirror {
         self.is_applying_layout = false;
         applied?;
 
-        let pane_ids = self.state.as_ref().map(|state| state.pane_ids.clone()).unwrap_or_default();
+        let pane_ids = self
+            .state
+            .as_ref()
+            .map(|state| state.pane_ids.clone())
+            .unwrap_or_default();
         self.io.set_live_panes(&pane_ids);
         self.focus.live_pane_ids = pane_ids;
         if let Some(pane_id) = result.focus_pane_id.as_deref() {
@@ -207,7 +212,9 @@ impl LiveWindowMirror {
             "create_panel" => {
                 if let Some(pane_id) = action.pane_id.as_deref() {
                     self.make_panel(pane_id);
-                    self.bonsplit.apply(std::slice::from_ref(action)).map_err(|error| error.to_string())?;
+                    self.bonsplit
+                        .apply(std::slice::from_ref(action))
+                        .map_err(|error| error.to_string())?;
                     Ok(format!("make_panel:{pane_id}"))
                 } else {
                     Ok(String::new())
@@ -216,7 +223,9 @@ impl LiveWindowMirror {
             "close_panel" => {
                 if let Some(pane_id) = action.pane_id.as_deref() {
                     self.close_panel(pane_id);
-                    self.bonsplit.apply(std::slice::from_ref(action)).map_err(|error| error.to_string())?;
+                    self.bonsplit
+                        .apply(std::slice::from_ref(action))
+                        .map_err(|error| error.to_string())?;
                     Ok(format!("close_panel:{pane_id}"))
                 } else {
                     Ok(String::new())
@@ -224,7 +233,9 @@ impl LiveWindowMirror {
             }
             "focus" => Ok(String::new()),
             _ => {
-                self.bonsplit.apply(std::slice::from_ref(action)).map_err(|error| error.to_string())?;
+                self.bonsplit
+                    .apply(std::slice::from_ref(action))
+                    .map_err(|error| error.to_string())?;
                 Ok(action.op.clone())
             }
         }
@@ -234,7 +245,11 @@ impl LiveWindowMirror {
         let Some(write) = self.io.route_output(pane_id, data) else {
             return false;
         };
-        let Some(surface) = self.surfaces.get_mut(pane_id).filter(|surface| surface.live) else {
+        let Some(surface) = self
+            .surfaces
+            .get_mut(pane_id)
+            .filter(|surface| surface.live)
+        else {
             return false;
         };
         surface.process_remote_output(&write.data);
@@ -287,7 +302,11 @@ impl LiveWindowMirror {
     }
 
     fn apply_cached_cwd(&mut self) {
-        let active = self.io.active_pane_id.as_ref().or(self.focus.active_pane_id.as_ref());
+        let active = self
+            .io
+            .active_pane_id
+            .as_ref()
+            .or(self.focus.active_pane_id.as_ref());
         if let Some(path) = active.and_then(|pane_id| self.io.cwd_by_pane.get(pane_id)) {
             self.tab_cwd = Some(path.clone());
         }
@@ -357,18 +376,11 @@ impl LiveWindowMirror {
         total_cells: i64,
         assigned_cells: i64,
     ) -> (i64, bool) {
-        let (cells, should_send) = end_divider_drag(
-            dragged_extent,
-            axis_span,
-            total_cells,
-            assigned_cells,
-        );
+        let (cells, should_send) =
+            end_divider_drag(dragged_extent, axis_span, total_cells, assigned_cells);
         if should_send && self.drag_hold.is_some() {
-            self.drag_hold = resolve_divider_hold(
-                self.drag_hold.take(),
-                Some(assigned_cells),
-                true,
-            );
+            self.drag_hold =
+                resolve_divider_hold(self.drag_hold.take(), Some(assigned_cells), true);
         }
         if should_send {
             let (split_key, axis) = self
@@ -384,12 +396,23 @@ impl LiveWindowMirror {
     }
 
     pub fn note_resize_reply(&mut self, assigned_cells: i64, split_exists: bool) {
-        self.drag_hold = resolve_divider_hold(self.drag_hold.take(), Some(assigned_cells), split_exists);
+        self.drag_hold =
+            resolve_divider_hold(self.drag_hold.take(), Some(assigned_cells), split_exists);
     }
 
-    pub fn seed_pane(&mut self, pane_id: &str, data: &[u8], cols: i64, rows: i64) -> Option<Vec<u8>> {
+    pub fn seed_pane(
+        &mut self,
+        pane_id: &str,
+        data: &[u8],
+        cols: i64,
+        rows: i64,
+    ) -> Option<Vec<u8>> {
         self.seed.queue(pane_id, data, "full", Some((cols, rows)));
-        let current = self.surfaces.get(pane_id).map(|surface| (surface.cols, surface.rows)).unwrap_or((0, 0));
+        let current = self
+            .surfaces
+            .get(pane_id)
+            .map(|surface| (surface.cols, surface.rows))
+            .unwrap_or((0, 0));
         let flushed = self.seed.note_ready(pane_id, current.0, current.1);
         if let Some(data) = flushed.as_deref() {
             self.route_output(pane_id, data);
@@ -532,7 +555,14 @@ impl LiveApplyHost {
                         let seeds: Vec<_> = mirror
                             .surfaces
                             .iter()
-                            .map(|(pane_id, surface)| (pane_id.clone(), surface.buffer.clone(), surface.cols, surface.rows))
+                            .map(|(pane_id, surface)| {
+                                (
+                                    pane_id.clone(),
+                                    surface.buffer.clone(),
+                                    surface.cols,
+                                    surface.rows,
+                                )
+                            })
                             .collect();
                         for (pane_id, data, cols, rows) in seeds {
                             mirror.seed_pane(&pane_id, &data, cols, rows);
@@ -542,7 +572,10 @@ impl LiveApplyHost {
                 _ => {}
             }
         }
-        self.log.push(format!("attach:{}", result["outcome"].as_str().unwrap_or("None")));
+        self.log.push(format!(
+            "attach:{}",
+            result["outcome"].as_str().unwrap_or("None")
+        ));
         result
     }
 
@@ -555,7 +588,8 @@ impl LiveApplyHost {
             .iter()
             .map(|window| (window.tab_id.clone(), window.title.clone()))
             .collect();
-        let previous_titles: std::collections::HashMap<String, String> = self.previous_titles.clone().into_iter().collect();
+        let previous_titles: std::collections::HashMap<String, String> =
+            self.previous_titles.clone().into_iter().collect();
         let actions = crate::session::session_actions(
             &session,
             Some(&titles),
@@ -564,7 +598,10 @@ impl LiveApplyHost {
             None,
         );
         self.session_host.apply(&actions)?;
-        if actions.iter().any(|action| action.op == "close_default_tabs") {
+        if actions
+            .iter()
+            .any(|action| action.op == "close_default_tabs")
+        {
             self.defaults_open = false;
         }
         for tab_id in &session.closed_tab_ids {
@@ -588,7 +625,8 @@ impl LiveApplyHost {
         }
         self.previous_tab_ids = session.ordered_tab_ids.clone();
         self.previous_titles = titles.into_iter().collect();
-        self.log.push(format!("session:tabs={}", self.windows.len()));
+        self.log
+            .push(format!("session:tabs={}", self.windows.len()));
         Ok(json!({
             "ok": true,
             "tabs": self.window_order,
@@ -677,7 +715,11 @@ impl LiveApplyHost {
     pub fn drain_input(&mut self) -> Vec<ProviderInput> {
         let mut items = Vec::new();
         for tab_id in self.window_order.clone() {
-            if let Some(mirror) = self.windows.get_mut(&tab_id).filter(|mirror| !mirror.is_torn_down) {
+            if let Some(mirror) = self
+                .windows
+                .get_mut(&tab_id)
+                .filter(|mirror| !mirror.is_torn_down)
+            {
                 items.extend(mirror.input.drain());
             }
         }
@@ -731,12 +773,21 @@ impl LiveApplyHost {
 
     pub fn restore(&mut self, sessions: &[DiscoveredSession], windows: &[HerdrWindow]) -> Value {
         let restored = self.lifecycle.restore(sessions);
-        let applied = self.apply_session(windows).unwrap_or_else(|error| json!({"ok": false, "error": error}));
+        let applied = self
+            .apply_session(windows)
+            .unwrap_or_else(|error| json!({"ok": false, "error": error}));
         for mirror in self.windows.values_mut() {
             let seeds: Vec<_> = mirror
                 .surfaces
                 .iter()
-                .map(|(pane_id, surface)| (pane_id.clone(), surface.buffer.clone(), surface.cols, surface.rows))
+                .map(|(pane_id, surface)| {
+                    (
+                        pane_id.clone(),
+                        surface.buffer.clone(),
+                        surface.cols,
+                        surface.rows,
+                    )
+                })
                 .collect();
             for (pane_id, data, cols, rows) in seeds {
                 mirror.seed_pane(&pane_id, &data, cols, rows);
@@ -869,7 +920,10 @@ fn ordered_set(entries: &mut Vec<(String, String)>, key: &str, value: &str) {
 }
 
 fn ordered_get<'a>(entries: &'a [(String, String)], key: &str) -> Option<&'a str> {
-    entries.iter().find(|(item, _)| item == key).map(|(_, value)| value.as_str())
+    entries
+        .iter()
+        .find(|(item, _)| item == key)
+        .map(|(_, value)| value.as_str())
 }
 
 pub fn apply_live_windows(
@@ -913,17 +967,30 @@ pub fn sessions_from_snapshot(snapshot: &Snapshot) -> Vec<DiscoveredSession> {
             .workspaces
             .iter()
             .map(|workspace| {
-                let session_id = if workspace.workspace_id.is_empty() { "main" } else { &workspace.workspace_id };
+                let session_id = if workspace.workspace_id.is_empty() {
+                    "main"
+                } else {
+                    &workspace.workspace_id
+                };
                 DiscoveredSession::new(
                     session_id,
-                    workspace.label.as_deref().filter(|label| !label.is_empty()).unwrap_or(session_id),
+                    workspace
+                        .label
+                        .as_deref()
+                        .filter(|label| !label.is_empty())
+                        .unwrap_or(session_id),
                     workspace.tab_count,
                     false,
                 )
             })
             .collect();
     }
-    vec![DiscoveredSession::new("main", "main", snapshot.tabs.len() as i64, false)]
+    vec![DiscoveredSession::new(
+        "main",
+        "main",
+        snapshot.tabs.len() as i64,
+        false,
+    )]
 }
 
 pub fn persist_host_restore(host: &LiveApplyHost) -> Option<String> {
@@ -944,12 +1011,17 @@ fn foreign_payload(action: &str, method: Option<&str>) -> Option<Value> {
             .as_ref()
             .is_some_and(|lease| lease.pid != 0 && lease.pid != std::process::id() as i64);
     if action == "observe" && (decision.yields() || observe_foreign_plugin) {
-        return Some(handoff::observe_foreign(&decision, method.unwrap_or("remote.herdr.state")));
+        return Some(handoff::observe_foreign(
+            &decision,
+            method.unwrap_or("remote.herdr.state"),
+        ));
     }
     if decision.yields() {
         let mut body = decision.payload(action, method);
         if action == "restore" {
-            body.as_object_mut().unwrap().insert("mode".into(), json!("reattach"));
+            body.as_object_mut()
+                .unwrap()
+                .insert("mode".into(), json!("reattach"));
         }
         return Some(body);
     }
@@ -972,7 +1044,9 @@ pub fn attach_live(
         return (None, yielded);
     }
     let mut host = LiveApplyHost::new(true, socket_path, false);
-    let applied = host.apply_session(windows).unwrap_or_else(|error| json!({"ok": false, "error": error}));
+    let applied = host
+        .apply_session(windows)
+        .unwrap_or_else(|error| json!({"ok": false, "error": error}));
     let attached = host.attach(sessions, activate);
     let path = if persist && attached["ok"].as_bool() == Some(true) {
         persist_host_restore(&host)
@@ -980,7 +1054,11 @@ pub fn attach_live(
         None
     };
     if attached["ok"].as_bool() == Some(true) {
-        let _ = handoff::claim_plugin_writer(&fingerprint_key(), socket_path, &endpoint_hash(socket_path));
+        let _ = handoff::claim_plugin_writer(
+            &fingerprint_key(),
+            socket_path,
+            &endpoint_hash(socket_path),
+        );
     }
     let result = json!({
         "ok": applied["ok"].as_bool().unwrap_or(false) && attached["ok"].as_bool().unwrap_or(false),
@@ -1007,9 +1085,16 @@ pub fn restore_live(
     let record = handoff::read_shared_restore(&hashed)
         .as_ref()
         .and_then(RestoreRecord::from_value)
-        .or_else(|| read_restore(&restore_record_path(socket_path)).ok().flatten());
+        .or_else(|| {
+            read_restore(&restore_record_path(socket_path))
+                .ok()
+                .flatten()
+        });
     let Some(record) = record else {
-        return (Some(host), json!({"ok": false, "outcome": "no_persist", "server_stopped": false}));
+        return (
+            Some(host),
+            json!({"ok": false, "outcome": "no_persist", "server_stopped": false}),
+        );
     };
     host.lifecycle.persist = Some(record);
     let mut restored = host.restore(sessions, windows);
@@ -1041,7 +1126,10 @@ pub fn observe_live(
         return (None, json!({"ok": false, "code": "apply_failed"}));
     };
     host.socket_path = socket_path.into();
-    let observed = host.observe(method, Some(&json!({"socket": socket_path, "session": session})));
+    let observed = host.observe(
+        method,
+        Some(&json!({"socket": socket_path, "session": session})),
+    );
     (Some(host), observed)
 }
 
@@ -1058,7 +1146,10 @@ pub fn detach_live(windows: &[HerdrWindow], socket_path: &str) -> Value {
     host.socket_path = socket_path.into();
     let mut closed = host.detach();
     let object = closed.as_object_mut().unwrap();
-    object.insert("restore_cleared".into(), json!(clear_host_restore(socket_path)));
+    object.insert(
+        "restore_cleared".into(),
+        json!(clear_host_restore(socket_path)),
+    );
     object.insert("detached".into(), json!(true));
     handoff::release_plugin_writer(&fingerprint_key());
     closed
@@ -1118,12 +1209,16 @@ mod tests {
     #[test]
     fn input_and_live_pane_order_follow_window_arrival() {
         let mut host = LiveApplyHost::default();
-        host.apply_session(&[window("t2", "z"), window("t1", "a")]).unwrap();
+        host.apply_session(&[window("t2", "z"), window("t1", "a")])
+            .unwrap();
         host.window_mut("t2").unwrap().send_text("z", "first");
         host.window_mut("t1").unwrap().send_text("a", "second");
         assert_eq!(host.live_pane_ids(), vec!["z", "a"]);
         assert_eq!(
-            host.drain_input().into_iter().map(|item| item.pane_id).collect::<Vec<_>>(),
+            host.drain_input()
+                .into_iter()
+                .map(|item| item.pane_id)
+                .collect::<Vec<_>>(),
             vec!["z", "a"]
         );
     }
@@ -1135,7 +1230,10 @@ mod tests {
         let (_, send) = mirror.end_drag(50.0, 200.0, 200, 100);
         assert!(send);
         let hold = mirror.drag_hold.unwrap();
-        assert_eq!((hold.split_key.as_str(), hold.axis.as_str()), ("s", "horizontal"));
+        assert_eq!(
+            (hold.split_key.as_str(), hold.axis.as_str()),
+            ("s", "horizontal")
+        );
     }
 
     #[test]

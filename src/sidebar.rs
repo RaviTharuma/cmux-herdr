@@ -240,7 +240,6 @@ impl MuxClient {
         drop(self);
     }
 
-
     /// Send one command and return its `data` value.
     pub fn call(
         &mut self,
@@ -558,10 +557,7 @@ fn draw(stdout: &mut impl Write, state: &SidebarState) -> io::Result<()> {
 }
 
 /// Refresh and draw one frame to an injected writer, then close the client.
-pub fn run_sidebar_once_to(
-    environ: &HashMap<String, String>,
-    stdout: &mut impl Write,
-) -> i32 {
+pub fn run_sidebar_once_to(environ: &HashMap<String, String>, stdout: &mut impl Write) -> i32 {
     let mut state = SidebarState::new();
     refresh(environ, &mut state);
     let _ = draw(stdout, &state);
@@ -620,11 +616,11 @@ pub fn run_sidebar(environ: Option<&HashMap<String, String>>, once: bool) -> i32
                 InputAction::Move(_) => {}
                 InputAction::Select if !state.rows.is_empty() => {
                     if let Some(path) = socket_path_from_env(environ) {
-                        if let Err(error) = MuxClient::connect(
-                            path,
-                            Duration::from_secs_f64(REFRESH_SECONDS),
-                        )
-                        .and_then(|mut client| client.select_workspace(state.selected as i64))
+                        if let Err(error) =
+                            MuxClient::connect(path, Duration::from_secs_f64(REFRESH_SECONDS))
+                                .and_then(|mut client| {
+                                    client.select_workspace(state.selected as i64)
+                                })
                         {
                             state.message = error.to_string();
                             state.connected = false;
@@ -745,7 +741,8 @@ mod tests {
             }
         });
 
-        let mut client = MuxClient::connect(path.to_string_lossy(), Duration::from_secs(2)).unwrap();
+        let mut client =
+            MuxClient::connect(path.to_string_lossy(), Duration::from_secs(2)).unwrap();
         let live = client.list_workspaces().unwrap();
         assert_eq!(live.len(), 1);
         assert_eq!(live[0].name, "lab");

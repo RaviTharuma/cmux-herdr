@@ -181,10 +181,7 @@ pub fn bind_surface(state: &mut WindowMirrorState, pane_id: &str, surface_id: &s
         .insert(pane_id.to_string(), surface_id.to_string());
 }
 
-pub fn reconcile_session(
-    windows: &[HerdrWindow],
-    previous_tab_ids: &[String],
-) -> SessionReconcile {
+pub fn reconcile_session(windows: &[HerdrWindow], previous_tab_ids: &[String]) -> SessionReconcile {
     let mut sorted: Vec<&HerdrWindow> = windows.iter().collect();
     sorted.sort_by(|left, right| {
         left.order_index
@@ -257,7 +254,11 @@ fn py_round(value: f64) -> i64 {
         floor as i64 + 1
     } else {
         let lower = floor as i64;
-        if lower % 2 == 0 { lower } else { lower + 1 }
+        if lower % 2 == 0 {
+            lower
+        } else {
+            lower + 1
+        }
     }
 }
 
@@ -323,7 +324,15 @@ mod tests {
 
     #[test]
     fn non_zoom_window_drops_visible_layout() {
-        let window = HerdrWindow::new("t", "t", 0, leaf("base"), Some(leaf("visible")), false, None);
+        let window = HerdrWindow::new(
+            "t",
+            "t",
+            0,
+            leaf("base"),
+            Some(leaf("visible")),
+            false,
+            None,
+        );
         assert!(window.visible_layout.is_none());
         assert_eq!(window.rendered_layout().pane_id.as_deref(), Some("base"));
     }

@@ -63,7 +63,10 @@ impl Pane {
     /// True when this pane carries an agent (`has_agent`): a non-empty agent
     /// name, or an `agent_status` that is not `""`/`unknown`.
     pub fn has_agent(&self) -> bool {
-        self.agent.as_deref().map(|a| !a.is_empty()).unwrap_or(false)
+        self.agent
+            .as_deref()
+            .map(|a| !a.is_empty())
+            .unwrap_or(false)
             || !matches!(self.agent_status.as_str(), "" | "unknown")
     }
 }
@@ -289,7 +292,11 @@ pub fn snapshot_from_session_payload(result: &Value) -> Option<Snapshot> {
         .collect();
 
     let tabs = match result.get("tabs") {
-        Some(Value::Array(a)) => a.iter().filter(|t| t.is_object()).map(tab_from_raw).collect(),
+        Some(Value::Array(a)) => a
+            .iter()
+            .filter(|t| t.is_object())
+            .map(tab_from_raw)
+            .collect(),
         _ => Vec::new(),
     };
 

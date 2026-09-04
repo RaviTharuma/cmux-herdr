@@ -71,7 +71,9 @@ pub fn session_actions(
         action.ordered_tab_ids = Some(session.ordered_tab_ids.clone());
         actions.push(action);
     }
-    if let Some(tab_id) = focus_tab_id.filter(|id| session.ordered_tab_ids.iter().any(|item| item == id)) {
+    if let Some(tab_id) =
+        focus_tab_id.filter(|id| session.ordered_tab_ids.iter().any(|item| item == id))
+    {
         let mut action = SessionAction::new("focus_tab");
         action.tab_id = Some(tab_id.to_string());
         actions.push(action);
@@ -137,7 +139,10 @@ impl FakeSessionHost {
             }
             "rename_tab" => {
                 if let (Some(tab_id), Some(title)) = (
-                    action.tab_id.as_deref().filter(|id| self.tabs.iter().any(|item| item == id)),
+                    action
+                        .tab_id
+                        .as_deref()
+                        .filter(|id| self.tabs.iter().any(|item| item == id)),
                     action.title.as_deref().filter(|title| !title.is_empty()),
                 ) {
                     self.titles.insert(tab_id.to_string(), title.to_string());
@@ -196,7 +201,10 @@ impl FakeSessionHost {
                     }
                 }
                 self.focus = action.tab_id.clone();
-                self.log.push(format!("focus:{}", action.tab_id.as_deref().unwrap_or("None")));
+                self.log.push(format!(
+                    "focus:{}",
+                    action.tab_id.as_deref().unwrap_or("None")
+                ));
             }
             other => return Err(format!("unknown session op {other}")),
         }

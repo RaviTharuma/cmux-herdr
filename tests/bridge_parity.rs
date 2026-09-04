@@ -1,16 +1,18 @@
+#![allow(dead_code, unused_imports)]
+
 //! Golden parity for bridge topology payload parsing against Python.
 //!
 //! `bridge` depends on `crate::api`, `crate::model`, and api depends on socket,
 //! so include all modules at the test-crate root.
 
-#[path = "../src/socket.rs"]
-mod socket;
 #[path = "../src/api.rs"]
 mod api;
-#[path = "../src/model.rs"]
-mod model;
 #[path = "../src/bridge.rs"]
 mod bridge;
+#[path = "../src/model.rs"]
+mod model;
+#[path = "../src/socket.rs"]
+mod socket;
 
 use serde_json::Value;
 
@@ -76,7 +78,12 @@ fn panes_from_list_matches_python() {
             .iter()
             .map(pane_json)
             .collect();
-        assert_eq!(Value::Array(got), case["out"], "panes data={:?}", case["data"]);
+        assert_eq!(
+            Value::Array(got),
+            case["out"],
+            "panes data={:?}",
+            case["data"]
+        );
     }
 }
 
@@ -87,7 +94,12 @@ fn tabs_from_list_matches_python() {
             .iter()
             .map(tab_json)
             .collect();
-        assert_eq!(Value::Array(got), case["out"], "tabs data={:?}", case["data"]);
+        assert_eq!(
+            Value::Array(got),
+            case["out"],
+            "tabs data={:?}",
+            case["data"]
+        );
     }
 }
 

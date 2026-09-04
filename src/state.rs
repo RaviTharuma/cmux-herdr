@@ -267,7 +267,11 @@ pub fn load_parent_binding(env: &dyn HostEnv, fp: &Fingerprint) -> Option<String
 }
 
 /// Persist the parent-binding workspace ref (`_save_parent_binding`).
-pub fn save_parent_binding(env: &dyn HostEnv, workspace: &str, fp: &Fingerprint) -> std::io::Result<()> {
+pub fn save_parent_binding(
+    env: &dyn HostEnv,
+    workspace: &str,
+    fp: &Fingerprint,
+) -> std::io::Result<()> {
     let dir = state_dir(env);
     let mut payload = Map::new();
     payload.insert("workspace_ref".into(), Value::String(workspace.to_string()));
@@ -277,7 +281,12 @@ pub fn save_parent_binding(env: &dyn HostEnv, workspace: &str, fp: &Fingerprint)
     payload.insert("host_fingerprint_key".into(), Value::String(parent_key(fp)));
     payload.insert("updated_at".into(), json!(env.now()));
     let body = serde_json::to_string(&Value::Object(payload)).unwrap();
-    atomic_write(&dir, ".parent-", &binding_path(env, fp), &format!("{body}\n"))
+    atomic_write(
+        &dir,
+        ".parent-",
+        &binding_path(env, fp),
+        &format!("{body}\n"),
+    )
 }
 
 // --- association map ---------------------------------------------------------
@@ -325,10 +334,7 @@ pub fn save_association_map(
     fp: &Fingerprint,
 ) -> std::io::Result<()> {
     let dir = state_dir(env);
-    let mut state = state
-        .as_object()
-        .cloned()
-        .unwrap_or_default();
+    let mut state = state.as_object().cloned().unwrap_or_default();
     state.insert("version".into(), json!(1));
     state.insert("updated_at".into(), json!(env.now()));
     for (k, v) in fp.as_json_fields() {
@@ -337,7 +343,12 @@ pub fn save_association_map(
     state.insert("host_fingerprint_key".into(), Value::String(parent_key(fp)));
     // Python: json.dump(state, indent=2, sort_keys=True).
     let body = to_json_sorted_indent(&Value::Object(state));
-    atomic_write(&dir, ".assoc-", &association_path(env, fp), &format!("{body}\n"))
+    atomic_write(
+        &dir,
+        ".assoc-",
+        &association_path(env, fp),
+        &format!("{body}\n"),
+    )
 }
 
 // --- parent resolution -------------------------------------------------------
@@ -385,7 +396,10 @@ pub fn prior_for_pane<'a>(pane: &Pane, previous: &'a Value) -> &'a Value {
     };
     let prior_sid = prior.get("agent_session_id").and_then(Value::as_str);
     let new_sid = pane.agent_session_id.as_deref();
-    if let (Some(p), Some(n)) = (prior_sid.filter(|s| !s.is_empty()), new_sid.filter(|s| !s.is_empty())) {
+    if let (Some(p), Some(n)) = (
+        prior_sid.filter(|s| !s.is_empty()),
+        new_sid.filter(|s| !s.is_empty()),
+    ) {
         if p != n {
             return &EMPTY;
         }
@@ -437,11 +451,17 @@ pub fn resolve_association_parents(
     prior: &Value,
     snapshot: Option<&Snapshot>,
 ) -> Value {
-    let prior = if prior.is_object() { prior } else { &Value::Null };
+    let prior = if prior.is_object() {
+        prior
+    } else {
+        &Value::Null
+    };
     let satisfied = truthy(prior.get("heuristic_satisfied"));
     let prior_tab = nonempty_id(py_or(prior.get("parent_tab_id"), prior.get("tab_id")));
-    let prior_ws =
-        nonempty_id(py_or(prior.get("parent_workspace_id"), prior.get("workspace_id")));
+    let prior_ws = nonempty_id(py_or(
+        prior.get("parent_workspace_id"),
+        prior.get("workspace_id"),
+    ));
     let snap_tab = nonempty_str(&pane.tab_id);
     let snap_ws = nonempty_str(&pane.workspace_id);
 
@@ -463,8 +483,7 @@ pub fn resolve_association_parents(
         }
     }
 
-    let now_satisfied =
-        satisfied || (tab_id.is_some() && workspace_id.is_some()) || used_heuristic;
+    let now_satisfied = satisfied || (tab_id.is_some() && workspace_id.is_some()) || used_heuristic;
     json!({
         "parent_tab_id": opt_str_json(&tab_id),
         "parent_workspace_id": opt_str_json(&workspace_id),
@@ -600,7 +619,10 @@ pub fn update_association_map(
         let mut parents = resolve_association_parents(env, pane, &prior, Some(snapshot));
         // meta may override parentage.
         let meta_has_parent = truthy(meta.get("parent_tab_id"))
-            || meta.get("heuristic_satisfied").map(|v| !v.is_null()).unwrap_or(false);
+            || meta
+                .get("heuristic_satisfied")
+                .map(|v| !v.is_null())
+                .unwrap_or(false);
         if meta_has_parent {
             let parent_tab = meta
                 .get("parent_tab_id")
@@ -637,7 +659,11 @@ pub fn update_association_map(
 
     let state_obj = state.as_object_mut().unwrap();
     state_obj.insert("panes".into(), Value::Object(live.clone()));
-    if !state_obj.get("mirrors").map(Value::is_object).unwrap_or(false) {
+    if !state_obj
+        .get("mirrors")
+        .map(Value::is_object)
+        .unwrap_or(false)
+    {
         state_obj.insert("mirrors".into(), json!({}));
     }
     // cmux_workspace or state.get("cmux_workspace")
@@ -716,7 +742,10 @@ pub fn set_title_lock(
         obj.remove("locked_title");
     }
     panes.insert(pane_id.to_string(), entry.clone());
-    state.as_object_mut().unwrap().insert("panes".into(), Value::Object(panes));
+    state
+        .as_object_mut()
+        .unwrap()
+        .insert("panes".into(), Value::Object(panes));
     save_association_map(env, &state, &fp).map_err(|e| e.to_string())?;
     Ok(entry)
 }
@@ -733,8 +762,14 @@ pub fn format_associations(env: &dyn HostEnv, state: Option<&Value>) -> String {
     };
     let panes = data.get("panes").filter(|p| p.is_object());
     let mirrors = data.get("mirrors").filter(|m| m.is_object());
-    let pane_count = panes.and_then(Value::as_object).map(|m| m.len()).unwrap_or(0);
-    let mirror_count = mirrors.and_then(Value::as_object).map(|m| m.len()).unwrap_or(0);
+    let pane_count = panes
+        .and_then(Value::as_object)
+        .map(|m| m.len())
+        .unwrap_or(0);
+    let mirror_count = mirrors
+        .and_then(Value::as_object)
+        .map(|m| m.len())
+        .unwrap_or(0);
 
     let dash = |v: Option<&Value>| -> String {
         match v {
@@ -773,14 +808,15 @@ pub fn format_associations(env: &dyn HostEnv, state: Option<&Value>) -> String {
                 },
             };
             if session.chars().count() > 60 {
-                let tail: String = session
-                    .chars()
-                    .skip(session.chars().count() - 57)
-                    .collect();
+                let tail: String = session.chars().skip(session.chars().count() - 57).collect();
                 session = format!("\u{2026}{tail}");
             }
             let lock = if truthy(get("title_lock")) { "Y" } else { "n" };
-            let heur = if truthy(get("heuristic_satisfied")) { "Y" } else { "n" };
+            let heur = if truthy(get("heuristic_satisfied")) {
+                "Y"
+            } else {
+                "n"
+            };
             let parent = match get("parent_tab_id") {
                 Some(v) if truthy(Some(v)) => plain(v),
                 _ => match get("tab_id") {
@@ -1033,7 +1069,8 @@ mod tests {
         let prior = prior_for_pane(&p, &previous);
         assert!(prior.is_null(), "session change should drop prior");
         // same session keeps it
-        let p_same = pane(json!({"pane_id": "p1", "agent_session": {"kind": "id", "value": "old"}}));
+        let p_same =
+            pane(json!({"pane_id": "p1", "agent_session": {"kind": "id", "value": "old"}}));
         assert!(prior_for_pane(&p_same, &previous).is_object());
     }
     #[test]
@@ -1077,7 +1114,9 @@ mod tests {
         assert_eq!(out1["pane_count"], 2);
         // Second pass: p2 gone → pruned.
         let snap2 = Snapshot {
-            panes: vec![pane(json!({"pane_id": "p1", "tab_id": "t1", "workspace_id": "w1"}))],
+            panes: vec![pane(
+                json!({"pane_id": "p1", "tab_id": "t1", "workspace_id": "w1"}),
+            )],
             tabs: vec![],
             workspaces: vec![],
             layouts: Value::Null,

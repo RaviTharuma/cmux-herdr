@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 //! Golden parity: Rust layout parser + split planner must match the Python
 //! bridge across a captured battery.
 //!
@@ -39,7 +41,12 @@ fn parse_layout_matches_python() {
     let g = golden();
     for entry in g["parse"].as_array().unwrap() {
         let node = layout::parse_layout(&entry["raw"]);
-        assert_eq!(node_json(node.as_ref()), entry["node"], "parse for {}", entry["raw"]);
+        assert_eq!(
+            node_json(node.as_ref()),
+            entry["node"],
+            "parse for {}",
+            entry["raw"]
+        );
     }
 }
 
@@ -106,7 +113,12 @@ fn tree_from_rects_matches_python() {
             })
             .collect();
         let node = layout::tree_from_rects(&items);
-        assert_eq!(node_json(node.as_ref()), entry["node"], "bsp for {}", entry["items"]);
+        assert_eq!(
+            node_json(node.as_ref()),
+            entry["node"],
+            "bsp for {}",
+            entry["items"]
+        );
     }
 }
 
@@ -119,7 +131,12 @@ fn layouts_by_tab_id_matches_python() {
         for (k, v) in &map {
             got.insert(k.clone(), node_json(Some(v)));
         }
-        assert_eq!(Value::Object(got), entry["tabs"], "by_tab for {}", entry["raw"]);
+        assert_eq!(
+            Value::Object(got),
+            entry["tabs"],
+            "by_tab for {}",
+            entry["raw"]
+        );
     }
 }
 

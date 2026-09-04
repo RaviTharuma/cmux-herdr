@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 //! Golden parity for the state-store module against Python.
 //!
 //! `state` depends on `crate::model`, so both source files are included at the
@@ -87,7 +89,12 @@ fn association_key_matches_python() {
     for case in golden()["association_key"].as_array().unwrap() {
         let pane = pane_from_raw(&case["raw"]);
         let want = case["key"].as_str().unwrap();
-        assert_eq!(association_key_for_pane(&pane), want, "assoc key {:?}", case["raw"]);
+        assert_eq!(
+            association_key_for_pane(&pane),
+            want,
+            "assoc key {:?}",
+            case["raw"]
+        );
     }
 }
 

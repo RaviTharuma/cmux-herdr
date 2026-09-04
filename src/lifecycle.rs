@@ -256,8 +256,8 @@ pub fn post_attach_action(replaced_dead: bool) -> &'static str {
 /// Host close never maps to provider termination.
 pub fn host_close_policy(source: &str) -> &'static str {
     match source {
-        "last_workspace_tab" | "window_quit" | "app_terminate" | "explicit_detach"
-        | "host_tab" | "host_panel" => "detach",
+        "last_workspace_tab" | "window_quit" | "app_terminate" | "explicit_detach" | "host_tab"
+        | "host_panel" => "detach",
         _ => "noop",
     }
 }
@@ -351,26 +351,23 @@ pub fn plan_attach(
         .map(String::as_str)
         .collect::<BTreeSet<_>>();
 
-    let (window_id, create_window, move_workspace_ids) =
-        if target.kind == "dedicated_new_window" {
-            (
-                None,
-                true,
-                live_records
-                    .iter()
-                    .filter_map(|record| record.workspace_id.clone())
-                    .collect(),
-            )
-        } else {
-            let Some(window_id) = target.resolve(
-                existing_mirror_window_id,
-                active_window_id,
-                |id| is_live(id),
-            ) else {
-                return AttachPlan::outcome("invalid_target", Some("window_lost"));
-            };
-            (Some(window_id), false, Vec::new())
+    let (window_id, create_window, move_workspace_ids) = if target.kind == "dedicated_new_window" {
+        (
+            None,
+            true,
+            live_records
+                .iter()
+                .filter_map(|record| record.workspace_id.clone())
+                .collect(),
+        )
+    } else {
+        let Some(window_id) = target.resolve(existing_mirror_window_id, active_window_id, |id| {
+            is_live(id)
+        }) else {
+            return AttachPlan::outcome("invalid_target", Some("window_lost"));
         };
+        (Some(window_id), false, Vec::new())
+    };
 
     let mut reuse = Vec::new();
     let mut create = Vec::new();
@@ -395,7 +392,11 @@ pub fn plan_attach(
     let (outcome, mut post_attach) = if create.is_empty() && !reuse.is_empty() {
         (
             "reused",
-            if replaced { Some(POST_RESEED.to_string()) } else { None },
+            if replaced {
+                Some(POST_RESEED.to_string())
+            } else {
+                None
+            },
         )
     } else {
         (
@@ -468,7 +469,10 @@ pub fn plan_restore(
             window_id: plan.window_id,
             create_window: plan.create_window,
             sessions_to_mirror: if plan.sessions_to_mirror.is_empty() {
-                sessions.iter().map(|item| item.session_id.clone()).collect()
+                sessions
+                    .iter()
+                    .map(|item| item.session_id.clone())
+                    .collect()
             } else {
                 plan.sessions_to_mirror
             },
@@ -534,8 +538,16 @@ impl RestoreRecord {
                 .map(value_string)
                 .as_deref(),
         )?;
-        let endpoint = body.get("endpoint_hash").filter(|value| json_truthy(value)).map(value_string).unwrap_or_default();
-        let target_kind = body.get("target_kind").filter(|value| json_truthy(value)).map(value_string).unwrap_or_default();
+        let endpoint = body
+            .get("endpoint_hash")
+            .filter(|value| json_truthy(value))
+            .map(value_string)
+            .unwrap_or_default();
+        let target_kind = body
+            .get("target_kind")
+            .filter(|value| json_truthy(value))
+            .map(value_string)
+            .unwrap_or_default();
         if endpoint.is_empty() || target_kind.is_empty() {
             return None;
         }
@@ -627,15 +639,10 @@ impl AttachRegistry {
     }
 }
 
-pub fn existing_mirror_window(
-    mirrors: &[MirrorRecord],
-    live_windows: &[String],
-) -> Option<String> {
+pub fn existing_mirror_window(mirrors: &[MirrorRecord], live_windows: &[String]) -> Option<String> {
     mirrors
         .iter()
-        .find(|record| {
-            record.workspace_id.is_some() && live_windows.contains(&record.window_id)
-        })
+        .find(|record| record.workspace_id.is_some() && live_windows.contains(&record.window_id))
         .map(|record| record.window_id.clone())
 }
 
@@ -830,10 +837,7 @@ where
             body,
             method == "remote.herdr.window",
         )),
-        activate: body
-            .get("activate")
-            .map(json_truthy)
-            .unwrap_or(false),
+        activate: body.get("activate").map(json_truthy).unwrap_or(false),
         create: body.get("create").map(json_truthy).unwrap_or(false),
     }
 }
@@ -951,7 +955,8 @@ impl LifecycleController {
         activate: bool,
         hashed: &str,
     ) -> Value {
-        self.mirrors.retain(|_, record| record.workspace_id.is_some());
+        self.mirrors
+            .retain(|_, record| record.workspace_id.is_some());
         let live_session_ids = self
             .connections
             .iter()
@@ -974,7 +979,10 @@ impl LifecycleController {
             activate,
             None,
         );
-        if matches!(plan.outcome.as_str(), "no_sessions" | "invalid_target" | "failed_empty") {
+        if matches!(
+            plan.outcome.as_str(),
+            "no_sessions" | "invalid_target" | "failed_empty"
+        ) {
             self.log(
                 "attach_reject",
                 [
@@ -1083,10 +1091,7 @@ impl LifecycleController {
         }
         self.log(
             "detach",
-            [
-                ("session_id", json!(session_id)),
-                ("reason", json!(reason)),
-            ],
+            [("session_id", json!(session_id)), ("reason", json!(reason))],
         );
         json!({
             "ok": true,
@@ -1156,7 +1161,10 @@ impl LifecycleController {
         }
         self.log(
             "restore",
-            [("outcome", result.get("outcome").cloned().unwrap_or(Value::Null))],
+            [(
+                "outcome",
+                result.get("outcome").cloned().unwrap_or(Value::Null),
+            )],
         );
         result
     }
@@ -1216,7 +1224,11 @@ fn value_string(value: &Value) -> String {
         Value::String(value) => value.clone(),
         Value::Null => "None".into(),
         Value::Bool(value) => {
-            if *value { "True".into() } else { "False".into() }
+            if *value {
+                "True".into()
+            } else {
+                "False".into()
+            }
         }
         _ => value.to_string(),
     }

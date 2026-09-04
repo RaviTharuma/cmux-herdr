@@ -31,7 +31,10 @@ fn is_owner(owner: &str) -> bool {
 
 pub fn env_truthy(name: &str) -> bool {
     let raw = std::env::var(name).unwrap_or_default();
-    matches!(raw.trim().to_lowercase().as_str(), "1" | "true" | "yes" | "on")
+    matches!(
+        raw.trim().to_lowercase().as_str(),
+        "1" | "true" | "yes" | "on"
+    )
 }
 
 pub fn milliseconds_from_seconds(seconds: f64) -> i64 {
@@ -181,7 +184,11 @@ fn truthy(value: Option<&Value>) -> bool {
 }
 
 fn py_repr_string(text: &str) -> String {
-    let quote = if text.contains('\'') && !text.contains('"') { '"' } else { '\'' };
+    let quote = if text.contains('\'') && !text.contains('"') {
+        '"'
+    } else {
+        '\''
+    };
     let mut out = String::with_capacity(text.len() + 2);
     out.push(quote);
     for character in text.chars() {
@@ -270,7 +277,11 @@ pub fn parse_lease_text(
     }
     if let Ok(Value::Object(payload)) = serde_json::from_str::<Value>(stripped) {
         let owner_value = payload.get("owner");
-        let owner = py_string(if truthy(owner_value) { owner_value } else { None });
+        let owner = py_string(if truthy(owner_value) {
+            owner_value
+        } else {
+            None
+        });
         if !is_owner(&owner) {
             return None;
         }
@@ -307,7 +318,10 @@ pub fn parse_lease_text(
         });
     }
     if fallback_owner.is_some_and(is_owner)
-        && matches!(stripped.to_lowercase().as_str(), "1" | "live" | "yes" | "on" | "true")
+        && matches!(
+            stripped.to_lowercase().as_str(),
+            "1" | "live" | "yes" | "on" | "true"
+        )
     {
         return Some(WriterLease {
             owner: fallback_owner.unwrap().to_string(),
@@ -328,7 +342,10 @@ pub fn read_lease_file(path: &Path, fingerprint: &str) -> Option<WriterLease> {
         return None;
     }
     let text = fs::read_to_string(path).ok()?;
-    let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
     let fallback_owner = if name.starts_with("native-live") {
         Some(OWNER_NATIVE)
     } else if name.starts_with("plugin-live") {
@@ -488,7 +505,10 @@ pub fn resolve_writer(fingerprint: &str, our_pid: Option<i64>, now: Option<i64>)
     let native_live = owner.as_deref() == Some(OWNER_NATIVE) && !force;
     let plugin_live = owner.as_deref() == Some(OWNER_PLUGIN) && !native_live;
     let writer = if force
-        && (env_native || live.as_ref().is_some_and(|lease| lease.owner == OWNER_NATIVE))
+        && (env_native
+            || live
+                .as_ref()
+                .is_some_and(|lease| lease.owner == OWNER_NATIVE))
     {
         "plugin-forced"
     } else if native_live {
@@ -498,7 +518,11 @@ pub fn resolve_writer(fingerprint: &str, our_pid: Option<i64>, now: Option<i64>)
     };
     WriterDecision {
         writer: writer.into(),
-        owner: if force { Some(OWNER_PLUGIN.into()) } else { owner },
+        owner: if force {
+            Some(OWNER_PLUGIN.into())
+        } else {
+            owner
+        },
         native_live,
         plugin_live,
         native_detected: env_native || native_file,
@@ -515,7 +539,10 @@ fn atomic_write(path: &Path, payload: &Value) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
     let temporary = path.with_file_name(format!("{file_name}.tmp"));
     let mut encoded = serde_json::to_string_pretty(payload).map_err(io::Error::other)?;
     encoded.push('\n');
@@ -557,7 +584,10 @@ pub fn write_lease(
         atomic_write(&path, &payload)?;
         last = path.to_string_lossy().into_owned();
     }
-    Ok(WriterLease { path: last, ..lease })
+    Ok(WriterLease {
+        path: last,
+        ..lease
+    })
 }
 
 pub fn clear_owner(owner: &str, fingerprint: &str) {
@@ -580,7 +610,15 @@ pub fn claim_plugin_writer(
     if decision.force_plugin {
         clear_owner(OWNER_NATIVE, fingerprint);
     }
-    write_lease(OWNER_PLUGIN, fingerprint, socket_path, endpoint_hash, None, None).map(Some)
+    write_lease(
+        OWNER_PLUGIN,
+        fingerprint,
+        socket_path,
+        endpoint_hash,
+        None,
+        None,
+    )
+    .map(Some)
 }
 
 pub fn release_plugin_writer(fingerprint: &str) {
@@ -602,8 +640,16 @@ pub fn heartbeat_plugin_writer(
     write_lease(
         OWNER_PLUGIN,
         fingerprint,
-        if socket_path.is_empty() { &lease.socket_path } else { socket_path },
-        if endpoint_hash.is_empty() { &lease.endpoint_hash } else { endpoint_hash },
+        if socket_path.is_empty() {
+            &lease.socket_path
+        } else {
+            socket_path
+        },
+        if endpoint_hash.is_empty() {
+            &lease.endpoint_hash
+        } else {
+            endpoint_hash
+        },
         None,
         None,
     )
@@ -626,13 +672,29 @@ pub fn heartbeat_native_writer(
         {
             return Ok(None);
         }
-        let prior_socket = decision.lease.as_ref().map(|lease| lease.socket_path.as_str()).unwrap_or("");
-        let prior_hash = decision.lease.as_ref().map(|lease| lease.endpoint_hash.as_str()).unwrap_or("");
+        let prior_socket = decision
+            .lease
+            .as_ref()
+            .map(|lease| lease.socket_path.as_str())
+            .unwrap_or("");
+        let prior_hash = decision
+            .lease
+            .as_ref()
+            .map(|lease| lease.endpoint_hash.as_str())
+            .unwrap_or("");
         return write_lease(
             OWNER_NATIVE,
             fingerprint,
-            if socket_path.is_empty() { prior_socket } else { socket_path },
-            if endpoint_hash.is_empty() { prior_hash } else { endpoint_hash },
+            if socket_path.is_empty() {
+                prior_socket
+            } else {
+                socket_path
+            },
+            if endpoint_hash.is_empty() {
+                prior_hash
+            } else {
+                endpoint_hash
+            },
             Some(owner_pid),
             None,
         )
@@ -650,14 +712,25 @@ pub fn claim_native_writer(
     let decision = resolve_writer(fingerprint, None, None);
     let owner_pid = pid.unwrap_or(std::process::id() as i64);
     if decision.plugin_live
-        && decision.lease.as_ref().is_some_and(|lease| lease.pid != owner_pid)
+        && decision
+            .lease
+            .as_ref()
+            .is_some_and(|lease| lease.pid != owner_pid)
         && !env_truthy(NATIVE_LIVE_ENV)
         && !decision.force_plugin
     {
         return Ok(None);
     }
     clear_owner(OWNER_PLUGIN, fingerprint);
-    write_lease(OWNER_NATIVE, fingerprint, socket_path, endpoint_hash, pid, None).map(Some)
+    write_lease(
+        OWNER_NATIVE,
+        fingerprint,
+        socket_path,
+        endpoint_hash,
+        pid,
+        None,
+    )
+    .map(Some)
 }
 
 pub fn release_native_writer(fingerprint: &str) {
@@ -668,7 +741,9 @@ pub fn writer_status(fingerprint: &str) -> Value {
     let decision = resolve_writer(fingerprint, None, None);
     let marker = legacy_native_marker_path(fingerprint);
     let plugin = plugin_marker_path(fingerprint);
-    let global_marker_exists = state_dirs().iter().any(|root| root.join("native-live").is_file());
+    let global_marker_exists = state_dirs()
+        .iter()
+        .any(|root| root.join("native-live").is_file());
     json!({
         "writer": decision.writer,
         "native_live": decision.native_live,
@@ -697,7 +772,10 @@ pub fn restore_paths(endpoint_hash: &str) -> Vec<PathBuf> {
 
 pub fn write_shared_restore(endpoint_hash: &str, payload: &Value) -> io::Result<String> {
     let Some(payload) = payload.as_object() else {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "restore payload must be an object"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "restore payload must be an object",
+        ));
     };
     if payload.get("mode").and_then(Value::as_str) == Some("replay_tree") {
         return Err(io::Error::new(
@@ -774,7 +852,9 @@ mod tests {
 
     impl TestEnv {
         fn new() -> Self {
-            let guard = HANDOFF_ENV_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+            let guard = HANDOFF_ENV_LOCK
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
             let temp = tempfile::tempdir().unwrap();
             std::env::set_var("XDG_STATE_HOME", temp.path().join("xdg"));
             std::env::set_var(NATIVE_STATE_ENV, temp.path().join("native"));
@@ -782,13 +862,23 @@ mod tests {
             std::env::remove_var(NATIVE_LIVE_ENV);
             std::env::remove_var(FORCE_PLUGIN_ENV);
             std::env::remove_var(LEASE_TTL_ENV);
-            Self { _guard: guard, _temp: temp }
+            Self {
+                _guard: guard,
+                _temp: temp,
+            }
         }
     }
 
     impl Drop for TestEnv {
         fn drop(&mut self) {
-            for name in ["XDG_STATE_HOME", NATIVE_STATE_ENV, "HOME", NATIVE_LIVE_ENV, FORCE_PLUGIN_ENV, LEASE_TTL_ENV] {
+            for name in [
+                "XDG_STATE_HOME",
+                NATIVE_STATE_ENV,
+                "HOME",
+                NATIVE_LIVE_ENV,
+                FORCE_PLUGIN_ENV,
+                LEASE_TTL_ENV,
+            ] {
                 std::env::remove_var(name);
             }
         }
@@ -797,8 +887,14 @@ mod tests {
     #[test]
     fn pidless_lease_staleness_uses_inclusive_ttl() {
         let lease = WriterLease {
-            owner: OWNER_PLUGIN.into(), pid: 0, heartbeat_ms: 100, fingerprint: "fp".into(),
-            endpoint_hash: String::new(), socket_path: String::new(), schema: SCHEMA, path: String::new(),
+            owner: OWNER_PLUGIN.into(),
+            pid: 0,
+            heartbeat_ms: 100,
+            fingerprint: "fp".into(),
+            endpoint_hash: String::new(),
+            socket_path: String::new(),
+            schema: SCHEMA,
+            path: String::new(),
         };
         assert!(lease.is_fresh(Some(145), Some(45)));
         assert!(!lease.is_fresh(Some(146), Some(45)));
@@ -807,12 +903,17 @@ mod tests {
     #[test]
     fn plugin_claim_resolve_release_round_trip() {
         let _env = TestEnv::new();
-        let claim = claim_plugin_writer("fp", "/tmp/herdr.sock", "hash").unwrap().unwrap();
+        let claim = claim_plugin_writer("fp", "/tmp/herdr.sock", "hash")
+            .unwrap()
+            .unwrap();
         assert_eq!(claim.owner, OWNER_PLUGIN);
         let decision = resolve_writer("fp", None, None);
         assert!(decision.plugin_live);
         assert_eq!(decision.writer, OWNER_PLUGIN);
-        assert!(application_support_dir().unwrap().join("plugin-live-fp").is_file());
+        assert!(application_support_dir()
+            .unwrap()
+            .join("plugin-live-fp")
+            .is_file());
         release_plugin_writer("fp");
         assert!(!resolve_writer("fp", None, None).plugin_live);
     }
@@ -839,7 +940,9 @@ mod tests {
     #[test]
     fn plugin_heartbeat_preserves_unspecified_metadata() {
         let _env = TestEnv::new();
-        let first = claim_plugin_writer("fp", "/tmp/herdr.sock", "hash").unwrap().unwrap();
+        let first = claim_plugin_writer("fp", "/tmp/herdr.sock", "hash")
+            .unwrap()
+            .unwrap();
         std::thread::sleep(Duration::from_millis(2));
         let heartbeat = heartbeat_plugin_writer("fp", "", "").unwrap().unwrap();
         assert_eq!(heartbeat.socket_path, "/tmp/herdr.sock");

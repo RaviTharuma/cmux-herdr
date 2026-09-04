@@ -25,9 +25,17 @@ pub struct ProviderInput {
 impl ProviderInput {
     pub fn byte_count(&self) -> usize {
         if self.kind == "key" {
-            self.csi.as_ref().map(Vec::len).filter(|size| *size > 0).unwrap_or(1)
+            self.csi
+                .as_ref()
+                .map(Vec::len)
+                .filter(|size| *size > 0)
+                .unwrap_or(1)
         } else {
-            self.text.as_ref().map(|text| text.len()).filter(|size| *size > 0).unwrap_or(1)
+            self.text
+                .as_ref()
+                .map(|text| text.len())
+                .filter(|size| *size > 0)
+                .unwrap_or(1)
         }
     }
 }
@@ -99,8 +107,17 @@ fn herdr_to_tmux(base: &str) -> Option<String> {
 fn herdr_special(name: &str) -> bool {
     matches!(
         name,
-        "up" | "down" | "left" | "right" | "enter" | "tab" | "esc" | "escape"
-            | "backspace" | "minus" | "plus" | "backtick"
+        "up" | "down"
+            | "left"
+            | "right"
+            | "enter"
+            | "tab"
+            | "esc"
+            | "escape"
+            | "backspace"
+            | "minus"
+            | "plus"
+            | "backtick"
     ) || name
         .strip_prefix('f')
         .and_then(|number| number.parse::<u8>().ok())
@@ -154,23 +171,26 @@ fn csi_for_herdr_combo(combo: &str) -> Option<Vec<u8>> {
     let mut modifiers = HashSet::new();
     for part in &parts[..parts.len() - 1] {
         match *part {
-            "ctrl" | "control" | "c" => { modifiers.insert("C"); }
-            "alt" | "m" => { modifiers.insert("M"); }
-            "shift" | "s" => { modifiers.insert("S"); }
+            "ctrl" | "control" | "c" => {
+                modifiers.insert("C");
+            }
+            "alt" | "m" => {
+                modifiers.insert("M");
+            }
+            "shift" | "s" => {
+                modifiers.insert("S");
+            }
             _ => {}
         }
     }
     let tmux = herdr_to_tmux(base);
-    let base_csi = tmux
-        .as_deref()
-        .and_then(named_csi)
-        .or_else(|| match base {
-            "enter" => Some(b"\r" as &[u8]),
-            "tab" => Some(b"\t" as &[u8]),
-            "esc" | "escape" => Some(b"\x1b" as &[u8]),
-            "backspace" => Some(b"\x7f" as &[u8]),
-            _ => None,
-        })?;
+    let base_csi = tmux.as_deref().and_then(named_csi).or(match base {
+        "enter" => Some(b"\r" as &[u8]),
+        "tab" => Some(b"\t" as &[u8]),
+        "esc" | "escape" => Some(b"\x1b" as &[u8]),
+        "backspace" => Some(b"\x7f" as &[u8]),
+        _ => None,
+    })?;
     if !modifiers.is_empty() && tmux.is_some() {
         Some(csi_with_modifiers(base_csi, &modifiers))
     } else {
@@ -214,9 +234,15 @@ pub fn encode_named_key(pane_id: &str, raw_name: &str) -> Option<ProviderInput> 
     });
     let key = herdr_base.map(|base| {
         let mut parts = Vec::new();
-        if modifiers.contains("C") { parts.push("ctrl"); }
-        if modifiers.contains("M") { parts.push("alt"); }
-        if modifiers.contains("S") { parts.push("shift"); }
+        if modifiers.contains("C") {
+            parts.push("ctrl");
+        }
+        if modifiers.contains("M") {
+            parts.push("alt");
+        }
+        if modifiers.contains("S") {
+            parts.push("shift");
+        }
         parts.push(base);
         parts.join("+")
     });
@@ -237,13 +263,14 @@ pub fn encode_manual_input(
     if let Some(key) = key.filter(|key| !key.is_empty()) {
         return encode_named_key(pane_id, key);
     }
-    text.filter(|text| !text.is_empty()).map(|text| ProviderInput {
-        pane_id: pane_id.to_string(),
-        kind: "text".into(),
-        text: Some(text.to_string()),
-        key: None,
-        csi: None,
-    })
+    text.filter(|text| !text.is_empty())
+        .map(|text| ProviderInput {
+            pane_id: pane_id.to_string(),
+            kind: "text".into(),
+            text: Some(text.to_string()),
+            key: None,
+            csi: None,
+        })
 }
 
 #[derive(Debug, Clone)]
@@ -271,7 +298,10 @@ impl Default for InputForwarder {
 
 impl InputForwarder {
     pub fn with_budget(maximum_pending_bytes: i64) -> Self {
-        Self { maximum_pending_bytes, ..Self::default() }
+        Self {
+            maximum_pending_bytes,
+            ..Self::default()
+        }
     }
 
     pub fn enqueue(&mut self, item: ProviderInput) -> &'static str {
@@ -319,7 +349,12 @@ pub struct FocusCommand {
 
 impl FocusCommand {
     fn quiet(pane_id: Option<String>) -> Self {
-        Self { pane_id, send_to_provider: false, rolled_back: false, request_id: None }
+        Self {
+            pane_id,
+            send_to_provider: false,
+            rolled_back: false,
+            request_id: None,
+        }
     }
 }
 
@@ -336,7 +371,11 @@ impl FocusController {
         if !self.live_pane_ids.iter().any(|item| item == pane_id) {
             return FocusCommand::quiet(None);
         }
-        if let Some(pending) = self.pending.as_ref().filter(|pending| pending.pane_id == pane_id) {
+        if let Some(pending) = self
+            .pending
+            .as_ref()
+            .filter(|pending| pending.pane_id == pane_id)
+        {
             return FocusCommand {
                 pane_id: Some(pane_id.into()),
                 send_to_provider: false,
@@ -361,7 +400,12 @@ impl FocusController {
     }
 
     pub fn command_rejected(&mut self, request_id: &str) -> FocusCommand {
-        let Some(pending) = self.pending.as_ref().filter(|pending| pending.request_id == request_id).cloned() else {
+        let Some(pending) = self
+            .pending
+            .as_ref()
+            .filter(|pending| pending.request_id == request_id)
+            .cloned()
+        else {
             return FocusCommand::quiet(self.active_pane_id.clone());
         };
         self.pending = None;
@@ -375,7 +419,11 @@ impl FocusController {
     }
 
     pub fn provider_confirms(&mut self, pane_id: &str) -> FocusCommand {
-        if self.pending.as_ref().is_some_and(|pending| pending.pane_id == pane_id) {
+        if self
+            .pending
+            .as_ref()
+            .is_some_and(|pending| pending.pane_id == pane_id)
+        {
             self.pending = None;
         }
         self.active_pane_id = Some(pane_id.into());
@@ -485,7 +533,10 @@ impl Default for PaneSeedQueue {
 
 impl PaneSeedQueue {
     pub fn with_budget(maximum_bytes: i64) -> Self {
-        Self { maximum_bytes, ..Self::default() }
+        Self {
+            maximum_bytes,
+            ..Self::default()
+        }
     }
 
     pub fn queue(
@@ -512,7 +563,11 @@ impl PaneSeedQueue {
     }
 
     pub fn note_ready(&mut self, pane_id: &str, cols: i64, rows: i64) -> Option<Vec<u8>> {
-        if self.targets.get(pane_id).is_some_and(|target| *target != (cols, rows)) {
+        if self
+            .targets
+            .get(pane_id)
+            .is_some_and(|target| *target != (cols, rows))
+        {
             return None;
         }
         let data = self.pending.remove(pane_id);
@@ -533,7 +588,10 @@ pub struct TabActivity {
 }
 
 fn busy_status(status: &str) -> bool {
-    matches!(status.to_ascii_lowercase().as_str(), "working" | "blocked" | "running" | "command")
+    matches!(
+        status.to_ascii_lowercase().as_str(),
+        "working" | "blocked" | "running" | "command"
+    )
 }
 
 pub fn tab_activity(
@@ -568,15 +626,28 @@ pub struct CloseIntent {
     pub pane_id: Option<String>,
 }
 
-pub fn close_intent(source: &str, pane_id: Option<&str>, agent_status: Option<&str>) -> CloseIntent {
+pub fn close_intent(
+    source: &str,
+    pane_id: Option<&str>,
+    agent_status: Option<&str>,
+) -> CloseIntent {
     if matches!(source, "host_tab" | "host_panel" | "detach") {
-        return CloseIntent { action: "detach".into(), pane_id: None };
+        return CloseIntent {
+            action: "detach".into(),
+            pane_id: None,
+        };
     }
     let Some(pane_id) = pane_id.filter(|pane_id| !pane_id.is_empty()) else {
-        return CloseIntent { action: "noop".into(), pane_id: None };
+        return CloseIntent {
+            action: "noop".into(),
+            pane_id: None,
+        };
     };
     if source != "user_pane" {
-        return CloseIntent { action: "noop".into(), pane_id: None };
+        return CloseIntent {
+            action: "noop".into(),
+            pane_id: None,
+        };
     }
     CloseIntent {
         action: if agent_status.is_some_and(busy_status) {
@@ -649,7 +720,10 @@ pub fn apply_session_title(
         return None;
     }
     let stripped = strip_title_escapes(name);
-    let cleaned: String = stripped.chars().filter(|ch| python_printable(*ch)).collect();
+    let cleaned: String = stripped
+        .chars()
+        .filter(|ch| python_printable(*ch))
+        .collect();
     let cleaned = cleaned.trim();
     if cleaned.is_empty() || current == Some(cleaned) {
         return None;

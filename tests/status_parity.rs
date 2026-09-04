@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 //! Golden parity: Rust model parsers + status-pill builders must match the
 //! Python bridge byte-for-byte across a captured battery.
 //!
@@ -60,20 +62,56 @@ fn pane_from_raw_matches_python() {
         let p = model::pane_from_raw(raw);
         assert_eq!(json!(p.pane_id), want["pane_id"], "pane_id for {raw}");
         assert_eq!(json!(p.tab_id), want["tab_id"], "tab_id for {raw}");
-        assert_eq!(json!(p.workspace_id), want["workspace_id"], "workspace_id for {raw}");
+        assert_eq!(
+            json!(p.workspace_id),
+            want["workspace_id"],
+            "workspace_id for {raw}"
+        );
         assert_eq!(json!(p.agent), want["agent"], "agent for {raw}");
-        assert_eq!(json!(p.agent_status), want["agent_status"], "agent_status for {raw}");
+        assert_eq!(
+            json!(p.agent_status),
+            want["agent_status"],
+            "agent_status for {raw}"
+        );
         assert_eq!(json!(p.label), want["label"], "label for {raw}");
         assert_eq!(json!(p.cwd), want["cwd"], "cwd for {raw}");
         assert_eq!(json!(p.focused), want["focused"], "focused for {raw}");
-        assert_eq!(json!(p.terminal_title), want["terminal_title"], "terminal_title for {raw}");
-        assert_eq!(json!(p.agent_session_path), want["agent_session_path"], "session_path for {raw}");
-        assert_eq!(json!(p.agent_session_id), want["agent_session_id"], "session_id for {raw}");
-        assert_eq!(json!(p.agent_session_kind), want["agent_session_kind"], "session_kind for {raw}");
+        assert_eq!(
+            json!(p.terminal_title),
+            want["terminal_title"],
+            "terminal_title for {raw}"
+        );
+        assert_eq!(
+            json!(p.agent_session_path),
+            want["agent_session_path"],
+            "session_path for {raw}"
+        );
+        assert_eq!(
+            json!(p.agent_session_id),
+            want["agent_session_id"],
+            "session_id for {raw}"
+        );
+        assert_eq!(
+            json!(p.agent_session_kind),
+            want["agent_session_kind"],
+            "session_kind for {raw}"
+        );
         assert_eq!(json!(p.revision), want["revision"], "revision for {raw}");
-        assert_eq!(json!(p.display_name()), want["display_name"], "display_name for {raw}");
-        assert_eq!(json!(p.status_key()), want["status_key"], "status_key for {raw}");
-        assert_eq!(json!(p.has_agent()), want["has_agent"], "has_agent for {raw}");
+        assert_eq!(
+            json!(p.display_name()),
+            want["display_name"],
+            "display_name for {raw}"
+        );
+        assert_eq!(
+            json!(p.status_key()),
+            want["status_key"],
+            "status_key for {raw}"
+        );
+        assert_eq!(
+            json!(p.has_agent()),
+            want["has_agent"],
+            "has_agent for {raw}"
+        );
     }
 }
 

@@ -1,35 +1,37 @@
+#![allow(dead_code, unused_imports)]
+
 //! Golden and state-machine parity for the intertwined runtime modules.
 
-#[path = "../src/socket.rs"]
-mod socket;
 #[path = "../src/api.rs"]
 mod api;
-#[path = "../src/model.rs"]
-mod model;
-#[path = "../src/layout.rs"]
-mod layout;
-#[path = "../src/impose.rs"]
-mod impose;
-#[path = "../src/host.rs"]
-mod host;
-#[path = "../src/lifecycle.rs"]
-mod lifecycle;
-#[path = "../src/handoff.rs"]
-mod handoff;
-#[path = "../src/state.rs"]
-mod state;
-#[path = "../src/engine.rs"]
-mod engine;
-#[path = "../src/session.rs"]
-mod session;
 #[path = "../src/control.rs"]
 mod control;
+#[path = "../src/engine.rs"]
+mod engine;
+#[path = "../src/handoff.rs"]
+mod handoff;
+#[path = "../src/host.rs"]
+mod host;
+#[path = "../src/impose.rs"]
+mod impose;
 #[path = "../src/io.rs"]
 mod io;
+#[path = "../src/layout.rs"]
+mod layout;
+#[path = "../src/lifecycle.rs"]
+mod lifecycle;
 #[path = "../src/live.rs"]
 mod live;
+#[path = "../src/model.rs"]
+mod model;
 #[path = "../src/pump.rs"]
 mod pump;
+#[path = "../src/session.rs"]
+mod session;
+#[path = "../src/socket.rs"]
+mod socket;
+#[path = "../src/state.rs"]
+mod state;
 
 use std::collections::HashMap;
 
@@ -59,7 +61,9 @@ fn option_strings(value: &Value) -> Option<Vec<String>> {
 
 fn hex_bytes(text: &str) -> Vec<u8> {
     text.as_bytes()
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|pair| {
             let digit = |byte: u8| match byte {
                 b'0'..=b'9' => byte - b'0',
@@ -159,9 +163,12 @@ fn engine_and_session_match_python_golden() {
         let a = case["args"].as_array().unwrap();
         assert_eq!(
             json!(engine::client_grid(
-                a[0].as_f64().unwrap(), a[1].as_f64().unwrap(),
-                a[2].as_f64().unwrap(), a[3].as_f64().unwrap(),
-                a[4].as_f64().unwrap(), a[5].as_f64().unwrap(),
+                a[0].as_f64().unwrap(),
+                a[1].as_f64().unwrap(),
+                a[2].as_f64().unwrap(),
+                a[3].as_f64().unwrap(),
+                a[4].as_f64().unwrap(),
+                a[5].as_f64().unwrap(),
             )),
             case["out"]
         );
@@ -169,20 +176,29 @@ fn engine_and_session_match_python_golden() {
     for case in g["engine"]["resize"].as_array().unwrap() {
         let a = case["args"].as_array().unwrap();
         assert_eq!(
-            json!(engine::resize_cells(a[0].as_f64().unwrap(), a[1].as_f64().unwrap(), a[2].as_i64().unwrap())),
+            json!(engine::resize_cells(
+                a[0].as_f64().unwrap(),
+                a[1].as_f64().unwrap(),
+                a[2].as_i64().unwrap()
+            )),
             case["out"]
         );
     }
     for case in g["engine"]["delta"].as_array().unwrap() {
         assert_eq!(
-            json!(engine::output_delta(case["previous"].as_str(), case["current"].as_str().unwrap())),
+            json!(engine::output_delta(
+                case["previous"].as_str(),
+                case["current"].as_str().unwrap()
+            )),
             case["out"]
         );
     }
 
     for case in g["session"]["actions"].as_array().unwrap() {
-        let titles: HashMap<String, String> = serde_json::from_value(case["titles"].clone()).unwrap();
-        let previous: HashMap<String, String> = serde_json::from_value(case["previous_titles"].clone()).unwrap();
+        let titles: HashMap<String, String> =
+            serde_json::from_value(case["titles"].clone()).unwrap();
+        let previous: HashMap<String, String> =
+            serde_json::from_value(case["previous_titles"].clone()).unwrap();
         let actions = session::session_actions(
             &session_reconcile(&case["session"]),
             Some(&titles),
@@ -190,7 +206,10 @@ fn engine_and_session_match_python_golden() {
             case["defaults_open"].as_bool().unwrap(),
             case["focus"].as_str(),
         );
-        assert_eq!(Value::Array(actions.iter().map(action_json).collect()), case["out"]);
+        assert_eq!(
+            Value::Array(actions.iter().map(action_json).collect()),
+            case["out"]
+        );
     }
 }
 
@@ -225,12 +244,19 @@ fn control_io_and_pump_helpers_match_python_golden() {
             case["pane_id"].as_str(),
             case["status"].as_str(),
         );
-        assert_eq!(json!({"action": got.action, "pane_id": got.pane_id}), case["out"]);
+        assert_eq!(
+            json!({"action": got.action, "pane_id": got.pane_id}),
+            case["out"]
+        );
     }
     for case in g["control"]["adjacent"].as_array().unwrap() {
         let node = layout::parse_layout(&case["layout"]).unwrap();
         assert_eq!(
-            json!(control::adjacent_pane(&node, case["pane_id"].as_str().unwrap(), case["direction"].as_str().unwrap())),
+            json!(control::adjacent_pane(
+                &node,
+                case["pane_id"].as_str().unwrap(),
+                case["direction"].as_str().unwrap()
+            )),
             case["out"]
         );
     }
@@ -239,7 +265,9 @@ fn control_io_and_pump_helpers_match_python_golden() {
     for case in g["io"]["filters"].as_array().unwrap() {
         let mut filter = io::TitleEscapeFilter::new();
         let got: Vec<String> = case["chunks_hex"]
-            .as_array().unwrap().iter()
+            .as_array()
+            .unwrap()
+            .iter()
             .map(|chunk| filter.filter(&hex_bytes(chunk.as_str().unwrap())))
             .map(|bytes| bytes.iter().map(|b| format!("{b:02x}")).collect())
             .collect();
@@ -247,7 +275,11 @@ fn control_io_and_pump_helpers_match_python_golden() {
     }
 
     for case in g["pump"]["events"].as_array().unwrap() {
-        let input = if case["input"].is_null() { None } else { Some(&case["input"]) };
+        let input = if case["input"].is_null() {
+            None
+        } else {
+            Some(&case["input"])
+        };
         assert_eq!(pump::unwrap_event(input), case["unwrapped"]);
         assert_eq!(pump::event_type(input), case["type"].as_str().unwrap());
         assert_eq!(pump::classify_event(input), case["kind"].as_str().unwrap());
@@ -256,25 +288,51 @@ fn control_io_and_pump_helpers_match_python_golden() {
         let result = case["result"].as_object().map(|raw| pump::PumpResult {
             kind: raw.get("kind").and_then(Value::as_str).unwrap().to_string(),
             resync: raw.get("resync").and_then(Value::as_bool).unwrap_or(false),
-            routed_output: raw.get("routed_output").and_then(Value::as_bool).unwrap_or(false),
-            status_updated: raw.get("status_updated").and_then(Value::as_bool).unwrap_or(false),
+            routed_output: raw
+                .get("routed_output")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            status_updated: raw
+                .get("status_updated")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
             ..pump::PumpResult::default()
         });
         assert_eq!(
-            pump::watch_followup(result.as_ref(), case["had_event"].as_bool().unwrap(), case["event_gap"].as_bool().unwrap()),
+            pump::watch_followup(
+                result.as_ref(),
+                case["had_event"].as_bool().unwrap(),
+                case["event_gap"].as_bool().unwrap()
+            ),
             case["out"].as_str().unwrap()
         );
     }
 
     for case in g["live_helpers"]["endpoint_hash"].as_array().unwrap() {
-        assert_eq!(live::endpoint_hash(case["socket"].as_str().unwrap()), case["out"].as_str().unwrap());
+        assert_eq!(
+            live::endpoint_hash(case["socket"].as_str().unwrap()),
+            case["out"].as_str().unwrap()
+        );
     }
     for case in g["live_helpers"]["decode_beta"].as_array().unwrap() {
-        assert_eq!(live::decode_beta(Some(&case["value"]), case["default"].as_bool().unwrap()), case["out"].as_bool().unwrap());
+        assert_eq!(
+            live::decode_beta(Some(&case["value"]), case["default"].as_bool().unwrap()),
+            case["out"].as_bool().unwrap()
+        );
     }
     for case in g["live_helpers"]["grid_match"].as_array().unwrap() {
         let a = case["args"].as_array().unwrap();
-        assert_eq!(live::grid_match(a[0].as_i64().unwrap(), a[1].as_i64().unwrap(), a[2].as_i64().unwrap(), a[3].as_i64().unwrap(), a[4].as_bool().unwrap(), a[5].as_bool().unwrap()), case["out"].as_bool().unwrap());
+        assert_eq!(
+            live::grid_match(
+                a[0].as_i64().unwrap(),
+                a[1].as_i64().unwrap(),
+                a[2].as_i64().unwrap(),
+                a[3].as_i64().unwrap(),
+                a[4].as_bool().unwrap(),
+                a[5].as_bool().unwrap()
+            ),
+            case["out"].as_bool().unwrap()
+        );
     }
 }
 
@@ -286,12 +344,33 @@ fn stateful_runtime_preserves_order_bounds_focus_and_close_safety() {
             {"width": 100, "height": 50, "x": 0, "y": 0, "pane": "w2:p1"},
             {"width": 99, "height": 50, "x": 101, "y": 0, "pane": "w2:p2"}
         ]
-    })).unwrap();
-    let window = engine::HerdrWindow::new("w2:t1", "Build", 0, layout, None, false, Some("w2:p1".into()));
+    }))
+    .unwrap();
+    let window = engine::HerdrWindow::new(
+        "w2:t1",
+        "Build",
+        0,
+        layout,
+        None,
+        false,
+        Some("w2:p1".into()),
+    );
     let mut host = live::apply_live_windows(&[window], None, true).unwrap();
     let mirror = host.window_mut("w2:t1").unwrap();
-    assert!(mirror.bonsplit.log.iter().position(|line| line == "create:w2:p1").unwrap()
-        < mirror.bonsplit.log.iter().position(|line| line == "rebuild_tree").unwrap());
+    assert!(
+        mirror
+            .bonsplit
+            .log
+            .iter()
+            .position(|line| line == "create:w2:p1")
+            .unwrap()
+            < mirror
+                .bonsplit
+                .log
+                .iter()
+                .position(|line| line == "rebuild_tree")
+                .unwrap()
+    );
     assert!(mirror.route_output("w2:p1", b"ab\x1bkTitle\x1b\\cd"));
     assert_eq!(mirror.surface("w2:p1").unwrap().buffer, b"abcd");
     assert!(mirror.surface("w2:p2").unwrap().buffer.is_empty());
@@ -317,20 +396,50 @@ fn pump_routes_events_and_flushes_input_without_cross_pane_writes() {
             {"width": 100, "height": 50, "pane": "w2:p1"},
             {"width": 99, "height": 50, "x": 101, "pane": "w2:p2"}
         ]
-    })).unwrap();
-    let window = engine::HerdrWindow::new("w2:t1", "Build", 0, layout, None, false, Some("w2:p1".into()));
+    }))
+    .unwrap();
+    let window = engine::HerdrWindow::new(
+        "w2:t1",
+        "Build",
+        0,
+        layout,
+        None,
+        false,
+        Some("w2:p1".into()),
+    );
     let mut host = live::apply_live_windows(&[window], None, true).unwrap();
-    host.window_mut("w2:t1").unwrap().send_named_key("w2:p1", "Up");
+    host.window_mut("w2:t1")
+        .unwrap()
+        .send_named_key("w2:p1", "Up");
     let transport = pump::MemoryTransport::new(
-        HashMap::from([("w2:p1".to_string(), "alpha".to_string()), ("w2:p2".to_string(), "bravo".to_string())]),
+        HashMap::from([
+            ("w2:p1".to_string(), "alpha".to_string()),
+            ("w2:p2".to_string(), "bravo".to_string()),
+        ]),
         HashMap::new(),
     );
     let mut live_pump = pump::LivePump::new(transport);
     let event = json!({"type": "pane.updated", "pane_id": "w2:p1"});
     let result = live_pump.handle_event(Some(&event), Some(&mut host));
     assert!(result.routed_output);
-    assert_eq!(host.window("w2:t1").unwrap().surface("w2:p1").unwrap().buffer, b"alpha");
-    assert!(host.window("w2:t1").unwrap().surface("w2:p2").unwrap().buffer.is_empty());
+    assert_eq!(
+        host.window("w2:t1")
+            .unwrap()
+            .surface("w2:p1")
+            .unwrap()
+            .buffer,
+        b"alpha"
+    );
+    assert!(host
+        .window("w2:t1")
+        .unwrap()
+        .surface("w2:p2")
+        .unwrap()
+        .buffer
+        .is_empty());
     assert_eq!(live_pump.flush_input(&mut host), 1);
-    assert_eq!(live_pump.transport.sent[0], ("key".into(), "w2:p1".into(), "up".into()));
+    assert_eq!(
+        live_pump.transport.sent[0],
+        ("key".into(), "w2:p1".into(), "up".into())
+    );
 }

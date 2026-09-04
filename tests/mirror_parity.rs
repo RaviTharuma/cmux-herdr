@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 //! Golden parity: Rust mirror projection and reconcile planning must match the
 //! Python bridge across scope, layout, malformed, ordering, and truthiness cases.
 use std::collections::HashSet;
@@ -5,42 +7,42 @@ use std::path::PathBuf;
 
 use serde_json::{json, Value};
 
-#[path = "../src/socket.rs"]
-mod socket;
 #[path = "../src/api.rs"]
 mod api;
+#[path = "../src/bridge.rs"]
+mod bridge;
 #[path = "../src/control.rs"]
 mod control;
-#[path = "../src/session.rs"]
-mod session;
 #[path = "../src/engine.rs"]
 mod engine;
-#[path = "../src/io.rs"]
-mod io;
+#[path = "../src/handoff.rs"]
+mod handoff;
 #[path = "../src/host.rs"]
 mod host;
+#[path = "../src/impose.rs"]
+mod impose;
+#[path = "../src/io.rs"]
+mod io;
+#[path = "../src/layout.rs"]
+mod layout;
 #[path = "../src/lifecycle.rs"]
 mod lifecycle;
 #[path = "../src/live.rs"]
 mod live;
-#[path = "../src/pump.rs"]
-mod pump;
-#[path = "../src/state.rs"]
-mod state;
-#[path = "../src/handoff.rs"]
-mod handoff;
-#[path = "../src/status.rs"]
-mod status;
-#[path = "../src/bridge.rs"]
-mod bridge;
-#[path = "../src/model.rs"]
-mod model;
-#[path = "../src/layout.rs"]
-mod layout;
-#[path = "../src/impose.rs"]
-mod impose;
 #[path = "../src/mirror.rs"]
 mod mirror;
+#[path = "../src/model.rs"]
+mod model;
+#[path = "../src/pump.rs"]
+mod pump;
+#[path = "../src/session.rs"]
+mod session;
+#[path = "../src/socket.rs"]
+mod socket;
+#[path = "../src/state.rs"]
+mod state;
+#[path = "../src/status.rs"]
+mod status;
 
 use mirror::{DesiredMirror, MirrorAction, MirrorPlan};
 
@@ -77,7 +79,10 @@ fn exact_floats(value: Value) -> Value {
         }
         Value::Array(items) => Value::Array(items.into_iter().map(exact_floats).collect()),
         Value::Object(items) => Value::Object(
-            items.into_iter().map(|(key, value)| (key, exact_floats(value))).collect(),
+            items
+                .into_iter()
+                .map(|(key, value)| (key, exact_floats(value)))
+                .collect(),
         ),
         other => other,
     }
@@ -135,7 +140,12 @@ fn action_json(action: &MirrorAction) -> Value {
 }
 
 fn pane_ids(actions: Vec<&MirrorAction>) -> Value {
-    Value::Array(actions.into_iter().map(|action| json!(action.pane_id)).collect())
+    Value::Array(
+        actions
+            .into_iter()
+            .map(|action| json!(action.pane_id))
+            .collect(),
+    )
 }
 
 fn plan_json(plan: &MirrorPlan) -> Value {
@@ -191,9 +201,16 @@ fn mirror_matches_python_golden() {
             }
             "plan_mirror" => {
                 let desired: Vec<DesiredMirror> = inputs["desired"]
-                    .as_array().unwrap().iter().map(desired_from).collect();
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(desired_from)
+                    .collect();
                 let live = inputs["live_surface_ids"].as_array().map(|values| {
-                    values.iter().map(|value| value.as_str().unwrap().to_string()).collect::<HashSet<_>>()
+                    values
+                        .iter()
+                        .map(|value| value.as_str().unwrap().to_string())
+                        .collect::<HashSet<_>>()
                 });
                 plan_json(&mirror::plan_mirror(
                     &desired,
@@ -206,10 +223,12 @@ fn mirror_matches_python_golden() {
                     (!inputs["engine"].is_null()).then_some(&inputs["engine"]),
                 ))
             }
-            "parse_cmux_json" => match mirror::parse_cmux_json(inputs["stdout"].as_str().unwrap()) {
-                Ok(value) => json!({"ok": value}),
-                Err(_) => json!({"error": true}),
-            },
+            "parse_cmux_json" => {
+                match mirror::parse_cmux_json(inputs["stdout"].as_str().unwrap()) {
+                    Ok(value) => json!({"ok": value}),
+                    Err(_) => json!({"error": true}),
+                }
+            }
             "mirror_key_for_pane" => json!(mirror::mirror_key_for_pane(
                 inputs["pane_id"].as_str().unwrap(),
             )),

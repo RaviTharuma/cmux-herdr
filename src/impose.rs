@@ -111,11 +111,19 @@ pub trait ReconcileResultLike {
 }
 
 fn py_min(first: f64, second: f64) -> f64 {
-    if second < first { second } else { first }
+    if second < first {
+        second
+    } else {
+        first
+    }
 }
 
 fn py_max(first: f64, second: f64) -> f64 {
-    if second > first { second } else { first }
+    if second > first {
+        second
+    } else {
+        first
+    }
 }
 
 fn divider_fraction_totals(first_span: i128, rest_span: i128) -> f64 {
@@ -133,10 +141,7 @@ pub fn clamp_ratio(value: f64) -> f64 {
 /// Tmux fraction: first / (first + rest + one divider cell).
 pub fn divider_fraction(first_span: i64, rest_spans: &[i64]) -> f64 {
     let first = i128::from(first_span);
-    let rest = rest_spans
-        .iter()
-        .map(|span| i128::from(*span).max(0))
-        .sum();
+    let rest = rest_spans.iter().map(|span| i128::from(*span).max(0)).sum();
     divider_fraction_totals(first, rest)
 }
 
@@ -244,10 +249,7 @@ pub fn leaf_expansion(
 }
 
 /// Decide whether the host should rebuild, keep, expand, or remove a leaf.
-pub fn tree_action(
-    previous_rendered: Option<&LayoutNode>,
-    rendered: &LayoutNode,
-) -> TreeAction {
+pub fn tree_action(previous_rendered: Option<&LayoutNode>, rendered: &LayoutNode) -> TreeAction {
     let Some(previous) = previous_rendered else {
         return TreeAction::simple("rebuild");
     };
@@ -290,7 +292,10 @@ fn _first_extent(
 ) -> (f64, f64) {
     let available = parent_extent - metrics.divider_thickness;
     if available <= 0.0 {
-        return (0.0, divider_fraction_totals(i128::from(first_span), rest_span));
+        return (
+            0.0,
+            divider_fraction_totals(i128::from(first_span), rest_span),
+        );
     }
     let cell = if horizontal {
         metrics.cell_width
@@ -334,11 +339,7 @@ pub fn binary_tree(
     }
 
     let horizontal = node.kind == "horizontal";
-    let orientation = if horizontal {
-        "horizontal"
-    } else {
-        "vertical"
-    };
+    let orientation = if horizontal { "horizontal" } else { "vertical" };
     if node.children.is_empty() {
         return DividerNode::Leaf(DividerLeaf {
             pane_id: String::new(),
@@ -449,11 +450,7 @@ pub fn collect_fractions(node: &DividerNode) -> Vec<f64> {
 }
 
 /// Start a divider drag hold.
-pub fn begin_divider_drag(
-    split_key: &str,
-    axis: &str,
-    assigned_cells: i64,
-) -> DividerDragHold {
+pub fn begin_divider_drag(split_key: &str, axis: &str, assigned_cells: i64) -> DividerDragHold {
     DividerDragHold {
         split_key: split_key.to_string(),
         axis: axis.to_string(),
@@ -468,7 +465,8 @@ pub fn resolve_divider_hold(
     split_still_exists: bool,
 ) -> Option<DividerDragHold> {
     let hold = hold?;
-    if !split_still_exists || assigned_cells.is_none() || assigned_cells == Some(hold.target_cells) {
+    if !split_still_exists || assigned_cells.is_none() || assigned_cells == Some(hold.target_cells)
+    {
         None
     } else {
         Some(hold)
@@ -586,10 +584,23 @@ mod tests {
     #[test]
     fn plan_parent_never_exceeds_region() {
         let parent = region_bounded_plan_parent(
-            Some(ImposeSize { width: 900.0, height: 500.0 }),
-            Some(ImposeSize { width: 800.0, height: 400.0 }),
-        ).unwrap();
-        assert_eq!(parent, ImposeSize { width: 800.0, height: 400.0 });
+            Some(ImposeSize {
+                width: 900.0,
+                height: 500.0,
+            }),
+            Some(ImposeSize {
+                width: 800.0,
+                height: 400.0,
+            }),
+        )
+        .unwrap();
+        assert_eq!(
+            parent,
+            ImposeSize {
+                width: 800.0,
+                height: 400.0
+            }
+        );
     }
 
     #[test]
@@ -623,9 +634,14 @@ mod tests {
                 divider_thickness: 4.0,
                 ..ImposeMetrics::default()
             }),
-            Some(ImposeSize { width: 800.0, height: 400.0 }),
+            Some(ImposeSize {
+                width: 800.0,
+                height: 400.0,
+            }),
         );
-        let DividerNode::Split(split) = tree else { panic!("expected split") };
+        let DividerNode::Split(split) = tree else {
+            panic!("expected split")
+        };
         assert!(split.first_extent.unwrap() > 0.0);
         assert!(split.first_extent.unwrap() <= 800.0);
     }
@@ -637,7 +653,10 @@ mod tests {
             resolve_divider_hold(Some(hold.clone()), Some(50), true),
             Some(hold.clone())
         );
-        assert_eq!(resolve_divider_hold(Some(hold.clone()), Some(40), true), None);
+        assert_eq!(
+            resolve_divider_hold(Some(hold.clone()), Some(40), true),
+            None
+        );
         assert_eq!(resolve_divider_hold(Some(hold), Some(50), false), None);
     }
 }

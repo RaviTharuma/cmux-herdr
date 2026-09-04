@@ -1,20 +1,22 @@
+#![allow(dead_code, unused_imports)]
+
 //! Golden and behavioral parity for the Python host/lifecycle modules.
 use std::path::PathBuf;
 
 use serde_json::{json, Value};
 
-#[path = "../src/layout.rs"]
-mod layout;
-#[path = "../src/impose.rs"]
-mod impose;
-#[path = "../src/session.rs"]
-mod session;
 #[path = "../src/engine.rs"]
 mod engine;
 #[path = "../src/host.rs"]
 mod host;
+#[path = "../src/impose.rs"]
+mod impose;
+#[path = "../src/layout.rs"]
+mod layout;
 #[path = "../src/lifecycle.rs"]
 mod lifecycle;
+#[path = "../src/session.rs"]
+mod session;
 
 use engine::{apply_window, impose_after_apply, HerdrWindow};
 use host::{host_actions, FakeBonsplitHost, HostAction};
@@ -24,8 +26,8 @@ use lifecycle::{
     plan_restore, post_attach_action, purge_dead_mirrors, read_restore, session_payload,
     validate_session_name, validate_socket_path, window_target_from_params, write_restore,
     AttachRegistry, AttachWindowTarget, ConnectionRecord, DiscoveredSession, LifecycleController,
-    MirrorRecord, RestoreRecord, POST_APPLY_CLIENT_SIZE, POST_RESEED, SETTING_KEY,
-    SOCKET_METHODS, TEARDOWN_EXPLICIT_DETACH, TEARDOWN_SESSION_ENDED,
+    MirrorRecord, RestoreRecord, POST_APPLY_CLIENT_SIZE, POST_RESEED, SETTING_KEY, SOCKET_METHODS,
+    TEARDOWN_EXPLICIT_DETACH, TEARDOWN_SESSION_ENDED,
 };
 
 fn golden() -> Value {
@@ -43,7 +45,11 @@ fn horizontal() -> layout::LayoutNode {
     .unwrap()
 }
 
-fn window(layout: layout::LayoutNode, visible: Option<layout::LayoutNode>, zoomed: bool) -> HerdrWindow {
+fn window(
+    layout: layout::LayoutNode,
+    visible: Option<layout::LayoutNode>,
+    zoomed: bool,
+) -> HerdrWindow {
     HerdrWindow::new(
         "w2:t1",
         "Build",
@@ -99,7 +105,10 @@ fn ordered_host_actions_match_python_golden() {
     assert_eq!(fake.panels.len(), 2);
     assert_eq!(fake.last_tree_op.as_deref(), Some("rebuild_tree"));
     assert_eq!(fake.focus.as_deref(), Some("w2:p2"));
-    assert_eq!(fake.log[..3], ["create:w2:p1", "create:w2:p2", "rebuild_tree"]);
+    assert_eq!(
+        fake.log[..3],
+        ["create:w2:p1", "create:w2:p2", "rebuild_tree"]
+    );
 }
 
 #[test]
@@ -110,11 +119,18 @@ fn fake_host_validates_order_and_unknown_verbs() {
         .unwrap_err();
     assert_eq!(error.to_string(), "focus missing panel w2:p1");
     assert!(fake.apply(&[HostAction::new("unknown")]).is_err());
-    assert!(fake.apply(&[HostAction::new("create_panel").with_pane_id("")]).is_err());
-    fake.apply(&[HostAction::new("create_panel").with_pane_id("p")]).unwrap();
-    fake.apply(&[HostAction::new("bind_surface").with_pane_id("").with_surface_id("surface")]).unwrap();
+    assert!(fake
+        .apply(&[HostAction::new("create_panel").with_pane_id("")])
+        .is_err());
+    fake.apply(&[HostAction::new("create_panel").with_pane_id("p")])
+        .unwrap();
+    fake.apply(&[HostAction::new("bind_surface")
+        .with_pane_id("")
+        .with_surface_id("surface")])
+        .unwrap();
     assert!(fake.surfaces.is_empty());
-    fake.apply(&[HostAction::new("close_panel").with_pane_id("")]).unwrap();
+    fake.apply(&[HostAction::new("close_panel").with_pane_id("")])
+        .unwrap();
     assert!(fake.panels.contains("p"));
 }
 
@@ -126,17 +142,27 @@ fn host_expands_removes_and_skips_held_divider() {
     .unwrap();
     let (state, first) = apply_window(&window(leaf.clone(), None, false), None);
     let mut fake = FakeBonsplitHost::default();
-    fake.apply(&host_actions(&first, &impose_after_apply(&first, None, "Build"))).unwrap();
+    fake.apply(&host_actions(
+        &first,
+        &impose_after_apply(&first, None, "Build"),
+    ))
+    .unwrap();
 
     let split = horizontal();
     let (state, expanded) = apply_window(&window(split.clone(), None, false), Some(&state));
-    let actions = host_actions(&expanded, &impose_after_apply(&expanded, Some(&leaf), "Build"));
+    let actions = host_actions(
+        &expanded,
+        &impose_after_apply(&expanded, Some(&leaf), "Build"),
+    );
     assert_eq!(actions[0].op, "create_panel");
     assert_eq!(actions[1].op, "expand_leaf");
     fake.apply(&actions).unwrap();
 
     let (_, removed) = apply_window(&window(leaf.clone(), None, false), Some(&state));
-    let actions = host_actions(&removed, &impose_after_apply(&removed, Some(&split), "Build"));
+    let actions = host_actions(
+        &removed,
+        &impose_after_apply(&removed, Some(&split), "Build"),
+    );
     assert_eq!(actions[0].op, "close_panel");
     assert_eq!(actions[1].op, "remove_leaf");
     fake.apply(&actions).unwrap();
@@ -144,8 +170,12 @@ fn host_expands_removes_and_skips_held_divider() {
 
     let (_, reconcile) = apply_window(&window(split, None, false), None);
     let hold = impose::begin_divider_drag("s", "horizontal", 50);
-    let plan = impose::plan_from_reconcile(&reconcile, None, "Build", None, None, None, Some(&hold));
-    assert!(host::divider_impose_actions(&plan.divider_tree, plan.held_split_key.as_deref(), "s").is_empty());
+    let plan =
+        impose::plan_from_reconcile(&reconcile, None, "Build", None, None, None, Some(&hold));
+    assert!(
+        host::divider_impose_actions(&plan.divider_tree, plan.held_split_key.as_deref(), "s")
+            .is_empty()
+    );
 }
 
 #[test]
@@ -153,8 +183,16 @@ fn lifecycle_validation_flags_and_methods_match_golden() {
     let g = golden();
     let socket = g["endpoint"]["socket"].as_str().unwrap();
     assert_eq!(endpoint_hash(socket), g["endpoint"]["hash"]);
-    assert_eq!(validate_socket_path(Some("  /tmp/herdr.sock  ")), Some(socket.into()));
-    for bad in ["tmp/herdr.sock", "-oProxyCommand=x", "/tmp/herdr\u{1b}sock", ""] {
+    assert_eq!(
+        validate_socket_path(Some("  /tmp/herdr.sock  ")),
+        Some(socket.into())
+    );
+    for bad in [
+        "tmp/herdr.sock",
+        "-oProxyCommand=x",
+        "/tmp/herdr\u{1b}sock",
+        "",
+    ] {
         assert_eq!(validate_socket_path(Some(bad)), None);
     }
     assert_eq!(validate_session_name(Some("  main  ")), Some("main".into()));
@@ -172,13 +210,50 @@ fn lifecycle_validation_flags_and_methods_match_golden() {
 #[test]
 fn attach_targets_preserve_affinity_and_fail_closed() {
     let explicit = AttachWindowTarget::new("explicit", Some("win-other".into()));
-    assert_eq!(explicit.resolve(Some("win-active"), Some("win-other"), |id| id != "dead"), Some("win-active".into()));
-    assert_eq!(AttachWindowTarget::new("explicit", Some("dead".into())).resolve(None, Some("win-active"), |id| id == "win-active"), None);
-    assert_eq!(AttachWindowTarget::new("unresolved_explicit", None).resolve(None, Some("win-active"), |_| true), None);
-    assert_eq!(AttachWindowTarget::new("contextual", Some("dead".into())).resolve(None, Some("win-active"), |id| id == "win-active"), Some("win-active".into()));
-    assert_eq!(AttachWindowTarget::new("dedicated_new_window", None).resolve(None, Some("win-active"), |_| true), None);
-    assert_eq!(window_target_from_params(&json!({"window_id": null}), false).kind, "unresolved_explicit");
-    assert_eq!(window_target_from_params(&json!({"window_id": "x"}), true).kind, "dedicated_new_window");
+    assert_eq!(
+        explicit.resolve(Some("win-active"), Some("win-other"), |id| id != "dead"),
+        Some("win-active".into())
+    );
+    assert_eq!(
+        AttachWindowTarget::new("explicit", Some("dead".into())).resolve(
+            None,
+            Some("win-active"),
+            |id| id == "win-active"
+        ),
+        None
+    );
+    assert_eq!(
+        AttachWindowTarget::new("unresolved_explicit", None).resolve(
+            None,
+            Some("win-active"),
+            |_| true
+        ),
+        None
+    );
+    assert_eq!(
+        AttachWindowTarget::new("contextual", Some("dead".into())).resolve(
+            None,
+            Some("win-active"),
+            |id| id == "win-active"
+        ),
+        Some("win-active".into())
+    );
+    assert_eq!(
+        AttachWindowTarget::new("dedicated_new_window", None).resolve(
+            None,
+            Some("win-active"),
+            |_| true
+        ),
+        None
+    );
+    assert_eq!(
+        window_target_from_params(&json!({"window_id": null}), false).kind,
+        "unresolved_explicit"
+    );
+    assert_eq!(
+        window_target_from_params(&json!({"window_id": "x"}), true).kind,
+        "dedicated_new_window"
+    );
 }
 
 #[test]
@@ -186,24 +261,121 @@ fn attach_planning_matches_python_branches() {
     let active = vec!["win-active".to_string(), "win-other".to_string()];
     let sessions = vec![session()];
     let contextual = AttachWindowTarget::new("contextual", None);
-    let preflight = plan_attach(&contextual, true, true, false, None, Some("win-active"), &active, None, None, None, false, None);
+    let preflight = plan_attach(
+        &contextual,
+        true,
+        true,
+        false,
+        None,
+        Some("win-active"),
+        &active,
+        None,
+        None,
+        None,
+        false,
+        None,
+    );
     assert_eq!(preflight.outcome, "discover");
-    let dedicated = plan_attach(&AttachWindowTarget::new("dedicated_new_window", None), true, true, false, None, Some("win-active"), &active, Some(&sessions), None, None, false, None);
+    let dedicated = plan_attach(
+        &AttachWindowTarget::new("dedicated_new_window", None),
+        true,
+        true,
+        false,
+        None,
+        Some("win-active"),
+        &active,
+        Some(&sessions),
+        None,
+        None,
+        false,
+        None,
+    );
     assert_eq!(dedicated.outcome, "mirrored");
     assert!(dedicated.create_window);
     assert_eq!(dedicated.sessions_to_mirror, ["sess-1"]);
-    assert_eq!(dedicated.post_attach.as_deref(), Some(POST_APPLY_CLIENT_SIZE));
+    assert_eq!(
+        dedicated.post_attach.as_deref(),
+        Some(POST_APPLY_CLIENT_SIZE)
+    );
 
-    let mirrors = vec![MirrorRecord::new("sess-1", "win-active", Some("ws-1".into()))];
+    let mirrors = vec![MirrorRecord::new(
+        "sess-1",
+        "win-active",
+        Some("ws-1".into()),
+    )];
     let live = vec!["sess-1".into()];
-    let reused = plan_attach(&contextual, true, true, false, Some("win-active"), Some("win-active"), &active, Some(&sessions), Some(&mirrors), Some(&live), false, None);
+    let reused = plan_attach(
+        &contextual,
+        true,
+        true,
+        false,
+        Some("win-active"),
+        Some("win-active"),
+        &active,
+        Some(&sessions),
+        Some(&mirrors),
+        Some(&live),
+        false,
+        None,
+    );
     assert_eq!(reused.outcome, "reused");
     assert_eq!(reused.sessions_to_reuse, ["sess-1"]);
     assert!(reused.sessions_to_mirror.is_empty());
 
-    assert_eq!(plan_attach(&contextual, false, true, false, None, Some("win-active"), &active, None, None, None, false, None).outcome, "disabled");
-    assert_eq!(plan_attach(&contextual, true, false, false, None, Some("win-active"), &active, None, None, None, false, None).outcome, "unreachable");
-    assert_eq!(plan_attach(&contextual, true, true, true, None, Some("win-active"), &active, None, None, None, false, None).outcome, "already_attaching");
+    assert_eq!(
+        plan_attach(
+            &contextual,
+            false,
+            true,
+            false,
+            None,
+            Some("win-active"),
+            &active,
+            None,
+            None,
+            None,
+            false,
+            None
+        )
+        .outcome,
+        "disabled"
+    );
+    assert_eq!(
+        plan_attach(
+            &contextual,
+            true,
+            false,
+            false,
+            None,
+            Some("win-active"),
+            &active,
+            None,
+            None,
+            None,
+            false,
+            None
+        )
+        .outcome,
+        "unreachable"
+    );
+    assert_eq!(
+        plan_attach(
+            &contextual,
+            true,
+            true,
+            true,
+            None,
+            Some("win-active"),
+            &active,
+            None,
+            None,
+            None,
+            false,
+            None
+        )
+        .outcome,
+        "already_attaching"
+    );
 }
 
 #[test]
@@ -231,7 +403,10 @@ fn registry_connections_purge_and_close_policy_match_python() {
     ];
     let kept = purge_dead_mirrors(&mirrors);
     assert_eq!(kept.len(), 1);
-    assert_eq!(existing_mirror_window(&kept, &["win-a".into()]).as_deref(), Some("win-a"));
+    assert_eq!(
+        existing_mirror_window(&kept, &["win-a".into()]).as_deref(),
+        Some("win-a")
+    );
     for (source, result) in golden()["close_sources"].as_object().unwrap() {
         assert_eq!(host_close_policy(source), result.as_str().unwrap());
     }
@@ -253,29 +428,62 @@ fn restore_record_json_and_atomic_files_match_python() {
         "socket_path": "/tmp/herdr.sock",
         "session_ids": ["sess-1"],
         "target_kind": "contextual"
-    })).is_none());
+    }))
+    .is_none());
 
     let temp = tempfile::tempdir().unwrap();
     let path = temp.path().join("nested/restore.json");
     write_restore(&path, &record).unwrap();
     assert_eq!(read_restore(&path).unwrap(), Some(record));
     assert!(!path.with_extension("json.tmp").exists());
-    assert_eq!(read_restore(&temp.path().join("missing.json")).unwrap(), None);
+    assert_eq!(
+        read_restore(&temp.path().join("missing.json")).unwrap(),
+        None
+    );
     std::fs::write(&path, b"not json").unwrap();
     assert_eq!(read_restore(&path).unwrap(), None);
 }
 
 #[test]
 fn restore_planning_always_reattaches_and_reseeds() {
-    let record = RestoreRecord::new("x", "/tmp/herdr.sock", vec!["sess-1".into()], "explicit", Some("win-stale".into()));
-    let plan = plan_restore(&record, true, true, &[session()], &["win-active".into()], Some("win-active"));
+    let record = RestoreRecord::new(
+        "x",
+        "/tmp/herdr.sock",
+        vec!["sess-1".into()],
+        "explicit",
+        Some("win-stale".into()),
+    );
+    let plan = plan_restore(
+        &record,
+        true,
+        true,
+        &[session()],
+        &["win-active".into()],
+        Some("win-active"),
+    );
     assert_eq!(plan.outcome, "mirrored");
     assert_eq!(plan.post_attach.as_deref(), Some(POST_RESEED));
     assert_eq!(plan.reason.as_deref(), Some("restore_reattach"));
     assert!(!plan.create_window);
 
-    let dedicated = RestoreRecord::new("x", "/tmp/herdr.sock", vec!["sess-1".into()], "dedicated_new_window", None);
-    assert!(plan_restore(&dedicated, true, true, &[session()], &["win-active".into()], None).create_window);
+    let dedicated = RestoreRecord::new(
+        "x",
+        "/tmp/herdr.sock",
+        vec!["sess-1".into()],
+        "dedicated_new_window",
+        None,
+    );
+    assert!(
+        plan_restore(
+            &dedicated,
+            true,
+            true,
+            &[session()],
+            &["win-active".into()],
+            None
+        )
+        .create_window
+    );
 }
 
 #[test]
@@ -293,7 +501,12 @@ fn controller_attach_reuse_move_restore_and_detach_are_safe() {
     assert_eq!(locked["outcome"], "already_attaching");
     ctl.registry.end_attach(&endpoint_hash("/tmp/herdr.sock"));
 
-    let moved = ctl.attach("/tmp/herdr.sock", &[session()], &AttachWindowTarget::new("dedicated_new_window", None), true);
+    let moved = ctl.attach(
+        "/tmp/herdr.sock",
+        &[session()],
+        &AttachWindowTarget::new("dedicated_new_window", None),
+        true,
+    );
     assert!(moved["window_id"].as_str().unwrap().starts_with("win-new-"));
     assert_eq!(ctl.active_window_id.as_deref(), moved["window_id"].as_str());
 
@@ -314,19 +527,73 @@ fn controller_attach_reuse_move_restore_and_detach_are_safe() {
 
 #[test]
 fn dispatch_state_and_grid_payloads_preserve_json_contract() {
-    assert_eq!(dispatch("remote.herdr.sessions", &json!({"socket": "/tmp/herdr.sock"}), false).code.as_deref(), Some("disabled"));
-    assert_eq!(dispatch("remote.tmux.attach", &json!({"socket": "/tmp/herdr.sock"}), true).code.as_deref(), Some("unknown_method"));
-    assert_eq!(dispatch("remote.herdr.attach", &json!({"socket": "/tmp/herdr.sock"}), true).code.as_deref(), Some("invalid_params"));
-    assert_eq!(dispatch("remote.herdr.attach", &json!({"socket": "/tmp/herdr.sock"}), true).to_value(), json!({"ok": false, "code": "invalid_params"}));
-    let accepted = dispatch("remote.herdr.attach", &json!({"socket": "/tmp/herdr.sock", "session": "main", "activate": true}), true);
+    assert_eq!(
+        dispatch(
+            "remote.herdr.sessions",
+            &json!({"socket": "/tmp/herdr.sock"}),
+            false
+        )
+        .code
+        .as_deref(),
+        Some("disabled")
+    );
+    assert_eq!(
+        dispatch(
+            "remote.tmux.attach",
+            &json!({"socket": "/tmp/herdr.sock"}),
+            true
+        )
+        .code
+        .as_deref(),
+        Some("unknown_method")
+    );
+    assert_eq!(
+        dispatch(
+            "remote.herdr.attach",
+            &json!({"socket": "/tmp/herdr.sock"}),
+            true
+        )
+        .code
+        .as_deref(),
+        Some("invalid_params")
+    );
+    assert_eq!(
+        dispatch(
+            "remote.herdr.attach",
+            &json!({"socket": "/tmp/herdr.sock"}),
+            true
+        )
+        .to_value(),
+        json!({"ok": false, "code": "invalid_params"})
+    );
+    let accepted = dispatch(
+        "remote.herdr.attach",
+        &json!({"socket": "/tmp/herdr.sock", "session": "main", "activate": true}),
+        true,
+    );
     assert!(accepted.ok);
     assert!(accepted.activate);
     assert_eq!(accepted.session.as_deref(), Some("main"));
-    assert_eq!(dispatch("remote.herdr.window", &json!({"socket_path": "/tmp/herdr.sock"}), true).target.unwrap().kind, "dedicated_new_window");
+    assert_eq!(
+        dispatch(
+            "remote.herdr.window",
+            &json!({"socket_path": "/tmp/herdr.sock"}),
+            true
+        )
+        .target
+        .unwrap()
+        .kind,
+        "dedicated_new_window"
+    );
 
     assert_eq!(session_payload(&session()), golden()["session_payload"]);
     let mut ctl = LifecycleController::default();
-    ctl.attach("/tmp/herdr.sock", &[session()], &AttachWindowTarget::new("contextual", None), false);
+    ctl.attach(
+        "/tmp/herdr.sock",
+        &[session()],
+        &AttachWindowTarget::new("contextual", None),
+        false,
+    );
     note_output(ctl.connections.get_mut("sess-1").unwrap(), "w2:p1", 12);
     let state = ctl.state("sess-1");
     assert_eq!(state["attached"], true);
