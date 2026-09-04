@@ -1,0 +1,41 @@
+{
+  "endpoint": {
+    "socket": "/tmp/herdr.sock",
+    "hash": "0cb0c5e4a7465217"
+  },
+  "host_first_apply": [
+    {"op": "create_panel", "pane_id": "w2:p1"},
+    {"op": "create_panel", "pane_id": "w2:p2"},
+    {"op": "rebuild_tree"},
+    {"op": "impose_divider", "orientation": "horizontal", "fraction": 0.5, "split_key": "s"},
+    {"op": "focus", "pane_id": "w2:p2"}
+  ],
+  "session_payload": {"id": "sess-1", "name": "main", "windows": 2, "attached": false},
+  "restore_payload": {
+    "endpoint_hash": "0cb0c5e4a7465217",
+    "socket_path": "/tmp/herdr.sock",
+    "session_ids": ["sess-1"],
+    "target_kind": "contextual",
+    "window_id": "win-active",
+    "mode": "reattach"
+  },
+  "socket_methods": [
+    "remote.herdr.sessions",
+    "remote.herdr.attach",
+    "remote.herdr.mirror",
+    "remote.herdr.window",
+    "remote.herdr.detach",
+    "remote.herdr.state",
+    "remote.herdr.pane_surfaces",
+    "remote.herdr.pane_grids"
+  ],
+  "close_sources": {
+    "last_workspace_tab": "detach",
+    "window_quit": "detach",
+    "app_terminate": "detach",
+    "explicit_detach": "detach",
+    "host_tab": "detach",
+    "host_panel": "detach",
+    "unknown": "noop"
+  }
+}
