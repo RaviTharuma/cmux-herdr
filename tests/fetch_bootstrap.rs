@@ -16,7 +16,7 @@ fn write_executable(path: &Path, body: &str) {
     fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
 }
 
-fn fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
+fn fixture_for(os: &str, arch: &str) -> (tempfile::TempDir, PathBuf, PathBuf) {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path();
     fs::create_dir_all(root.join("bin")).unwrap();
@@ -32,13 +32,19 @@ fn fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
     fs::create_dir(&fake_bin).unwrap();
     write_executable(
         &fake_bin.join("uname"),
-        "#!/bin/sh\ncase \"${1-}\" in -s) echo Linux;; -m) echo x86_64;; *) echo Linux;; esac\n",
+        &format!(
+            "#!/bin/sh\ncase \"${{1-}}\" in -s) echo '{os}';; -m) echo '{arch}';; *) echo '{os}';; esac\n"
+        ),
     );
     (tmp, fetch, fake_bin)
 }
 
-fn curl_script(hash: &str) -> String {
-    let asset = format!("cmux-herdr-{VERSION}-{TARGET}");
+fn fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
+    fixture_for("Linux", "x86_64")
+}
+
+fn curl_script_for(hash: &str, target: &str) -> String {
+    let asset = format!("cmux-herdr-{VERSION}-{target}");
     format!(
         r#"#!/bin/sh
 out=
@@ -66,6 +72,10 @@ esac
     )
 }
 
+fn curl_script(hash: &str) -> String {
+    curl_script_for(hash, TARGET)
+}
+
 fn run_fetch(fetch: &Path, fake_bin: &Path) -> std::process::Output {
     let system_path = std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin".into());
     Command::new("sh")
@@ -91,6 +101,35 @@ fn installs_verified_asset_atomically_and_executable() {
     let installed = tmp.path().join(".cmux-herdr/bin/cmux-herdr");
     assert_eq!(fs::read(&installed).unwrap(), PAYLOAD);
     assert_ne!(fs::metadata(installed).unwrap().permissions().mode() & 0o111, 0);
+}
+
+#[test]
+fn maps_all_release_platforms_to_expected_assets() {
+    let cases = [
+        ("Linux", "x86_64", "x86_64-unknown-linux-gnu"),
+        ("Linux", "aarch64", "aarch64-unknown-linux-gnu"),
+        ("Darwin", "x86_64", "x86_64-apple-darwin"),
+        ("Darwin", "arm64", "aarch64-apple-darwin"),
+    ];
+    let hash = format!("{:x}", Sha256::digest(PAYLOAD));
+    for (os, arch, target) in cases {
+        let (tmp, fetch, fake_bin) = fixture_for(os, arch);
+        write_executable(
+            &fake_bin.join("curl"),
+            &curl_script_for(&hash, target),
+        );
+        let output = run_fetch(&fetch, &fake_bin);
+        assert!(
+            output.status.success(),
+            "{os}/{arch}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            fs::read(tmp.path().join(".cmux-herdr/bin/cmux-herdr")).unwrap(),
+            PAYLOAD,
+            "{os}/{arch}"
+        );
+    }
 }
 
 #[test]
