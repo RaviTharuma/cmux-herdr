@@ -1,7 +1,7 @@
 [plugin]
 name = "cmux-herdr"
 kind = "sidebar"
-version = "0.6.1"
+version = "0.7.0"
 description = "Herdr in native cmux chrome: CLI, watch, status pills, pane mirroring"
 
 [run]

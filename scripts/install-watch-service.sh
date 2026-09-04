@@ -23,18 +23,15 @@ fi
 
 mkdir -p "${HOME}/Library/LaunchAgents" "${LOG_DIR}"
 
-# Rewrite user-specific paths from the sample template.
-python3 - "${PLIST_SRC}" "${PLIST_DST}" "${HOME}" <<'PY'
-import sys
-from pathlib import Path
-
-src, dst, home = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
-text = src.read_text()
-text = text.replace("/Users/PLACEHOLDER", home)
-# Drop XML comment block noise is fine; keep as-is.
-dst.write_text(text)
-print(f"  wrote {dst}")
-PY
+# Rewrite user-specific paths from the sample template without requiring Python.
+ESCAPED_HOME="$(printf '%s' "${HOME}" | sed 's/[\\&|]/\\&/g')"
+TEMP_PLIST="$(mktemp "${PLIST_DST}.XXXXXX")"
+trap 'rm -f "${TEMP_PLIST}"' EXIT HUP INT TERM
+sed "s|/Users/PLACEHOLDER|${ESCAPED_HOME}|g" "${PLIST_SRC}" > "${TEMP_PLIST}"
+chmod 600 "${TEMP_PLIST}"
+mv -f "${TEMP_PLIST}" "${PLIST_DST}"
+trap - EXIT HUP INT TERM
+echo "  wrote ${PLIST_DST}"
 
 # Boot out this plist only. Tests and alternate HOME installs must not evict a
 # same-label agent loaded from another path in the real user domain.
