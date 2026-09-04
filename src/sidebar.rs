@@ -596,8 +596,14 @@ pub fn run_sidebar(environ: Option<&HashMap<String, String>>, once: bool) -> i32
     });
 
     loop {
-        let elapsed = state.last_refresh.elapsed();
         let refresh_after = Duration::from_secs_f64(REFRESH_SECONDS);
+        if state.last_refresh.elapsed() >= refresh_after {
+            refresh(environ, &mut state);
+            if draw(&mut stdout, &state).is_err() {
+                return 0;
+            }
+        }
+        let elapsed = state.last_refresh.elapsed();
         let timeout = refresh_after
             .saturating_sub(elapsed)
             .max(Duration::from_millis(50));
