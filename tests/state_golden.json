@@ -1,0 +1,628 @@
+{
+  "now": 1700000000.0,
+  "parent_key": [
+    {
+      "fp": {
+        "cmux_surface_id": "surf-1",
+        "herdr_socket_path": "/tmp/h.sock",
+        "herdr_server_pid": 42,
+        "herdr_workspace_id": "ws1"
+      },
+      "key": "surf-1-164d249fc7321d07"
+    },
+    {
+      "fp": {
+        "cmux_surface_id": "my/surface id!!",
+        "herdr_socket_path": "/x/y.sock",
+        "herdr_server_pid": null,
+        "herdr_workspace_id": null
+      },
+      "key": "my_surface_id_-6d5ebd8f21c36b1e"
+    },
+    {
+      "fp": {
+        "cmux_surface_id": null,
+        "herdr_socket_path": null,
+        "herdr_server_pid": null,
+        "herdr_workspace_id": null
+      },
+      "key": "_nosurface_-385023d21a0dd241"
+    },
+    {
+      "fp": {
+        "cmux_surface_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "herdr_socket_path": "sock",
+        "herdr_server_pid": 7,
+        "herdr_workspace_id": "w"
+      },
+      "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-df491a9152004486"
+    },
+    {
+      "fp": {
+        "cmux_surface_id": "----",
+        "herdr_socket_path": "s",
+        "herdr_server_pid": 0,
+        "herdr_workspace_id": "w"
+      },
+      "key": "-----a8261c37e9032028"
+    },
+    {
+      "fp": {
+        "cmux_surface_id": "\u65e5\u672c\u8a9esurf",
+        "herdr_socket_path": "s",
+        "herdr_server_pid": 1,
+        "herdr_workspace_id": "w"
+      },
+      "key": "_surf-3a77a8870a3c2389"
+    }
+  ],
+  "association_key": [
+    {
+      "raw": {
+        "pane_id": "p1",
+        "agent_session": {
+          "kind": "id",
+          "value": "sess9"
+        }
+      },
+      "key": "p1:sess9"
+    },
+    {
+      "raw": {
+        "pane_id": "p2"
+      },
+      "key": "p2"
+    },
+    {
+      "raw": {
+        "pane_id": "p3",
+        "agent_session": {
+          "kind": "id",
+          "value": "  "
+        }
+      },
+      "key": "p3"
+    },
+    {
+      "raw": {
+        "pane_id": "p4",
+        "agent_session": {
+          "kind": "path",
+          "value": "/a/b.jsonl"
+        }
+      },
+      "key": "p4"
+    }
+  ],
+  "resolve": [
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p1",
+          "tab_id": "t1",
+          "workspace_id": "w1"
+        },
+        "prior": null,
+        "env": {},
+        "snapshot": null
+      },
+      "result": {
+        "parent_tab_id": "t1",
+        "parent_workspace_id": "w1",
+        "heuristic_satisfied": true,
+        "used_heuristic": false
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p1",
+          "workspace_id": "w1"
+        },
+        "prior": {
+          "heuristic_satisfied": true,
+          "parent_tab_id": "pt",
+          "parent_workspace_id": "pw"
+        },
+        "env": {},
+        "snapshot": null
+      },
+      "result": {
+        "parent_tab_id": "pt",
+        "parent_workspace_id": "w1",
+        "heuristic_satisfied": true,
+        "used_heuristic": false
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p1"
+        },
+        "prior": null,
+        "env": {
+          "HERDR_PANE_ID": "p1",
+          "HERDR_TAB_ID": "envtab",
+          "HERDR_WORKSPACE_ID": "envws"
+        },
+        "snapshot": null
+      },
+      "result": {
+        "parent_tab_id": "envtab",
+        "parent_workspace_id": "envws",
+        "heuristic_satisfied": true,
+        "used_heuristic": true
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p1",
+          "workspace_id": "w1"
+        },
+        "prior": null,
+        "env": {},
+        "snapshot": {
+          "tabs": [
+            {
+              "tab_id": "onlytab",
+              "workspace_id": "w1"
+            }
+          ]
+        }
+      },
+      "result": {
+        "parent_tab_id": "onlytab",
+        "parent_workspace_id": "w1",
+        "heuristic_satisfied": true,
+        "used_heuristic": true
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p1",
+          "workspace_id": "w1"
+        },
+        "prior": null,
+        "env": {},
+        "snapshot": {
+          "tabs": [
+            {
+              "tab_id": "t1",
+              "workspace_id": "w1"
+            },
+            {
+              "tab_id": "t2",
+              "workspace_id": "w1"
+            }
+          ]
+        }
+      },
+      "result": {
+        "parent_tab_id": null,
+        "parent_workspace_id": "w1",
+        "heuristic_satisfied": false,
+        "used_heuristic": false
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p1"
+        },
+        "prior": {
+          "heuristic_satisfied": true,
+          "parent_tab_id": "  ",
+          "tab_id": "priortab",
+          "parent_workspace_id": "  ",
+          "workspace_id": "priorws"
+        },
+        "env": {},
+        "snapshot": null
+      },
+      "result": {
+        "parent_tab_id": null,
+        "parent_workspace_id": null,
+        "heuristic_satisfied": true,
+        "used_heuristic": false
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p1"
+        },
+        "prior": null,
+        "env": {},
+        "snapshot": null
+      },
+      "result": {
+        "parent_tab_id": null,
+        "parent_workspace_id": null,
+        "heuristic_satisfied": false,
+        "used_heuristic": false
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p1",
+          "workspace_id": "w1"
+        },
+        "prior": null,
+        "env": {
+          "HERDR_PANE_ID": "other",
+          "HERDR_TAB_ID": "x"
+        },
+        "snapshot": null
+      },
+      "result": {
+        "parent_tab_id": null,
+        "parent_workspace_id": "w1",
+        "heuristic_satisfied": false,
+        "used_heuristic": false
+      }
+    }
+  ],
+  "record": [
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p1",
+          "tab_id": "t1",
+          "workspace_id": "w1",
+          "agent": "bot",
+          "agent_status": "working",
+          "label": "lbl",
+          "cwd": "/home",
+          "focused": true,
+          "agent_session": {
+            "kind": "path",
+            "value": "/a/s.jsonl"
+          },
+          "revision": 3
+        },
+        "prior": {},
+        "parents": {
+          "parent_tab_id": "pt",
+          "parent_workspace_id": "pw",
+          "heuristic_satisfied": true
+        },
+        "meta": null
+      },
+      "record": {
+        "pane_id": "p1",
+        "association_key": "p1",
+        "tab_id": "t1",
+        "workspace_id": "w1",
+        "parent_tab_id": "pt",
+        "parent_workspace_id": "pw",
+        "heuristic_satisfied": true,
+        "title_lock": false,
+        "locked_title": null,
+        "last_status_value": null,
+        "last_icon": null,
+        "last_color": null,
+        "last_priority": null,
+        "agent": "bot",
+        "agent_status": "working",
+        "status_key": "herdr:p1",
+        "label": "lbl",
+        "cwd": "/home",
+        "focused": true,
+        "agent_session_path": "/a/s.jsonl",
+        "agent_session_id": null,
+        "agent_session_kind": "path",
+        "revision": 3,
+        "first_seen_at": 1700000000.0,
+        "last_seen_at": 1700000000.0
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p2",
+          "tab_id": "t2",
+          "workspace_id": "w2",
+          "label": "MyLabel"
+        },
+        "prior": {},
+        "parents": {
+          "parent_tab_id": null,
+          "parent_workspace_id": null,
+          "heuristic_satisfied": false
+        },
+        "meta": {
+          "title_lock": true
+        }
+      },
+      "record": {
+        "pane_id": "p2",
+        "association_key": "p2",
+        "tab_id": "t2",
+        "workspace_id": "w2",
+        "parent_tab_id": "t2",
+        "parent_workspace_id": "w2",
+        "heuristic_satisfied": false,
+        "title_lock": true,
+        "locked_title": "MyLabel",
+        "last_status_value": null,
+        "last_icon": null,
+        "last_color": null,
+        "last_priority": null,
+        "agent": null,
+        "agent_status": "unknown",
+        "status_key": "herdr:p2",
+        "label": "MyLabel",
+        "cwd": null,
+        "focused": false,
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "first_seen_at": 1700000000.0,
+        "last_seen_at": 1700000000.0
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p3",
+          "tab_id": "t3",
+          "workspace_id": "w3"
+        },
+        "prior": {
+          "title_lock": true,
+          "locked_title": "PriorTitle",
+          "first_seen_at": 111.0
+        },
+        "parents": {
+          "parent_tab_id": "",
+          "parent_workspace_id": "",
+          "heuristic_satisfied": false
+        },
+        "meta": null
+      },
+      "record": {
+        "pane_id": "p3",
+        "association_key": "p3",
+        "tab_id": "t3",
+        "workspace_id": "w3",
+        "parent_tab_id": "t3",
+        "parent_workspace_id": "w3",
+        "heuristic_satisfied": false,
+        "title_lock": true,
+        "locked_title": "PriorTitle",
+        "last_status_value": null,
+        "last_icon": null,
+        "last_color": null,
+        "last_priority": null,
+        "agent": null,
+        "agent_status": "unknown",
+        "status_key": "herdr:p3",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "first_seen_at": 111.0,
+        "last_seen_at": 1700000000.0
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p4",
+          "tab_id": "t4",
+          "workspace_id": "w4"
+        },
+        "prior": {
+          "last_status_value": "old",
+          "last_icon": "oldicon"
+        },
+        "parents": {
+          "parent_tab_id": "pt",
+          "parent_workspace_id": "pw",
+          "heuristic_satisfied": true
+        },
+        "meta": {
+          "last_status_value": "new",
+          "last_color": "#fff",
+          "last_priority": 5
+        }
+      },
+      "record": {
+        "pane_id": "p4",
+        "association_key": "p4",
+        "tab_id": "t4",
+        "workspace_id": "w4",
+        "parent_tab_id": "pt",
+        "parent_workspace_id": "pw",
+        "heuristic_satisfied": true,
+        "title_lock": false,
+        "locked_title": null,
+        "last_status_value": "new",
+        "last_icon": "oldicon",
+        "last_color": "#fff",
+        "last_priority": 5,
+        "agent": null,
+        "agent_status": "unknown",
+        "status_key": "herdr:p4",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "first_seen_at": 1700000000.0,
+        "last_seen_at": 1700000000.0
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p5",
+          "tab_id": "t5",
+          "workspace_id": "w5"
+        },
+        "prior": {},
+        "parents": {
+          "parent_tab_id": "pt",
+          "parent_workspace_id": "pw",
+          "heuristic_satisfied": true
+        },
+        "meta": {
+          "title_lock": true,
+          "locked_title": "MetaLocked"
+        }
+      },
+      "record": {
+        "pane_id": "p5",
+        "association_key": "p5",
+        "tab_id": "t5",
+        "workspace_id": "w5",
+        "parent_tab_id": "pt",
+        "parent_workspace_id": "pw",
+        "heuristic_satisfied": true,
+        "title_lock": true,
+        "locked_title": "MetaLocked",
+        "last_status_value": null,
+        "last_icon": null,
+        "last_color": null,
+        "last_priority": null,
+        "agent": null,
+        "agent_status": "unknown",
+        "status_key": "herdr:p5",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "first_seen_at": 1700000000.0,
+        "last_seen_at": 1700000000.0
+      }
+    },
+    {
+      "case": {
+        "raw": {
+          "pane_id": "p6",
+          "tab_id": "t6",
+          "workspace_id": "w6"
+        },
+        "prior": {
+          "title_lock": true,
+          "locked_title": "Was"
+        },
+        "parents": {
+          "parent_tab_id": "pt",
+          "parent_workspace_id": "pw",
+          "heuristic_satisfied": true
+        },
+        "meta": {
+          "title_lock": false
+        }
+      },
+      "record": {
+        "pane_id": "p6",
+        "association_key": "p6",
+        "tab_id": "t6",
+        "workspace_id": "w6",
+        "parent_tab_id": "pt",
+        "parent_workspace_id": "pw",
+        "heuristic_satisfied": true,
+        "title_lock": false,
+        "locked_title": null,
+        "last_status_value": null,
+        "last_icon": null,
+        "last_color": null,
+        "last_priority": null,
+        "agent": null,
+        "agent_status": "unknown",
+        "status_key": "herdr:p6",
+        "label": null,
+        "cwd": null,
+        "focused": false,
+        "agent_session_path": null,
+        "agent_session_id": null,
+        "agent_session_kind": null,
+        "revision": null,
+        "first_seen_at": 1700000000.0,
+        "last_seen_at": 1700000000.0
+      }
+    }
+  ],
+  "format": [
+    {
+      "state": {
+        "version": 1,
+        "panes": {},
+        "mirrors": {},
+        "cmux_workspace": null,
+        "herdr_workspace_id": null,
+        "cmux_surface_id": null,
+        "herdr_server_pid": null,
+        "host_fingerprint_key": "fp-key"
+      },
+      "text": "associations: 0 panes, 0 mirrored surfaces\n  cmux_workspace=-\n  herdr_workspace=-\n  surface=-\n  herdr_pid=-\n  fingerprint=fp-key\n  file=/tmp/goldenstate/cmux-herdr/associations-_nosurface_-385023d21a0dd241.json"
+    },
+    {
+      "state": {
+        "version": 1,
+        "panes": {
+          "p2": {
+            "agent_status": "idle",
+            "agent": "botB",
+            "status_key": "herdr:p2",
+            "parent_tab_id": "pt2",
+            "title_lock": true,
+            "heuristic_satisfied": true,
+            "agent_session_path": "/very/long/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/session.jsonl"
+          },
+          "p1": {
+            "agent_status": "working",
+            "agent": "botA",
+            "status_key": "herdr:p1",
+            "tab_id": "t1",
+            "title_lock": false,
+            "heuristic_satisfied": false,
+            "agent_session_id": "sid1"
+          }
+        },
+        "mirrors": {
+          "m1": {
+            "role": "leader",
+            "cmux_surface_id": "surfX",
+            "title": "Mirror One"
+          }
+        },
+        "cmux_workspace": "cws",
+        "herdr_workspace_id": "hws",
+        "cmux_surface_id": "surf",
+        "herdr_server_pid": 999,
+        "host_fingerprint_key": "fpk"
+      },
+      "text": "associations: 2 panes, 1 mirrored surfaces\n  cmux_workspace=cws\n  herdr_workspace=hws\n  surface=surf\n  herdr_pid=999\n  fingerprint=fpk\n  file=/tmp/goldenstate/cmux-herdr/associations-_nosurface_-385023d21a0dd241.json\n  p1          working   botA      herdr:p1  parent=t1  lock=n  heur=n  session=sid1\n  p2          idle      botB      herdr:p2  parent=pt2  lock=Y  heur=Y  session=\u2026xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/session.jsonl\nmirrors:\n  m1          leader    surfX  Mirror One"
+    },
+    {
+      "state": {
+        "version": 1,
+        "panes": {
+          "pz": {}
+        },
+        "mirrors": {},
+        "cmux_workspace": null,
+        "herdr_workspace_id": null,
+        "cmux_surface_id": null,
+        "herdr_server_pid": null,
+        "host_fingerprint_key": null
+      },
+      "text": "associations: 1 panes, 0 mirrored surfaces\n  cmux_workspace=-\n  herdr_workspace=-\n  surface=-\n  herdr_pid=-\n  fingerprint=_nosurface_-385023d21a0dd241\n  file=/tmp/goldenstate/cmux-herdr/associations-_nosurface_-385023d21a0dd241.json\n  pz          ?         -         -  parent=-  lock=n  heur=n  session=-"
+    }
+  ]
+}

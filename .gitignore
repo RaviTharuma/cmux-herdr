@@ -1,4 +1,5 @@
 /target
 
-# rust build output
-/target
+# python bytecode from the reference bridge
+__pycache__/
+*.pyc

@@ -7,6 +7,7 @@ mod impose;
 mod layout;
 mod model;
 mod socket;
+mod state;
 mod status;
 mod version;
 
