@@ -57,7 +57,7 @@ jobs:
           version="$(tr -d '[:space:]' < VERSION)"
           cp "target/${{ matrix.target }}/release/cmux-herdr" \
             "cmux-herdr-${version}-${{ matrix.target }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cmux-herdr-${{ matrix.target }}
           path: cmux-herdr-*-${{ matrix.target }}
