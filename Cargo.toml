@@ -15,7 +15,9 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# preserve_order: JSON objects keep insertion order to mirror Python dict
+# ordering, which handoff's `str(dict)` repr coercion is byte-sensitive to.
+serde_json = { version = "1", features = ["preserve_order"] }
 toml_edit = "0.22"
 rustix = { version = "0.38", features = ["fs", "process", "net"] }
 sha2 = "0.10"

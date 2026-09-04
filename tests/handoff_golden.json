@@ -1,0 +1,406 @@
+{
+  "env_truthy": [
+    {
+      "result": false,
+      "value": null
+    },
+    {
+      "result": false,
+      "value": ""
+    },
+    {
+      "result": false,
+      "value": "0"
+    },
+    {
+      "result": true,
+      "value": "1"
+    },
+    {
+      "result": true,
+      "value": " true "
+    },
+    {
+      "result": true,
+      "value": "TRUE"
+    },
+    {
+      "result": true,
+      "value": "yes"
+    },
+    {
+      "result": true,
+      "value": "On"
+    },
+    {
+      "result": false,
+      "value": "off"
+    },
+    {
+      "result": false,
+      "value": " false "
+    },
+    {
+      "result": false,
+      "value": "2"
+    }
+  ],
+  "freshness": [
+    {
+      "heartbeat_ms": 1000,
+      "now": 1000,
+      "result": true,
+      "ttl": 1
+    },
+    {
+      "heartbeat_ms": 1000,
+      "now": 1001,
+      "result": true,
+      "ttl": 1
+    },
+    {
+      "heartbeat_ms": 1000,
+      "now": 1002,
+      "result": false,
+      "ttl": 1
+    },
+    {
+      "heartbeat_ms": 0,
+      "now": 45000,
+      "result": true,
+      "ttl": 45000
+    },
+    {
+      "heartbeat_ms": -10,
+      "now": 0,
+      "result": false,
+      "ttl": 5
+    },
+    {
+      "heartbeat_ms": 5000,
+      "now": 4000,
+      "result": true,
+      "ttl": 1
+    }
+  ],
+  "lease_ttl_ms": [
+    {
+      "result": 45000,
+      "value": null
+    },
+    {
+      "result": 45000,
+      "value": ""
+    },
+    {
+      "result": 1000,
+      "value": "0"
+    },
+    {
+      "result": 1000,
+      "value": "1"
+    },
+    {
+      "result": 1000,
+      "value": "999"
+    },
+    {
+      "result": 1000,
+      "value": "1000"
+    },
+    {
+      "result": 45001,
+      "value": "45001"
+    },
+    {
+      "result": 2000,
+      "value": " 2000 "
+    },
+    {
+      "result": 45000,
+      "value": "+2000"
+    },
+    {
+      "result": 45000,
+      "value": "-3"
+    },
+    {
+      "result": 45000,
+      "value": "abc"
+    },
+    {
+      "result": 45000,
+      "value": "1.5"
+    }
+  ],
+  "now_ms_formula": [
+    {
+      "result": 0,
+      "seconds": 0.0
+    },
+    {
+      "result": 1,
+      "seconds": 0.001
+    },
+    {
+      "result": 1234,
+      "seconds": 1.234
+    },
+    {
+      "result": 1700000000123,
+      "seconds": 1700000000.123
+    },
+    {
+      "result": 1700000000999,
+      "seconds": 1700000000.9999
+    }
+  ],
+  "parse_lease_text": [
+    {
+      "fallback_fingerprint": "",
+      "fallback_owner": null,
+      "name": "empty",
+      "result": null,
+      "text": ""
+    },
+    {
+      "fallback_fingerprint": "fp",
+      "fallback_owner": "native",
+      "name": "whitespace",
+      "result": null,
+      "text": "  \n"
+    },
+    {
+      "fallback_fingerprint": "fp",
+      "fallback_owner": "native",
+      "name": "malformed",
+      "result": null,
+      "text": "{bad"
+    },
+    {
+      "fallback_fingerprint": "fp",
+      "fallback_owner": "native",
+      "name": "array",
+      "result": null,
+      "text": "[]"
+    },
+    {
+      "fallback_fingerprint": "",
+      "fallback_owner": null,
+      "name": "missing_owner",
+      "result": null,
+      "text": "{\"pid\": 3}"
+    },
+    {
+      "fallback_fingerprint": "",
+      "fallback_owner": null,
+      "name": "unknown_owner",
+      "result": null,
+      "text": "{\"owner\": \"other\"}"
+    },
+    {
+      "fallback_fingerprint": "fallback",
+      "fallback_owner": null,
+      "name": "plugin_minimal",
+      "result": {
+        "endpoint_hash": "",
+        "fingerprint": "fallback",
+        "heartbeat_ms": 1700000000000,
+        "owner": "plugin",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 0,
+        "schema": 1,
+        "socket_path": ""
+      },
+      "text": "{\"owner\":\"plugin\"}"
+    },
+    {
+      "fallback_fingerprint": "fallback",
+      "fallback_owner": null,
+      "name": "native_complete",
+      "result": {
+        "endpoint_hash": "deadbeef",
+        "fingerprint": "abc",
+        "heartbeat_ms": 123456,
+        "owner": "native",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 42,
+        "schema": 7,
+        "socket_path": "/tmp/h.sock"
+      },
+      "text": "{\"schema\": 7, \"owner\": \"native\", \"pid\": 42, \"heartbeat_ms\": 123456, \"fingerprint\": \"abc\", \"endpoint_hash\": \"deadbeef\", \"socket_path\": \"/tmp/h.sock\"}"
+    },
+    {
+      "fallback_fingerprint": "fallback",
+      "fallback_owner": null,
+      "name": "coercions",
+      "result": {
+        "endpoint_hash": "",
+        "fingerprint": "55",
+        "heartbeat_ms": 900,
+        "owner": "plugin",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 17,
+        "schema": 2,
+        "socket_path": "9"
+      },
+      "text": "{\"schema\": \"2\", \"owner\": \"plugin\", \"pid\": \"17\", \"heartbeat_ms\": \"900\", \"fingerprint\": 55, \"endpoint_hash\": false, \"socket_path\": 9}"
+    },
+    {
+      "fallback_fingerprint": "fallback",
+      "fallback_owner": null,
+      "name": "bad_numeric",
+      "result": {
+        "endpoint_hash": "",
+        "fingerprint": "fallback",
+        "heartbeat_ms": 1700000000000,
+        "owner": "native",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 0,
+        "schema": 1,
+        "socket_path": ""
+      },
+      "text": "{\"schema\": \"x\", \"owner\": \"native\", \"pid\": \"1.2\", \"heartbeat_ms\": [], \"fingerprint\": null}"
+    },
+    {
+      "fallback_fingerprint": "fallback",
+      "fallback_owner": null,
+      "name": "composite_metadata",
+      "result": {
+        "endpoint_hash": "{'a': 'b', 'n': None}",
+        "fingerprint": "['x', None, True, {'k': 'v'}]",
+        "heartbeat_ms": 1,
+        "owner": "plugin",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 0,
+        "schema": 1,
+        "socket_path": "[\"a'b\", 'a\"b', 'line\\nbreak']"
+      },
+      "text": "{\"owner\": \"plugin\", \"heartbeat_ms\": 1, \"fingerprint\": [\"x\", null, true, {\"k\": \"v\"}], \"endpoint_hash\": {\"a\": \"b\", \"n\": null}, \"socket_path\": [\"a'b\", \"a\\\"b\", \"line\\nbreak\"]}"
+    },
+    {
+      "fallback_fingerprint": "fallback",
+      "fallback_owner": null,
+      "name": "composite_object_order",
+      "result": {
+        "endpoint_hash": "",
+        "fingerprint": "{'z': 1, 'a': 2}",
+        "heartbeat_ms": 1,
+        "owner": "native",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 0,
+        "schema": 1,
+        "socket_path": ""
+      },
+      "text": "{\"owner\": \"native\", \"heartbeat_ms\": 1, \"fingerprint\": {\"z\": 1, \"a\": 2}, \"endpoint_hash\": \"\", \"socket_path\": \"\"}"
+    },
+    {
+      "fallback_fingerprint": "fp",
+      "fallback_owner": null,
+      "name": "zero_heartbeat_mtime",
+      "result": {
+        "endpoint_hash": "",
+        "fingerprint": "fp",
+        "heartbeat_ms": 1700000000000,
+        "owner": "native",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 0,
+        "schema": 1,
+        "socket_path": ""
+      },
+      "text": "{\"owner\": \"native\", \"pid\": 0, \"heartbeat_ms\": 0}"
+    },
+    {
+      "fallback_fingerprint": "legacy-fp",
+      "fallback_owner": "native",
+      "name": "legacy_one",
+      "result": {
+        "endpoint_hash": "",
+        "fingerprint": "legacy-fp",
+        "heartbeat_ms": 1700000000000,
+        "owner": "native",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 0,
+        "schema": 0,
+        "socket_path": ""
+      },
+      "text": "1\n"
+    },
+    {
+      "fallback_fingerprint": "legacy-fp",
+      "fallback_owner": "plugin",
+      "name": "legacy_live_case",
+      "result": {
+        "endpoint_hash": "",
+        "fingerprint": "legacy-fp",
+        "heartbeat_ms": 1700000000000,
+        "owner": "plugin",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 0,
+        "schema": 0,
+        "socket_path": ""
+      },
+      "text": " LIVE "
+    },
+    {
+      "fallback_fingerprint": "",
+      "fallback_owner": "native",
+      "name": "legacy_yes",
+      "result": {
+        "endpoint_hash": "",
+        "fingerprint": "",
+        "heartbeat_ms": 1700000000000,
+        "owner": "native",
+        "path": "/tmp/cmux-herdr-handoff-golden/fixture/native-live-fp",
+        "pid": 0,
+        "schema": 0,
+        "socket_path": ""
+      },
+      "text": "yes"
+    },
+    {
+      "fallback_fingerprint": "",
+      "fallback_owner": "native",
+      "name": "legacy_false",
+      "result": null,
+      "text": "false"
+    },
+    {
+      "fallback_fingerprint": "fp",
+      "fallback_owner": null,
+      "name": "legacy_without_owner",
+      "result": null,
+      "text": "on"
+    }
+  ],
+  "paths": {
+    "application_support_dir": "/tmp/cmux-herdr-handoff-golden/native",
+    "legacy_native_marker_path": "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr/native-live-host-a",
+    "plugin_marker_path": "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr/plugin-live-host-a",
+    "restore_paths": [
+      "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr/restore-deadbeef.json",
+      "/tmp/cmux-herdr-handoff-golden/native/restore-deadbeef.json"
+    ],
+    "state_dirs": [
+      "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr",
+      "/tmp/cmux-herdr-handoff-golden/native"
+    ],
+    "writer_native": [
+      "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr/writer-host-a.json",
+      "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr/native-live-host-a",
+      "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr/native-live",
+      "/tmp/cmux-herdr-handoff-golden/native/writer-host-a.json",
+      "/tmp/cmux-herdr-handoff-golden/native/native-live-host-a",
+      "/tmp/cmux-herdr-handoff-golden/native/native-live"
+    ],
+    "writer_plugin": [
+      "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr/writer-host-a.json",
+      "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr/plugin-live-host-a",
+      "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr/plugin-live",
+      "/tmp/cmux-herdr-handoff-golden/native/writer-host-a.json",
+      "/tmp/cmux-herdr-handoff-golden/native/plugin-live-host-a",
+      "/tmp/cmux-herdr-handoff-golden/native/plugin-live"
+    ],
+    "xdg_state_dir": "/tmp/cmux-herdr-handoff-golden/xdg/cmux-herdr"
+  }
+}
