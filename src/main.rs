@@ -3,7 +3,9 @@
 //! Behavioral port of the Python bridge. Modules mirror `bridge/cmux_herdr_*`.
 
 mod api;
+mod model;
 mod socket;
+mod status;
 
 fn main() {
     // CLI dispatch is wired in a later phase (CliAndUpdate). This binary
