@@ -112,3 +112,52 @@ fn rejects_non_https_release_base_before_touching_install() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("must use https://"));
     assert!(!tmp.path().join(".cmux-herdr/bin/cmux-herdr").exists());
 }
+
+#[test]
+fn unsupported_platform_uses_source_build_when_cargo_exists() {
+    let (tmp, fetch, fake_bin) = fixture();
+    write_executable(
+        &fake_bin.join("uname"),
+        "#!/bin/sh\ncase \"${1-}\" in -s) echo Plan9;; -m) echo mips;; esac\n",
+    );
+    let root = tmp.path().to_string_lossy();
+    write_executable(
+        &fake_bin.join("cargo"),
+        &format!(
+            "#!/bin/sh\nmkdir -p '{root}/target/release'\nprintf 'source-built binary\\n' > '{root}/target/release/cmux-herdr'\n"
+        ),
+    );
+
+    let output = run_fetch(&fetch, &fake_bin);
+    assert!(
+        output.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        fs::read(tmp.path().join(".cmux-herdr/bin/cmux-herdr")).unwrap(),
+        b"source-built binary\n"
+    );
+}
+
+#[test]
+fn unsupported_platform_without_cargo_keeps_existing_install() {
+    let (tmp, fetch, fake_bin) = fixture();
+    write_executable(
+        &fake_bin.join("uname"),
+        "#!/bin/sh\ncase \"${1-}\" in -s) echo Plan9;; -m) echo mips;; esac\n",
+    );
+    let installed = tmp.path().join(".cmux-herdr/bin/cmux-herdr");
+    fs::create_dir_all(installed.parent().unwrap()).unwrap();
+    fs::write(&installed, b"existing-good-binary").unwrap();
+
+    let output = Command::new("sh")
+        .arg(fetch)
+        .env("PATH", format!("{}:/usr/bin:/bin", fake_bin.display()))
+        .env("CMUX_HERDR_RELEASE_BASE_URL", "https://example.invalid/releases")
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("unsupported platform"));
+    assert_eq!(fs::read(installed).unwrap(), b"existing-good-binary");
+}

@@ -1,4 +1,5 @@
 /target
+/.cmux-herdr
 
 # python bytecode from the reference bridge
 __pycache__/
