@@ -1,0 +1,67 @@
+{
+  "python_commands": [
+    "agent-explain", "agent-prompt", "agent-view", "agent-wait", "agents",
+    "api", "associations", "attach", "attach-pane", "clear",
+    "clear-agent-authority", "close-pane", "close-tab", "close-workspace",
+    "detach", "doctor", "focus-agent", "focus-dir", "focus-pane",
+    "focus-tab", "focus-workspace", "json-dump", "layout", "layout-apply",
+    "lease", "lock-title", "manifests", "mirror", "move-pane", "move-tab",
+    "neighbor", "new-tab", "new-workspace", "notify", "observe",
+    "process-info", "read-agent", "read-pane", "release-agent", "rename-agent",
+    "rename-pane", "rename-tab", "rename-workspace", "resize-pane", "restore",
+    "send", "send-key", "set-ratio", "split", "start-agent", "status",
+    "swap-pane", "sync", "tree", "unlock-title", "wait-output", "watch",
+    "window-title", "workspace-move", "worktree", "zoom-pane"
+  ],
+  "cases": [
+    {
+      "name": "new tab JSON falls back to documented CLI",
+      "argv": ["new-tab", "--label", "logs", "--json"],
+      "status": 0,
+      "stdout": "{\n  \"ok\": true,\n  \"method\": \"tab.create\",\n  \"via\": \"cli\",\n  \"result\": {\n    \"result\": {\n      \"label\": \"logs\",\n      \"tab_id\": \"t2\"\n    }\n  }\n}\n",
+      "stderr": "",
+      "herdr_argv": "tab create --label logs"
+    },
+    {
+      "name": "send joins positional text",
+      "argv": ["send", "p1", "hello", "world"],
+      "status": 0,
+      "stdout": "sent text to p1\n",
+      "stderr": "",
+      "herdr_argv": "pane send-text p1 hello world"
+    },
+    {
+      "name": "wait output maps timeout alias",
+      "argv": ["wait-output", "p1", "ready", "--timeout-ms", "725", "--json"],
+      "status": 0,
+      "stdout": "{\n  \"ok\": true,\n  \"method\": \"pane.wait_for_output\",\n  \"via\": \"cli\",\n  \"result\": {\n    \"result\": {\n      \"matched\": true\n    }\n  }\n}\n",
+      "stderr": "",
+      "herdr_argv": "pane wait-output p1 --match ready --timeout 725"
+    },
+    {
+      "name": "sync writes current pill and clears only stale herdr keys",
+      "argv": ["sync", "--workspace", "workspace:1", "--no-progress", "--no-log"],
+      "status": 0,
+      "stdout": "herdr sync: 1 panes → cmux ws=workspace:1 (working=1 idle=0 done=0 blocked=0 unknown=0)\ncleared stale: herdr:stale\n",
+      "stderr": "",
+      "herdr_argv": "status\npane list\ntab list\nworkspace list\napi snapshot",
+      "cmux_argv": "set-status herdr:p1 pi/working · Bot --icon hammer --color #ff9500 --priority 80 --workspace workspace:1\nlist-status --workspace workspace:1\nclear-status herdr:stale --workspace workspace:1"
+    },
+    {
+      "name": "invalid ratio path fails before transport",
+      "argv": ["set-ratio", "--ratio", "0.5", "--path", "{}"],
+      "status": 1,
+      "stdout": "",
+      "stderr": "cmux-herdr: --path must be a JSON array of hop indexes\n",
+      "herdr_argv": ""
+    },
+    {
+      "name": "missing wait matcher fails before transport",
+      "argv": ["wait-output", "p1"],
+      "status": 1,
+      "stdout": "",
+      "stderr": "cmux-herdr: wait-output: pass --match TEXT or --regex PATTERN\n",
+      "herdr_argv": ""
+    }
+  ]
+}
