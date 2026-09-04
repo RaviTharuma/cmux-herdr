@@ -2,7 +2,8 @@
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     LazyLock,
@@ -1129,13 +1130,41 @@ fn cmd_focus_tab(_m: &ArgMatches) -> i32 {
         Ok(value) => value,
         Err(error) => return die(error),
     };
-    let Some(tab) = tabs
-        .iter()
-        .find(|tab| tab.tab_id == target || tab.label.as_deref() == Some(target))
-    else {
-        return die(format!("tab not found: {target}"));
+    let tab_id = if let Some(tab) = tabs.iter().find(|tab| tab.tab_id == target) {
+        tab.tab_id.clone()
+    } else {
+        let needle = target.to_lowercase();
+        let exact: Vec<_> = tabs
+            .iter()
+            .filter(|tab| tab.label.as_deref().unwrap_or("").to_lowercase() == needle)
+            .collect();
+        let matches = if exact.is_empty() {
+            tabs.iter()
+                .filter(|tab| {
+                    tab.label
+                        .as_deref()
+                        .unwrap_or("")
+                        .to_lowercase()
+                        .starts_with(&needle)
+                })
+                .collect::<Vec<_>>()
+        } else {
+            exact
+        };
+        match matches.as_slice() {
+            [tab] => tab.tab_id.clone(),
+            [] => return die(format!("tab not found: {target}")),
+            ambiguous => {
+                let options = ambiguous
+                    .iter()
+                    .take(8)
+                    .map(|tab| format!("{}({})", tab.tab_id, tab.label.as_deref().unwrap_or("")))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                return die(format!("ambiguous tab label '{target}': {options}"));
+            }
+        }
     };
-    let tab_id = tab.tab_id.clone();
     match call_api("tab.focus", json!({"tab_id": tab_id})) {
         Ok(_) => {
             println!("focused tab {tab_id}");
@@ -1200,18 +1229,39 @@ fn cmd_read(m: &ArgMatches, agent: bool) -> i32 {
     if !agent && b(m, "raw") {
         params["raw"] = json!(true);
     }
-    let method = if agent { "agent.read" } else { "pane.read" };
-    match call_api(method, params) {
-        Ok(outcome) => {
-            let text = api::extract_read_text(&outcome.result);
-            print!("{text}");
-            if !text.ends_with('\n') {
-                println!();
-            }
-            0
+    let kind = if agent { "agent" } else { "pane" };
+    let mut argv = vec![kind.to_string(), "read".to_string(), target.to_string()];
+    for key in ["source", "lines", "format"] {
+        if let Some(value) = params.get(key).filter(|value| !value.is_null()) {
+            argv.extend([format!("--{key}"), plain(value)]);
         }
-        Err(error) => die(error),
     }
+    if b(m, "ansi") {
+        argv.push("--ansi".into());
+    }
+    if !agent && b(m, "raw") {
+        argv.push("--raw".into());
+    }
+    let Some(herdr) = bridge::which("herdr") else {
+        return die("herdr not found on PATH");
+    };
+    let mut command = Vec::with_capacity(argv.len() + 1);
+    command.push(herdr);
+    command.extend(argv);
+    let refs: Vec<&str> = command.iter().map(String::as_str).collect();
+    let output = match bridge::run_cmd(&refs, Duration::from_secs(15), None) {
+        Ok(output) => output,
+        Err(error) => return die(error),
+    };
+    print!("{}", output.stdout);
+    if !output.stdout.is_empty() && !output.stdout.ends_with('\n') {
+        println!();
+    }
+    eprint!("{}", output.stderr);
+    if !output.stderr.is_empty() && !output.stderr.ends_with('\n') {
+        eprintln!();
+    }
+    output.returncode
 }
 
 fn cmd_split(m: &ArgMatches) -> i32 {
@@ -1514,8 +1564,11 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
     let fingerprint_key = state::parent_key(&fingerprint);
     let writer = crate::handoff::writer_status(&fingerprint_key);
     if writer["native_live"].as_bool().unwrap_or(false) {
-        let associations = state::update_association_map(&SystemEnv, &snap, Some(&workspace), None)
-            .unwrap_or(Value::Null);
+        let associations =
+            match state::update_association_map(&SystemEnv, &snap, Some(&workspace), None) {
+                Ok(value) => value,
+                Err(error) => return die(error),
+            };
         let summary=format!("herdr sync: skipped (native attachment live) ws={workspace} fingerprint={fingerprint_key}");
         if !b(m, "no-log") {
             let _ = bridge::cmux_cmd(&["log", &summary], Some(&workspace));
@@ -1656,13 +1709,15 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
     if !b(m, "no-log") {
         let _ = bridge::cmux_cmd(&["log", &summary], Some(&workspace));
     }
-    let associations = state::update_association_map(
+    let associations = match state::update_association_map(
         &SystemEnv,
         &snap,
         Some(&workspace),
         Some(&Value::Object(write_meta)),
-    )
-    .unwrap_or(Value::Null);
+    ) {
+        Ok(value) => value,
+        Err(error) => return die(error),
+    };
     let result = json!({"workspace":workspace,"applied":applied,"skipped_unchanged":skipped,"stale_cleared":stale,"counts":counts,"progress":progress,"errors":errors,"summary":summary,"pane_count":snap.panes.len(),"agent_count":panes.len(),"associations":associations,"host_fingerprint_key":fingerprint_key,"writer":"plugin","native_live":false});
     println!("{}", result["summary"].as_str().unwrap());
     if !result["skipped_unchanged"].as_array().unwrap().is_empty() {
@@ -1707,7 +1762,7 @@ fn cmd_status(m: &ArgMatches) -> i32 {
                         counts[&status] =
                             json!(counts.get(&status).and_then(Value::as_i64).unwrap_or(0) + 1)
                     }
-                    herdr["status_counts"] = Value::Object(counts)
+                    herdr["status_counts"] = Value::Object(counts);
                 }
             }
             Err(error) => herdr["api"] = json!({"ok":false,"error":error.to_string()}),
@@ -1716,14 +1771,13 @@ fn cmd_status(m: &ArgMatches) -> i32 {
     let cmux = json!({"available":bridge::cmux_available(),"cli":bridge::which("cmux"),"workspace_id":std::env::var("CMUX_WORKSPACE_ID").ok(),"tab_id":std::env::var("CMUX_TAB_ID").ok(),"surface_id":std::env::var("CMUX_SURFACE_ID").ok(),"socket_path":std::env::var("CMUX_SOCKET_PATH").ok(),"socket_exists":std::env::var("CMUX_SOCKET_PATH").ok().is_some_and(|path|std::path::Path::new(&path).exists()),"resolved_workspace":resolve_workspace(None)});
     let writer = crate::handoff::writer_status(&key);
     let missing = state::fingerprint_missing_fields(&fingerprint);
-    let payload = json!({"nested":std::env::var_os("HERDR_ENV").is_some(),"herdr":herdr,"cmux":cmux,"host_fingerprint":{"cmux_surface_id":fingerprint.cmux_surface_id,"herdr_socket_path":fingerprint.herdr_socket_path,"herdr_server_pid":fingerprint.herdr_server_pid,"herdr_workspace_id":fingerprint.herdr_workspace_id},"host_fingerprint_key":key,"host_fingerprint_missing":missing,"writer":writer});
+    let nested = std::env::var_os("HERDR_ENV").is_some_and(|value| !value.is_empty())
+        && (std::env::var_os("CMUX_SOCKET_PATH").is_some_and(|value| !value.is_empty())
+            || std::env::var_os("CMUX_WORKSPACE_ID").is_some_and(|value| !value.is_empty()));
+    let payload = json!({"nested":nested,"herdr":herdr,"cmux":cmux,"host_fingerprint":{"cmux_surface_id":fingerprint.cmux_surface_id,"herdr_socket_path":fingerprint.herdr_socket_path,"herdr_server_pid":fingerprint.herdr_server_pid,"herdr_workspace_id":fingerprint.herdr_workspace_id},"host_fingerprint_key":key,"host_fingerprint_missing":missing,"writer":writer});
     println!(
         "cmux-herdr status\n─────────────────\nnested context : {}",
-        if payload["nested"].as_bool().unwrap_or(false) {
-            "yes"
-        } else {
-            "no"
-        }
+        if nested { "yes" } else { "no" }
     );
     println!("herdr:\n  available    : {}\n  cli          : {}\n  env          : {}\n  workspace    : {}\n  tab          : {}\n  pane         : {}\n  socket       : {} (exists={})\n  server pid   : {}",plain(&herdr["available"]),plain(&herdr["cli"]),plain(&herdr["env"]),plain(&herdr["workspace_id"]),plain(&herdr["tab_id"]),plain(&herdr["pane_id"]),plain(&herdr["socket_path"]),plain(&herdr["socket_exists"]),herdr["server_pid"].as_i64().map(|value|value.to_string()).unwrap_or_else(||"-".into()));
     if herdr["api"]["ok"].as_bool() == Some(true) {
@@ -1769,40 +1823,620 @@ fn cmd_status(m: &ArgMatches) -> i32 {
     0
 }
 
-fn cmd_doctor(m: &ArgMatches) -> i32 {
-    let fp = state::collect_host_fingerprint(&SystemEnv);
-    let missing = state::fingerprint_missing_fields(&fp);
-    let nested = std::env::var_os("HERDR_ENV").is_some();
-    let checks = vec![
-        json!({"name":"herdr_cli","ok":bridge::which("herdr").is_some(),"hard":true,"detail":bridge::which("herdr").unwrap_or_else(||"not found on PATH".into())}),
-        json!({"name":"herdr_health","ok":bridge::herdr_available(),"hard":true,"detail":if bridge::herdr_available(){"available"}else{"unavailable"}}),
-        json!({"name":"host_fingerprint","ok":!nested||missing.is_empty(),"hard":nested,"detail":if missing.is_empty(){"complete".into()}else{format!("incomplete host fingerprint (missing {})",missing.join(", "))}}),
-    ];
-    let hard: Vec<String> = checks
-        .iter()
-        .filter(|c| c["hard"] == json!(true) && c["ok"] == json!(false))
-        .map(|c| c["detail"].as_str().unwrap_or("").to_string())
-        .collect();
-    let report = json!({"ok":hard.is_empty(),"checks":checks,"hard_failures":hard});
-    println!("cmux-herdr doctor\n─────────────────");
-    for c in checks {
-        let mark = if c["ok"] == json!(true) {
-            "ok"
-        } else if c["hard"] == json!(true) {
-            "FAIL"
+const WATCH_LAUNCH_AGENT_LABEL: &str = "com.cmux-herdr.watch";
+
+fn doctor_fingerprint_json(fingerprint: &state::Fingerprint) -> Value {
+    json!({
+        "cmux_surface_id": fingerprint.cmux_surface_id,
+        "herdr_socket_path": fingerprint.herdr_socket_path,
+        "herdr_server_pid": fingerprint.herdr_server_pid,
+        "herdr_workspace_id": fingerprint.herdr_workspace_id,
+    })
+}
+
+fn default_herdr_socket_path() -> PathBuf {
+    std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_default()
+        .join(".config/herdr/herdr.sock")
+}
+
+fn doctor_socket_info(path: &Path) -> Value {
+    use std::os::unix::fs::MetadataExt;
+
+    let mut info = json!({
+        "path": path.to_string_lossy(),
+        "exists": false,
+        "mode": Value::Null,
+        "owner": Value::Null,
+        "uid": Value::Null,
+        "gid": Value::Null,
+    });
+    match fs::metadata(path) {
+        Ok(metadata) => {
+            let uid = metadata.uid();
+            info["exists"] = json!(true);
+            info["mode"] = json!(format!("0o{:o}", metadata.mode() & 0o777));
+            // Rust's standard library has no uid-to-name lookup. Keep the legacy
+            // owner field useful and dependency-free by reporting the numeric uid.
+            info["owner"] = json!(uid.to_string());
+            info["uid"] = json!(uid);
+            info["gid"] = json!(metadata.gid());
+        }
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+            info["stat_error"] = json!(error.to_string());
+        }
+        Err(_) => {}
+    }
+    info
+}
+
+fn doctor_herdr_version(herdr_path: &str) -> Option<String> {
+    let output = bridge::run_cmd(&[herdr_path, "--version"], Duration::from_secs(5), None).ok()?;
+    if output.returncode != 0 {
+        return None;
+    }
+    let text = if output.stdout.trim().is_empty() {
+        output.stderr.trim()
+    } else {
+        output.stdout.trim()
+    };
+    text.lines()
+        .next()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+}
+
+fn doctor_launch_agent_status() -> Value {
+    if !cfg!(target_os = "macos") {
+        return json!({
+            "label": WATCH_LAUNCH_AGENT_LABEL,
+            "checked": false,
+            "skipped": true,
+            "reason": format!("not macOS (platform={})", std::env::consts::OS),
+            "loaded": Value::Null,
+        });
+    }
+    let Some(launchctl) = bridge::which("launchctl") else {
+        return json!({
+            "label": WATCH_LAUNCH_AGENT_LABEL,
+            "checked": false,
+            "skipped": true,
+            "reason": "launchctl not on PATH",
+            "loaded": Value::Null,
+        });
+    };
+    let target = format!(
+        "gui/{}/{}",
+        rustix::process::getuid().as_raw(),
+        WATCH_LAUNCH_AGENT_LABEL
+    );
+    match bridge::run_cmd(
+        &[launchctl.as_str(), "print", target.as_str()],
+        Duration::from_secs(5),
+        None,
+    ) {
+        Ok(output) if output.returncode == 0 => json!({
+            "label": WATCH_LAUNCH_AGENT_LABEL,
+            "checked": true,
+            "skipped": false,
+            "loaded": true,
+        }),
+        Ok(_) => match bridge::run_cmd(
+            &[launchctl.as_str(), "list", WATCH_LAUNCH_AGENT_LABEL],
+            Duration::from_secs(5),
+            None,
+        ) {
+            Ok(output) => json!({
+                "label": WATCH_LAUNCH_AGENT_LABEL,
+                "checked": true,
+                "skipped": false,
+                "loaded": output.returncode == 0,
+            }),
+            Err(error) => json!({
+                "label": WATCH_LAUNCH_AGENT_LABEL,
+                "checked": false,
+                "skipped": true,
+                "reason": error.to_string(),
+                "loaded": Value::Null,
+            }),
+        },
+        Err(error) => json!({
+            "label": WATCH_LAUNCH_AGENT_LABEL,
+            "checked": false,
+            "skipped": true,
+            "reason": error.to_string(),
+            "loaded": Value::Null,
+        }),
+    }
+}
+
+fn doctor_sidebar_path() -> PathBuf {
+    let base = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_default()
+        .join(".config/cmux/sidebars");
+    let javascript = base.join("herdr.js");
+    let swift = base.join("herdr.swift");
+    if javascript.is_file() {
+        javascript
+    } else if swift.is_file() {
+        swift
+    } else {
+        javascript
+    }
+}
+
+fn doctor_dry_sync_preview(
+    herdr_path: Option<&str>,
+    env_socket: Option<&str>,
+    default_socket: &Path,
+) -> Value {
+    if !bridge::herdr_available() {
+        let reason = if herdr_path.is_none() {
+            "herdr not on PATH".to_string()
+        } else if let Some(socket) = env_socket.filter(|socket| !Path::new(socket).exists()) {
+            format!("HERDR_SOCKET_PATH missing on disk: {socket}")
+        } else if env_socket.is_none() && !default_socket.exists() {
+            format!(
+                "no HERDR_SOCKET_PATH and default socket absent ({})",
+                default_socket.display()
+            )
         } else {
-            "warn"
+            "herdr status probe failed / socket unhealthy".to_string()
         };
-        println!(
-            "[{mark:4}] {}: {}",
-            c["name"].as_str().unwrap(),
-            c["detail"].as_str().unwrap()
+        return json!({"skipped": true, "reasons": [reason]});
+    }
+
+    let mut api = bridge::herdr_api();
+    let snapshot = match bridge::fetch_snapshot(&mut api) {
+        Ok(snapshot) => snapshot,
+        Err(error) => {
+            return json!({
+                "skipped": true,
+                "reasons": [format!("snapshot failed: {error}")],
+            })
+        }
+    };
+    let mut agent_panes: Vec<_> = snapshot
+        .panes
+        .iter()
+        .filter(|pane| pane.agent.as_deref().is_some_and(|agent| !agent.is_empty()))
+        .collect();
+    if agent_panes.is_empty() {
+        agent_panes = snapshot
+            .panes
+            .iter()
+            .filter(|pane| {
+                matches!(
+                    pane.agent_status.as_str(),
+                    "working" | "idle" | "done" | "blocked"
+                )
+            })
+            .collect();
+    }
+    let (mut working, mut idle, mut done, mut blocked, mut unknown) = (0, 0, 0, 0, 0);
+    for pane in &agent_panes {
+        match pane.agent_status.to_ascii_lowercase().as_str() {
+            "working" => working += 1,
+            "idle" => idle += 1,
+            "done" => done += 1,
+            "blocked" => blocked += 1,
+            _ => unknown += 1,
+        }
+    }
+
+    let fingerprint = state::collect_host_fingerprint(&SystemEnv);
+    let missing = state::fingerprint_missing_fields(&fingerprint);
+    let (workspace, workspace_error) = if missing.is_empty() {
+        (crate::mirror::resolve_cmux_workspace(None), None)
+    } else {
+        (
+            None,
+            Some(format!(
+                "incomplete host fingerprint (missing {}); dry sync cannot auto-resolve outer workspace",
+                missing.join(", ")
+            )),
         )
+    };
+    let mut summary = format!(
+        "dry sync: {} agent panes (working={working} idle={idle} done={done} blocked={blocked})",
+        agent_panes.len()
+    );
+    if let Some(workspace) = workspace.as_deref() {
+        summary.push_str(&format!(" → ws={workspace}"));
+    }
+    json!({
+        "skipped": false,
+        "pane_count": snapshot.panes.len(),
+        "agent_count": agent_panes.len(),
+        "counts": {
+            "working": working,
+            "idle": idle,
+            "done": done,
+            "blocked": blocked,
+            "unknown": unknown,
+        },
+        "workspace": workspace,
+        "workspace_error": workspace_error,
+        "summary": summary,
+    })
+}
+
+fn doctor_state_binding_detail(
+    state_dir: &Path,
+    state_exists: bool,
+    fingerprint_complete: bool,
+    binding_exists: bool,
+    bound_workspace: Option<&str>,
+) -> String {
+    let prefix = format!("state={} exists={state_exists}", state_dir.display());
+    if !fingerprint_complete {
+        format!("{prefix}; binding check skipped (incomplete fingerprint)")
+    } else if let Some(workspace) = bound_workspace {
+        format!("{prefix}; matching parent binding=yes ({workspace})")
+    } else if binding_exists {
+        format!("{prefix}; matching parent binding=file present (workspace unset)")
+    } else {
+        format!("{prefix}; matching parent binding=none")
+    }
+}
+
+fn diagnose_install() -> Value {
+    let mut checks = Vec::with_capacity(11);
+    let mut hard_failures = Vec::with_capacity(2);
+
+    let herdr_path = bridge::which("herdr");
+    let version = herdr_path.as_deref().and_then(doctor_herdr_version);
+    let herdr_ok = herdr_path.is_some();
+    let herdr_detail = if herdr_ok {
+        format!(
+            "herdr on PATH ({})",
+            version.as_deref().unwrap_or("version unknown")
+        )
+    } else {
+        "herdr not found on PATH".to_string()
+    };
+    checks.push(json!({
+        "name": "herdr_cli",
+        "ok": herdr_ok,
+        "hard": true,
+        "path": herdr_path,
+        "version": version,
+        "detail": herdr_detail,
+    }));
+    if !herdr_ok {
+        hard_failures.push("herdr not found on PATH".to_string());
+    }
+
+    let env_socket = std::env::var("HERDR_SOCKET_PATH")
+        .ok()
+        .filter(|socket| !socket.is_empty());
+    let default_socket = default_herdr_socket_path();
+    let socket_path = env_socket
+        .as_deref()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| default_socket.clone());
+    let mut socket_info = doctor_socket_info(&socket_path);
+    socket_info["from_env"] = json!(env_socket.is_some());
+    socket_info["default_path"] = json!(default_socket.to_string_lossy());
+    let socket_exists = socket_info["exists"].as_bool().unwrap_or(false);
+    let socket_detail = if socket_exists {
+        format!(
+            "socket {} exists mode={} owner={}",
+            socket_path.display(),
+            socket_info["mode"].as_str().unwrap_or("-"),
+            socket_info["owner"].as_str().unwrap_or("-")
+        )
+    } else if env_socket.is_some() {
+        format!(
+            "HERDR_SOCKET_PATH set but missing: {}",
+            socket_path.display()
+        )
+    } else {
+        format!("default socket absent: {}", socket_path.display())
+    };
+    checks.push(json!({
+        "name": "herdr_socket",
+        "ok": socket_exists,
+        "hard": false,
+        "socket": socket_info,
+        "detail": socket_detail,
+    }));
+
+    let mut ping_api = HerdrApi::new(
+        Some(socket_path.to_string_lossy().into_owned()),
+        Duration::from_secs(2),
+    );
+    let (api_ok, api_via, api_detail) = match ping_api.call("ping", json!({}), true) {
+        Ok(ping) => (
+            ping.ok,
+            Some(ping.via.to_string()),
+            format!("ping via {}", ping.via),
+        ),
+        Err(error) => (false, None, format!("ping failed: {error}")),
+    };
+    checks.push(json!({
+        "name": "herdr_api",
+        "ok": api_ok,
+        "hard": false,
+        "via": api_via,
+        "detail": api_detail,
+    }));
+
+    let fingerprint = state::collect_host_fingerprint(&SystemEnv);
+    let fingerprint_json = doctor_fingerprint_json(&fingerprint);
+    let missing = state::fingerprint_missing_fields(&fingerprint);
+    let claiming_nested = std::env::var_os("HERDR_ENV").is_some_and(|value| !value.is_empty());
+    let fingerprint_complete = missing.is_empty();
+    let fingerprint_ok = fingerprint_complete || !claiming_nested;
+    let fingerprint_key = fingerprint_complete.then(|| state::parent_key(&fingerprint));
+    let fingerprint_detail = if let Some(key) = fingerprint_key.as_deref() {
+        format!("complete key={key}")
+    } else {
+        format!(
+            "incomplete (missing {}){}",
+            missing.join(", "),
+            if claiming_nested {
+                "; hard fail because HERDR_ENV claims nested context"
+            } else {
+                "; ok for non-nested inspect commands"
+            }
+        )
+    };
+    checks.push(json!({
+        "name": "host_fingerprint",
+        "ok": fingerprint_ok,
+        "hard": claiming_nested && !fingerprint_complete,
+        "fingerprint": fingerprint_json,
+        "fingerprint_key": fingerprint_key,
+        "missing": missing,
+        "claiming_nested": claiming_nested,
+        "detail": fingerprint_detail,
+    }));
+    if claiming_nested && !fingerprint_complete {
+        hard_failures.push(format!(
+            "incomplete host fingerprint while HERDR_ENV claims nested env (missing {})",
+            missing.join(", ")
+        ));
+    }
+
+    let state_dir = state::state_dir(&SystemEnv);
+    let state_exists = state_dir.is_dir();
+    let binding_path = fingerprint_complete.then(|| state::binding_path(&SystemEnv, &fingerprint));
+    let binding_exists = binding_path.as_deref().is_some_and(Path::is_file);
+    let bound_workspace = fingerprint_complete
+        .then(|| state::load_parent_binding(&SystemEnv, &fingerprint))
+        .flatten();
+    checks.push(json!({
+        "name": "state_binding",
+        "ok": true,
+        "hard": false,
+        "state_dir": state_dir.to_string_lossy(),
+        "state_dir_exists": state_exists,
+        "binding_path": binding_path.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        "binding_exists": binding_exists,
+        "bound_workspace": bound_workspace,
+        "detail": doctor_state_binding_detail(
+            &state_dir,
+            state_exists,
+            fingerprint_complete,
+            binding_exists,
+            bound_workspace.as_deref(),
+        ),
+    }));
+
+    let writer = crate::handoff::writer_status(&state::parent_key(&fingerprint));
+    let writer_detail = if writer["native_live"].as_bool() == Some(true) {
+        format!(
+            "writer=native (plugin projection skipped); marker={}",
+            writer["marker_path"].as_str().unwrap_or("-")
+        )
+    } else if writer["force_plugin"].as_bool() == Some(true)
+        && writer["native_detected"].as_bool() == Some(true)
+    {
+        format!(
+            "writer=plugin-forced ({}=1 overrides native live)",
+            crate::handoff::FORCE_PLUGIN_ENV
+        )
+    } else {
+        "writer=plugin (no native attachment detected)".to_string()
+    };
+    checks.push(json!({
+        "name": "writer",
+        "ok": true,
+        "hard": false,
+        "writer": writer,
+        "detail": writer_detail,
+    }));
+
+    let size_env = std::env::var(crate::mirror::SIZE_AUTHORITY_ENV)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    let size_file = fingerprint_complete
+        .then(crate::mirror::read_size_authority)
+        .flatten();
+    let size_authority = size_env.clone().or(size_file);
+    let size_detail = match size_authority.as_deref() {
+        Some(authority) if authority == "native" || authority.starts_with("native:") => {
+            format!("size-authority=native (plugin SIGWINCH no-op); value={authority}")
+        }
+        Some(authority) => format!("size-authority pane={authority}"),
+        None => "size-authority unset (first attach may claim)".to_string(),
+    };
+    checks.push(json!({
+        "name": "size_authority",
+        "ok": true,
+        "hard": false,
+        "size_authority": size_authority,
+        "size_authority_env": size_env,
+        "size_authority_path": fingerprint_complete.then(|| crate::mirror::size_authority_path().to_string_lossy().into_owned()),
+        "detail": size_detail,
+    }));
+
+    let association = if fingerprint_complete {
+        state::load_association_map(&SystemEnv, &fingerprint)
+    } else {
+        json!({"panes": {}})
+    };
+    let locked: Vec<String> = association["panes"]
+        .as_object()
+        .into_iter()
+        .flat_map(|panes| panes.iter())
+        .filter(|(_, entry)| entry["title_lock"].as_bool() == Some(true))
+        .map(|(pane_id, _)| pane_id.clone())
+        .collect();
+    let locked_preview = locked
+        .iter()
+        .take(5)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(", ");
+    let title_detail = if locked.is_empty() {
+        "title locks=0".to_string()
+    } else {
+        format!(
+            "title locks={} ({}{})",
+            locked.len(),
+            locked_preview,
+            if locked.len() > 5 { "…" } else { "" }
+        )
+    };
+    checks.push(json!({
+        "name": "title_locks",
+        "ok": true,
+        "hard": false,
+        "locked_count": locked.len(),
+        "locked_panes": locked.into_iter().take(20).collect::<Vec<_>>(),
+        "association_path": fingerprint_complete.then(|| state::association_path(&SystemEnv, &fingerprint).to_string_lossy().into_owned()),
+        "detail": title_detail,
+    }));
+
+    let launch_agent = doctor_launch_agent_status();
+    let launch_skipped = launch_agent["skipped"].as_bool() == Some(true);
+    let launch_ok = launch_skipped || launch_agent["loaded"].as_bool() == Some(true);
+    let launch_detail = if launch_skipped {
+        format!(
+            "LaunchAgent {}: skipped ({})",
+            launch_agent["label"]
+                .as_str()
+                .unwrap_or(WATCH_LAUNCH_AGENT_LABEL),
+            launch_agent["reason"].as_str().unwrap_or("unknown reason")
+        )
+    } else {
+        format!(
+            "LaunchAgent {}: {}",
+            launch_agent["label"]
+                .as_str()
+                .unwrap_or(WATCH_LAUNCH_AGENT_LABEL),
+            if launch_agent["loaded"].as_bool() == Some(true) {
+                "loaded"
+            } else {
+                "not loaded"
+            }
+        )
+    };
+    checks.push(json!({
+        "name": "launch_agent",
+        "ok": launch_ok,
+        "hard": false,
+        "launch_agent": launch_agent,
+        "detail": launch_detail,
+    }));
+
+    let sidebar_path = doctor_sidebar_path();
+    let sidebar_exists = sidebar_path.is_file();
+    checks.push(json!({
+        "name": "sidebar",
+        "ok": true,
+        "hard": false,
+        "path": sidebar_path.to_string_lossy(),
+        "exists": sidebar_exists,
+        "detail": if sidebar_exists {
+            format!("sidebar present: {}", sidebar_path.display())
+        } else {
+            format!("sidebar absent (optional): {}", sidebar_path.display())
+        },
+    }));
+
+    let dry_sync = doctor_dry_sync_preview(
+        herdr_path.as_deref(),
+        env_socket.as_deref(),
+        &default_socket,
+    );
+    let dry_sync_ok = dry_sync["skipped"].as_bool() != Some(true);
+    let dry_sync_detail = if dry_sync_ok {
+        dry_sync["summary"]
+            .as_str()
+            .unwrap_or("dry sync complete")
+            .to_string()
+    } else {
+        let reasons = dry_sync["reasons"]
+            .as_array()
+            .map(|reasons| {
+                reasons
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            })
+            .filter(|reasons| !reasons.is_empty())
+            .unwrap_or_else(|| "unknown".to_string());
+        format!("dry sync skipped: {reasons}")
+    };
+    checks.push(json!({
+        "name": "dry_sync",
+        "ok": dry_sync_ok || !herdr_ok,
+        "hard": false,
+        "dry_sync": dry_sync,
+        "detail": dry_sync_detail,
+    }));
+
+    json!({
+        "ok": hard_failures.is_empty(),
+        "hard_failures": hard_failures,
+        "checks": checks,
+        "claiming_nested": claiming_nested,
+        "host_fingerprint": doctor_fingerprint_json(&fingerprint),
+        "host_fingerprint_missing": missing,
+    })
+}
+
+fn cmd_doctor(m: &ArgMatches) -> i32 {
+    let report = diagnose_install();
+    println!("cmux-herdr doctor\n─────────────────");
+    if let Some(checks) = report["checks"].as_array() {
+        for check in checks {
+            let mark = if check["ok"].as_bool() == Some(true) {
+                "ok"
+            } else if check["hard"].as_bool() == Some(true) {
+                "FAIL"
+            } else {
+                "warn"
+            };
+            println!(
+                "[{mark:4}] {}: {}",
+                check["name"].as_str().unwrap_or("?"),
+                check["detail"].as_str().unwrap_or("None")
+            );
+        }
+    }
+    if let Some(failures) = report["hard_failures"]
+        .as_array()
+        .filter(|failures| !failures.is_empty())
+    {
+        println!();
+        println!("hard failures:");
+        for failure in failures {
+            println!("  - {}", failure.as_str().unwrap_or("unknown hard failure"));
+        }
     }
     if b(m, "json") {
         pretty(&report)
     }
-    if report["ok"] == json!(true) {
+    if report["ok"].as_bool() == Some(true) {
         0
     } else {
         1
@@ -1925,6 +2559,208 @@ fn cmd_mirror(m: &ArgMatches) -> i32 {
     }
 }
 
+type WatchPump = crate::pump::LivePump<crate::pump::ApiTransport<'static>>;
+
+fn watch_fingerprint_key() -> String {
+    state::parent_key(&state::collect_host_fingerprint(&SystemEnv))
+}
+
+fn watch_note(note: &mut String, text: String) {
+    if note == &text {
+        return;
+    }
+    *note = text;
+    eprintln!("{note}");
+}
+
+fn watch_attach_from_snapshot(
+    m: &ArgMatches,
+) -> Result<(Option<crate::live::LiveApplyHost>, Value), String> {
+    let snap = fetch_snapshot().map_err(|error| error.to_string())?;
+    let desired = crate::mirror::desired_mirrors(&snap, "all", None, None, true)
+        .map_err(|error| error.to_string())?;
+    let windows = crate::mirror::build_herdr_windows(&snap, &desired);
+    let explicit_socket = m
+        .try_get_one::<String>("socket")
+        .ok()
+        .flatten()
+        .map(String::as_str);
+    let socket = crate::live::resolve_socket_path(explicit_socket).ok_or_else(|| {
+        "need an absolute Herdr socket (--socket or HERDR_SOCKET_PATH)".to_string()
+    })?;
+    let sessions = crate::live::sessions_from_snapshot(&snap);
+    Ok(crate::live::attach_live(
+        &windows, &sessions, &socket, true, true,
+    ))
+}
+
+fn watch_reconcile_host(
+    m: &ArgMatches,
+    live_host: &mut Option<crate::live::LiveApplyHost>,
+    note: &mut String,
+) -> Result<(), String> {
+    let fingerprint = watch_fingerprint_key();
+    let decision = crate::handoff::resolve_writer(&fingerprint, None, None);
+    if decision.yields() {
+        if let Some(mut host) = live_host.take() {
+            let _ = host.detach();
+            crate::handoff::release_plugin_writer(&fingerprint);
+            watch_note(
+                note,
+                "cmux-herdr watch: yielded to native (Herdr session left running)".into(),
+            );
+        } else {
+            watch_note(
+                note,
+                "cmux-herdr watch: native owns this host; plugin apply idle".into(),
+            );
+        }
+        return Ok(());
+    }
+    if let Some(host) = live_host.as_mut() {
+        let endpoint_hash = crate::live::endpoint_hash(&host.socket_path);
+        let lease = crate::handoff::heartbeat_plugin_writer(
+            &fingerprint,
+            &host.socket_path,
+            &endpoint_hash,
+        )
+        .map_err(|error| format!("writer heartbeat failed: {error}"))?;
+        if lease.is_none() {
+            let _ = host.detach();
+            *live_host = None;
+            crate::handoff::release_plugin_writer(&fingerprint);
+            watch_note(
+                note,
+                "cmux-herdr watch: yielded to native (Herdr session left running)".into(),
+            );
+        }
+        return Ok(());
+    }
+    let (host, attached) = match watch_attach_from_snapshot(m) {
+        Ok(attached) => attached,
+        Err(error) => {
+            watch_note(note, format!("cmux-herdr watch: attach skipped: {error}"));
+            return Ok(());
+        }
+    };
+    let Some(host) = host else {
+        watch_note(
+            note,
+            format!(
+                "cmux-herdr watch: {}; not starting a competing apply host",
+                attached["outcome"].as_str().unwrap_or("unknown")
+            ),
+        );
+        return Ok(());
+    };
+    let outcome = attached
+        .get("attach")
+        .and_then(Value::as_object)
+        .and_then(|attach| attach.get("outcome"))
+        .and_then(Value::as_str)
+        .or_else(|| attached.get("outcome").and_then(Value::as_str))
+        .unwrap_or("unknown");
+    watch_note(
+        note,
+        format!("cmux-herdr watch: attached ({outcome}); Ctrl-C detaches and leaves Herdr running"),
+    );
+    *live_host = Some(host);
+    Ok(())
+}
+
+fn watch_windows_from_live_snapshot() -> Result<Vec<crate::engine::HerdrWindow>, String> {
+    let snap = fetch_snapshot().map_err(|error| error.to_string())?;
+    let desired = crate::mirror::desired_mirrors(&snap, "all", None, None, true)
+        .map_err(|error| error.to_string())?;
+    Ok(crate::mirror::build_herdr_windows(&snap, &desired))
+}
+
+fn make_watch_pump() -> WatchPump {
+    let mut api = HerdrApi::new(None, API_TIMEOUT);
+    let _ = api.open();
+    crate::pump::LivePump::new(crate::pump::ApiTransport::new(Some(api)))
+}
+
+fn watch_sync_pills(m: &ArgMatches) -> Result<(), String> {
+    let code = cmd_sync(m);
+    if code == 0 {
+        Ok(())
+    } else {
+        Err(format!("watch iteration failed ({code})"))
+    }
+}
+
+fn watch_project(m: &ArgMatches) -> Result<(), String> {
+    if !b(m, "mirror") && !tmux_parity(m) {
+        return watch_sync_pills(m);
+    }
+    let tmux = tmux_parity(m);
+    let result = crate::mirror::mirror_to_cmux(
+        mirror_scope(m),
+        s(m, "workspace"),
+        s(m, "herdr-workspace"),
+        s(m, "tab"),
+        b(m, "prune") || tmux,
+        !b(m, "no-status") && !b(m, "no-progress"),
+        !b(m, "no-layout"),
+        b(m, "focus") || tmux,
+        b(m, "order") || tmux,
+        b(m, "ratios") || tmux,
+        tmux,
+        false,
+        false,
+    )
+    .map_err(|error| error.to_string())?;
+    let formatted = crate::mirror::format_mirror_plan(&result);
+    println!("{}", formatted.lines().next().unwrap_or_default());
+    Ok(())
+}
+
+fn watch_resync(
+    live_host: &mut crate::live::LiveApplyHost,
+    pump: &mut WatchPump,
+    log: &str,
+) -> Result<(), String> {
+    let windows = watch_windows_from_live_snapshot()?;
+    live_host.apply_session(&windows)?;
+    let _ = pump.poll(Some(live_host));
+    pump.log.push(log.into());
+    Ok(())
+}
+
+fn watch_apply_event(
+    m: &ArgMatches,
+    live_host: Option<&mut crate::live::LiveApplyHost>,
+    pump: Option<&mut WatchPump>,
+    event: Option<&Value>,
+    event_gap: bool,
+) -> Result<(), String> {
+    if let (Some(live_host), Some(pump)) = (live_host, pump) {
+        if event_gap {
+            watch_resync(live_host, pump, "event_gap")?;
+            return watch_project(m);
+        }
+        if let Some(event) = event {
+            let pumped = pump.handle_event(Some(event), Some(live_host));
+            if pumped.resync {
+                watch_resync(live_host, pump, &pumped.log)?;
+            }
+            return match crate::pump::watch_followup(Some(&pumped), true, false) {
+                "project" => watch_project(m),
+                "pills" => watch_sync_pills(m),
+                _ => Ok(()),
+            };
+        }
+        let _ = pump.poll(Some(live_host));
+        return Ok(());
+    }
+    if event_gap || event.is_none() || tmux_parity(m) {
+        watch_project(m)
+    } else {
+        watch_sync_pills(m)
+    }
+}
+
 fn cmd_watch(m: &ArgMatches) -> i32 {
     if b(m, "once") {
         return if b(m, "pills-only") {
@@ -1937,6 +2773,7 @@ fn cmd_watch(m: &ArgMatches) -> i32 {
         return code;
     }
     let interval = (*m.get_one::<f64>("interval").unwrap()).max(0.5);
+    let wait = Duration::from_secs_f64(interval);
     WATCH_STOP.store(false, Ordering::Relaxed);
     install_watch_signals();
     eprintln!(
@@ -1949,31 +2786,141 @@ fn cmd_watch(m: &ArgMatches) -> i32 {
         interval,
         s(m, "workspace").unwrap_or("auto")
     );
+
+    let want_events = tmux_parity(m) || b(m, "events");
+    let mut event_session = want_events
+        .then(|| crate::socket::EventSession::try_open(None, wait))
+        .flatten();
+    if event_session.is_some() {
+        eprintln!("cmux-herdr watch: holding Herdr events.subscribe session");
+    }
+    let mut live_host = None;
+    let mut restore_socket = None;
+    let mut pump: Option<WatchPump> = None;
+    let mut note = String::new();
     let mut errors = ErrorDeduplicator::default();
-    while !WATCH_STOP.load(Ordering::Relaxed) {
-        let code = if b(m, "pills-only") {
-            cmd_sync(m)
-        } else {
-            cmd_mirror(m)
-        };
-        if code == 0 {
-            errors.success()
-        } else {
-            errors.report(format!("cmux-herdr: watch iteration failed ({code})"))
+    if tmux_parity(m) {
+        let _ = watch_reconcile_host(m, &mut live_host, &mut note);
+        if let Some(host) = live_host.as_ref() {
+            restore_socket = Some(host.socket_path.clone());
         }
-        if tmux_parity(m) || b(m, "events") {
-            let _ = crate::mirror::wait_herdr_event(interval);
-        } else {
-            let deadline = std::time::Instant::now() + Duration::from_secs_f64(interval);
-            while !WATCH_STOP.load(Ordering::Relaxed) && std::time::Instant::now() < deadline {
-                std::thread::sleep(
-                    Duration::from_millis(250)
-                        .min(deadline.saturating_duration_since(std::time::Instant::now())),
-                )
-            }
+        if live_host.is_some() {
+            pump = Some(make_watch_pump());
+            eprintln!(
+                "cmux-herdr watch: pumping pane.read / focus / agent_status into the live apply host"
+            );
         }
     }
+
+    let mut initial = true;
+    let mut last_resync: Option<std::time::Instant> = None;
+    let periodic_resync = Duration::from_secs_f64((interval * 10.0).max(15.0));
+    while !WATCH_STOP.load(Ordering::Relaxed) {
+        let iteration = (|| -> Result<(), String> {
+            if tmux_parity(m) {
+                watch_reconcile_host(m, &mut live_host, &mut note)?;
+                if let Some(host) = live_host.as_ref() {
+                    restore_socket = Some(host.socket_path.clone());
+                }
+                if live_host.is_some() && pump.is_none() {
+                    pump = Some(make_watch_pump());
+                } else if live_host.is_none() {
+                    if let Some(mut old_pump) = pump.take() {
+                        old_pump.close();
+                    }
+                }
+            }
+            if initial {
+                if let (Some(host), Some(pump)) = (live_host.as_mut(), pump.as_mut()) {
+                    let _ = pump.poll(Some(host));
+                }
+                watch_project(m)?;
+                initial = false;
+                last_resync = Some(std::time::Instant::now());
+                return Ok(());
+            }
+            if want_events {
+                let event = if let Some(session) = event_session.as_mut() {
+                    session.wait(wait)
+                } else {
+                    let _ = crate::mirror::wait_herdr_event(interval);
+                    None
+                };
+                let mut event_gap = false;
+                if event.is_none()
+                    && event_session
+                        .as_ref()
+                        .is_some_and(|session| !session.alive())
+                {
+                    if let Some(mut dead) = event_session.take() {
+                        dead.close();
+                    }
+                    event_session = crate::socket::EventSession::try_open(None, wait);
+                    event_gap = true;
+                }
+                if !event_gap
+                    && live_host.is_some()
+                    && pump.is_some()
+                    && last_resync.is_some_and(|last| last.elapsed() >= periodic_resync)
+                {
+                    event_gap = true;
+                }
+                watch_apply_event(
+                    m,
+                    live_host.as_mut(),
+                    pump.as_mut(),
+                    event.as_ref(),
+                    event_gap,
+                )?;
+                if event_gap {
+                    last_resync = Some(std::time::Instant::now());
+                }
+            } else {
+                watch_project(m)?;
+            }
+            Ok(())
+        })();
+        match iteration {
+            Ok(()) => errors.success(),
+            Err(error) => {
+                errors.report(format!("cmux-herdr: {error}"));
+                initial = false;
+            }
+        }
+        if want_events {
+            continue;
+        }
+        let deadline = std::time::Instant::now() + wait;
+        while !WATCH_STOP.load(Ordering::Relaxed) && std::time::Instant::now() < deadline {
+            std::thread::sleep(
+                Duration::from_millis(250)
+                    .min(deadline.saturating_duration_since(std::time::Instant::now())),
+            );
+        }
+    }
+
     eprintln!("\ncmux-herdr watch: stopping…");
+    let cleanup_socket = live_host
+        .as_ref()
+        .map(|host| host.socket_path.clone())
+        .or(restore_socket);
+    if let Some(host) = live_host.as_mut() {
+        let closed = host.detach();
+        eprintln!(
+            "cmux-herdr watch: detached (server_stopped={})",
+            closed["server_stopped"].as_bool().unwrap_or(false)
+        );
+    }
+    if let Some(socket_path) = cleanup_socket.as_deref() {
+        crate::live::clear_host_restore(socket_path);
+        crate::handoff::release_plugin_writer(&watch_fingerprint_key());
+    }
+    if let Some(mut pump) = pump {
+        pump.close();
+    }
+    if let Some(mut session) = event_session {
+        session.close();
+    }
     0
 }
 
@@ -2134,15 +3081,25 @@ fn file_change(value: crate::update::FileChange) -> &'static str {
     }
 }
 fn update_paths(
+    action: &str,
     m: &ArgMatches,
     manager: &crate::update::ServiceManager,
 ) -> Result<crate::update::ServicePaths, i32> {
-    crate::update::ServicePaths::discover(manager, s(m, "herdr").map(Path::new)).map_err(die)
+    match action {
+        "status" | "uninstall" => {
+            crate::update::ServicePaths::discover_service_state(manager).map_err(die)
+        }
+        "install" | "run" => {
+            crate::update::ServicePaths::discover(manager, s(m, "herdr").map(Path::new))
+                .map_err(die)
+        }
+        _ => unreachable!(),
+    }
 }
 fn cmd_update_service(m: &ArgMatches) -> i32 {
     let (action, sub) = m.subcommand().expect("required update-service action");
     let manager = update_manager();
-    let paths = match update_paths(sub, &manager) {
+    let paths = match update_paths(action, sub, &manager) {
         Ok(v) => v,
         Err(code) => return code,
     };

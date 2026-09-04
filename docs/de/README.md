@@ -38,7 +38,7 @@ Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
 Der Plugin-Manager lädt eine checksum-verifizierte Rust-Binärdatei; Nutzer
 brauchen weder Python noch eine Rust-Toolchain.
 
-Aktuelle Version: **v0.6.1**.
+Aktuelle Version: **v0.7.0**.
 
 ## Installation
 

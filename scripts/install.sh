@@ -22,13 +22,16 @@ fi
 "${FETCH_SRC}"
 
 mkdir -p "${LOCAL_BIN}"
-# Prefer symlink so edits in the repo are live; fall back to copy.
+# Prefer a symlink so checkout updates stay live. If symlinks are unavailable,
+# copy the bootstrapped runtime itself; a copied launcher cannot resolve the
+# checkout-local fetch script or binary from ~/.local/bin.
 if ln -sfn "${BIN_SRC}" "${TARGET}" 2>/dev/null; then
   echo "  cli:  ${TARGET} -> ${BIN_SRC}"
 else
-  cp "${BIN_SRC}" "${TARGET}"
+  rm -f "${TARGET}"
+  cp "${ROOT}/.cmux-herdr/bin/cmux-herdr" "${TARGET}"
   chmod +x "${TARGET}"
-  echo "  cli:  ${TARGET} (copied)"
+  echo "  cli:  ${TARGET} (runtime copied)"
 fi
 
 # The launcher resolves this symlink back to the checkout and executes the

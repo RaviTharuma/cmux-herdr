@@ -993,6 +993,23 @@ fn absolute_xdg(name: &str, fallback: PathBuf) -> PathBuf {
 
 impl ServicePaths {
     pub fn discover(manager: &ServiceManager, herdr_override: Option<&Path>) -> Result<Self> {
+        let mut paths = Self::discover_service_state(manager)?;
+        paths.source_binary = std::env::current_exe()
+            .and_then(fs::canonicalize)
+            .map_err(|error| UpdateError::io("resolve cmux-herdr executable", error))?;
+        let environment_herdr = std::env::var_os("HERDR_BIN")
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from);
+        paths.herdr_binary = resolve_herdr_path(
+            herdr_override,
+            environment_herdr.as_deref(),
+            std::env::var_os("PATH").as_deref(),
+        )?;
+        Ok(paths)
+    }
+
+    /// Discover generated service state without requiring Herdr to still exist.
+    pub(crate) fn discover_service_state(manager: &ServiceManager) -> Result<Self> {
         let home = std::env::var_os("HOME")
             .map(PathBuf::from)
             .filter(|path| path.is_absolute())
@@ -1000,30 +1017,36 @@ impl ServicePaths {
         let config_home = absolute_xdg("XDG_CONFIG_HOME", home.join(".config"));
         let state_home = absolute_xdg("XDG_STATE_HOME", home.join(".local/state"));
         let data_home = absolute_xdg("XDG_DATA_HOME", home.join(".local/share"));
+        Ok(Self::service_state_from_roots(
+            manager,
+            home,
+            config_home,
+            state_home,
+            data_home,
+        ))
+    }
+
+    fn service_state_from_roots(
+        manager: &ServiceManager,
+        home: PathBuf,
+        config_home: PathBuf,
+        state_home: PathBuf,
+        data_home: PathBuf,
+    ) -> Self {
         let definition_dir = match manager {
             ServiceManager::Launchd { .. } => home.join("Library/LaunchAgents"),
             ServiceManager::Systemd => config_home.join("systemd/user"),
         };
-        let source_binary = std::env::current_exe()
-            .and_then(fs::canonicalize)
-            .map_err(|error| UpdateError::io("resolve cmux-herdr executable", error))?;
-        let environment_herdr = std::env::var_os("HERDR_BIN")
-            .filter(|value| !value.is_empty())
-            .map(PathBuf::from);
-        let herdr_binary = resolve_herdr_path(
-            herdr_override,
-            environment_herdr.as_deref(),
-            std::env::var_os("PATH").as_deref(),
-        )?;
-        Ok(Self {
+        Self {
             home,
             config_path: config_home.join("herdr/config.toml"),
             state_root: state_home.join("cmux-herdr"),
             data_root: data_home.join("cmux-herdr"),
             definition_dir,
-            source_binary,
-            herdr_binary,
-        })
+            source_binary: PathBuf::new(),
+            // Status and uninstall never consume execution-only paths.
+            herdr_binary: PathBuf::new(),
+        }
     }
 
     pub fn runtime_binary(&self) -> PathBuf {
@@ -2189,5 +2212,18 @@ mod tests {
         assert!(!paths.runtime_binary().exists());
         assert!(!paths.systemd_service().exists());
         assert!(!paths.systemd_timer().exists());
+    }
+    #[test]
+    fn state_only_discovery_leaves_execution_paths_unresolved() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = ServicePaths::service_state_from_roots(
+            &ServiceManager::Systemd,
+            root.path().join("home"),
+            root.path().join("config"),
+            root.path().join("state"),
+            root.path().join("data"),
+        );
+        assert!(paths.source_binary.as_os_str().is_empty());
+        assert!(paths.herdr_binary.as_os_str().is_empty());
     }
 }

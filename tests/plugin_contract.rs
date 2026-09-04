@@ -97,3 +97,82 @@ fn launchers_exec_cached_binary_and_resolve_symlink() {
     assert!(linked.status.success());
     assert_eq!(String::from_utf8(linked.stdout).unwrap(), "tree\n");
 }
+
+#[test]
+fn installer_copy_fallback_installs_a_runnable_cli() {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("checkout");
+    let home = tmp.path().join("home");
+    let fake_bin = tmp.path().join("fake-bin");
+    fs::create_dir_all(root.join("bin")).unwrap();
+    fs::create_dir_all(root.join("scripts")).unwrap();
+    fs::create_dir_all(&fake_bin).unwrap();
+    copy_executable(
+        &source.join("scripts/install.sh"),
+        &root.join("scripts/install.sh"),
+    );
+    copy_executable(&source.join("bin/cmux-herdr"), &root.join("bin/cmux-herdr"));
+    let original_launcher = fs::read(root.join("bin/cmux-herdr")).unwrap();
+    fs::create_dir_all(home.join(".local/bin")).unwrap();
+    std::os::unix::fs::symlink(
+        root.join("bin/cmux-herdr"),
+        home.join(".local/bin/cmux-herdr"),
+    )
+    .unwrap();
+    let fetch = root.join("bin/cmux-herdr-fetch");
+    fs::write(
+        &fetch,
+        r#"#!/bin/sh
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+mkdir -p "$root/.cmux-herdr/bin"
+cat > "$root/.cmux-herdr/bin/cmux-herdr" <<'EOF'
+#!/bin/sh
+printf 'runtime %s\n' "$*"
+EOF
+chmod +x "$root/.cmux-herdr/bin/cmux-herdr"
+"#,
+    )
+    .unwrap();
+    fs::set_permissions(&fetch, fs::Permissions::from_mode(0o755)).unwrap();
+    let fake_ln = fake_bin.join("ln");
+    fs::write(&fake_ln, "#!/bin/sh\nexit 1\n").unwrap();
+    fs::set_permissions(&fake_ln, fs::Permissions::from_mode(0o755)).unwrap();
+
+    let path = format!(
+        "{}:{}",
+        fake_bin.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    let install = Command::new(root.join("scripts/install.sh"))
+        .env("HOME", &home)
+        .env("PATH", path)
+        .output()
+        .unwrap();
+    assert!(
+        install.status.success(),
+        "install failed: {}",
+        String::from_utf8_lossy(&install.stderr)
+    );
+    assert_eq!(
+        fs::read(root.join("bin/cmux-herdr")).unwrap(),
+        original_launcher,
+        "copy fallback overwrote the launcher through the existing symlink"
+    );
+    assert!(!fs::symlink_metadata(home.join(".local/bin/cmux-herdr"))
+        .unwrap()
+        .file_type()
+        .is_symlink());
+
+    let cli = Command::new(home.join(".local/bin/cmux-herdr"))
+        .arg("status")
+        .output()
+        .unwrap();
+    assert!(
+        cli.status.success(),
+        "copied CLI failed: {}",
+        String::from_utf8_lossy(&cli.stderr)
+    );
+    assert_eq!(String::from_utf8(cli.stdout).unwrap(), "runtime status\n");
+}

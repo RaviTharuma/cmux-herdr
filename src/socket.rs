@@ -229,13 +229,19 @@ impl SocketClient {
         };
         // A valid, id-matched remote error is authoritative (Remote stage):
         // no reconnect retry, no CLI fallback.
-        if let Some(id) = obj.get("id").and_then(Value::as_str) {
-            if id != req_id {
+        match obj.get("id").and_then(Value::as_str) {
+            Some(id) if id == req_id => {}
+            Some(id) => {
                 self.close();
                 return Err(SocketError::new(format!(
                     "response id {id} does not match request id {req_id}"
                 ))
                 .at(ErrorStage::AfterSend));
+            }
+            None => {
+                self.close();
+                return Err(SocketError::new("response id is missing or not a string")
+                    .at(ErrorStage::AfterSend));
             }
         }
         if let Some(error) = obj.get("error").filter(|e| e.is_object()) {
@@ -343,6 +349,7 @@ impl SocketClient {
             let mut chunk = [0u8; 64 * 1024];
             match sock.read(&mut chunk) {
                 Ok(0) => {
+                    self.close();
                     return if required {
                         Err(SocketError::new("socket closed"))
                     } else {
@@ -352,6 +359,7 @@ impl SocketClient {
                 Ok(n) => {
                     self.buf.extend_from_slice(&chunk[..n]);
                     if self.buf.len() > MAX_LINE_BYTES {
+                        self.close();
                         return Err(SocketError::new("oversized line"));
                     }
                 }
@@ -368,6 +376,7 @@ impl SocketClient {
                     };
                 }
                 Err(e) => {
+                    self.close();
                     return if required {
                         Err(SocketError::new(format!("recv failed: {e}")))
                     } else {
@@ -480,5 +489,30 @@ mod tests {
         std::fs::set_permissions(&tight, std::fs::Permissions::from_mode(0o700)).unwrap();
         // 0700 has no group/other bits and is owned by us: must be accepted.
         assert!(assert_socket_secure(tight.to_str().unwrap()).is_ok());
+    }
+
+    #[test]
+    fn response_requires_a_string_request_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("missing-id.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = Vec::new();
+            let mut byte = [0u8; 1];
+            while stream.read(&mut byte).unwrap() == 1 && byte[0] != b'\n' {
+                request.push(byte[0]);
+            }
+            assert!(!request.is_empty());
+            stream.write_all(b"{\"result\":{\"ok\":true}}\n").unwrap();
+        });
+
+        let mut client = SocketClient::new(path.to_string_lossy(), Duration::from_secs(1));
+        client.connect().unwrap();
+        let error = client.request("ping", json!({})).unwrap_err();
+        assert_eq!(error.stage, ErrorStage::AfterSend);
+        assert!(error.message.contains("response id"), "{}", error.message);
+        server.join().unwrap();
     }
 }

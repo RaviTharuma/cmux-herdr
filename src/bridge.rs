@@ -47,9 +47,6 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
 pub fn which(cmd: &str) -> Option<String> {
     let path = std::env::var_os("PATH")?;
     for dir in std::env::split_paths(&path) {
-        if dir.as_os_str().is_empty() {
-            continue;
-        }
         let candidate = dir.join(cmd);
         if is_executable(&candidate) {
             return Some(candidate.to_string_lossy().into_owned());

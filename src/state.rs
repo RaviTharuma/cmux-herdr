@@ -205,11 +205,13 @@ fn sha256_hex(bytes: &[u8]) -> String {
     s
 }
 
-fn binding_path(env: &dyn HostEnv, fp: &Fingerprint) -> PathBuf {
+/// Parent-binding file path for one host fingerprint.
+pub fn binding_path(env: &dyn HostEnv, fp: &Fingerprint) -> PathBuf {
     state_dir(env).join(format!("parent-{}.json", parent_key(fp)))
 }
 
-fn association_path(env: &dyn HostEnv, fp: &Fingerprint) -> PathBuf {
+/// Association-cache file path for one host fingerprint.
+pub fn association_path(env: &dyn HostEnv, fp: &Fingerprint) -> PathBuf {
     state_dir(env).join(format!("associations-{}.json", parent_key(fp)))
 }
 
