@@ -2,6 +2,7 @@
 //!
 //! Behavioral port of the Python bridge. Modules mirror `bridge/cmux_herdr_*`.
 mod api;
+mod bridge;
 mod handoff;
 mod impose;
 mod layout;

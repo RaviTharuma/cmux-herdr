@@ -1,0 +1,354 @@
+{
+  "panes": [
+    {
+      "data": {
+        "result": {
+          "panes": [
+            {
+              "pane_id": "p1",
+              "tab_id": "t1",
+              "workspace_id": "w1",
+              "agent": "bot",
+              "agent_status": "working"
+            },
+            {
+              "pane_id": "",
+              "tab_id": "t2"
+            },
+            {
+              "tab_id": "t3"
+            }
+          ]
+        }
+      },
+      "out": [
+        {
+          "pane_id": "p1",
+          "tab_id": "t1",
+          "workspace_id": "w1",
+          "agent": "bot",
+          "agent_status": "working",
+          "label": null,
+          "cwd": null,
+          "focused": false,
+          "terminal_title": null,
+          "agent_session_path": null,
+          "agent_session_id": null,
+          "agent_session_kind": null,
+          "revision": null,
+          "raw": {
+            "pane_id": "p1",
+            "tab_id": "t1",
+            "workspace_id": "w1",
+            "agent": "bot",
+            "agent_status": "working"
+          }
+        }
+      ]
+    },
+    {
+      "data": {},
+      "out": []
+    },
+    {
+      "data": {
+        "result": null
+      },
+      "out": []
+    },
+    {
+      "data": {
+        "result": {
+          "panes": null
+        }
+      },
+      "out": []
+    },
+    {
+      "data": {
+        "result": {
+          "panes": [
+            {
+              "pane_id": "px",
+              "agent_session": {
+                "kind": "id",
+                "value": "s1"
+              }
+            }
+          ]
+        }
+      },
+      "out": [
+        {
+          "pane_id": "px",
+          "tab_id": "",
+          "workspace_id": "",
+          "agent": null,
+          "agent_status": "unknown",
+          "label": null,
+          "cwd": null,
+          "focused": false,
+          "terminal_title": null,
+          "agent_session_path": null,
+          "agent_session_id": "s1",
+          "agent_session_kind": "id",
+          "revision": null,
+          "raw": {
+            "pane_id": "px",
+            "agent_session": {
+              "kind": "id",
+              "value": "s1"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "tabs": [
+    {
+      "data": {
+        "result": {
+          "tabs": [
+            {
+              "tab_id": "t1",
+              "workspace_id": "w1",
+              "label": "L",
+              "number": 2,
+              "agent_status": "idle",
+              "focused": true,
+              "pane_count": 3
+            },
+            {
+              "tab_id": null,
+              "pane_count": "5"
+            }
+          ]
+        }
+      },
+      "out": [
+        {
+          "tab_id": "t1",
+          "workspace_id": "w1",
+          "label": "L",
+          "number": 2,
+          "agent_status": "idle",
+          "focused": true,
+          "pane_count": 3,
+          "raw": {
+            "tab_id": "t1",
+            "workspace_id": "w1",
+            "label": "L",
+            "number": 2,
+            "agent_status": "idle",
+            "focused": true,
+            "pane_count": 3
+          }
+        },
+        {
+          "tab_id": "",
+          "workspace_id": "",
+          "label": null,
+          "number": null,
+          "agent_status": "unknown",
+          "focused": false,
+          "pane_count": 5,
+          "raw": {
+            "tab_id": null,
+            "pane_count": "5"
+          }
+        }
+      ]
+    },
+    {
+      "data": {
+        "result": {
+          "tabs": []
+        }
+      },
+      "out": []
+    },
+    {
+      "data": {},
+      "out": []
+    }
+  ],
+  "workspaces": [
+    {
+      "data": {
+        "result": {
+          "workspaces": [
+            {
+              "workspace_id": "w1",
+              "label": "A",
+              "tab_count": 2
+            }
+          ]
+        }
+      },
+      "out": [
+        {
+          "workspace_id": "w1",
+          "label": "A",
+          "number": null,
+          "agent_status": "unknown",
+          "focused": false,
+          "pane_count": 0,
+          "tab_count": 2,
+          "raw": {
+            "workspace_id": "w1",
+            "label": "A",
+            "tab_count": 2
+          }
+        }
+      ]
+    },
+    {
+      "data": {
+        "result": {
+          "workspace_list": [
+            {
+              "workspace_id": "w2"
+            }
+          ]
+        }
+      },
+      "out": [
+        {
+          "workspace_id": "w2",
+          "label": null,
+          "number": null,
+          "agent_status": "unknown",
+          "focused": false,
+          "pane_count": 0,
+          "tab_count": 0,
+          "raw": {
+            "workspace_id": "w2"
+          }
+        }
+      ]
+    },
+    {
+      "data": {
+        "result": {}
+      },
+      "out": []
+    },
+    {
+      "data": {},
+      "out": []
+    }
+  ],
+  "agents": [
+    {
+      "data": {
+        "result": {
+          "agents": [
+            {
+              "pane_id": "a1",
+              "agent": "bot"
+            }
+          ]
+        }
+      },
+      "out": [
+        {
+          "pane_id": "a1",
+          "tab_id": "",
+          "workspace_id": "",
+          "agent": "bot",
+          "agent_status": "unknown",
+          "label": null,
+          "cwd": null,
+          "focused": false,
+          "terminal_title": null,
+          "agent_session_path": null,
+          "agent_session_id": null,
+          "agent_session_kind": null,
+          "revision": null,
+          "raw": {
+            "pane_id": "a1",
+            "agent": "bot"
+          }
+        }
+      ]
+    },
+    {
+      "data": {
+        "result": {
+          "agents": []
+        }
+      },
+      "out": null
+    },
+    {
+      "data": {},
+      "out": null
+    },
+    {
+      "data": {
+        "result": {
+          "agents": [
+            {
+              "pane_id": ""
+            },
+            {
+              "pane_id": "a2"
+            }
+          ]
+        }
+      },
+      "out": [
+        {
+          "pane_id": "a2",
+          "tab_id": "",
+          "workspace_id": "",
+          "agent": null,
+          "agent_status": "unknown",
+          "label": null,
+          "cwd": null,
+          "focused": false,
+          "terminal_title": null,
+          "agent_session_path": null,
+          "agent_session_id": null,
+          "agent_session_kind": null,
+          "revision": null,
+          "raw": {
+            "pane_id": "a2"
+          }
+        }
+      ]
+    }
+  ],
+  "parse": [
+    {
+      "stdout": "{\"a\": 1}",
+      "out": {
+        "a": 1
+      }
+    },
+    {
+      "stdout": "warn\n{\"ok\": true}\nmore",
+      "out": {
+        "ok": true
+      }
+    },
+    {
+      "stdout": "noise\n[1, 2, 3]",
+      "out": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "stdout": "  {\"nested\": {\"x\": [1]}}  ",
+      "out": {
+        "nested": {
+          "x": [
+            1
+          ]
+        }
+      }
+    }
+  ]
+}
