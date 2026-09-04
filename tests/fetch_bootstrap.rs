@@ -43,16 +43,24 @@ fn curl_script(hash: &str) -> String {
         r#"#!/bin/sh
 out=
 url=
+secure=
+secure_redirect=
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --output) shift; out=$1 ;;
+    --proto) shift; [ "$1" = '=https' ] && secure=1 ;;
+    --proto-redir) shift; [ "$1" = '=https' ] && secure_redirect=1 ;;
     https://*) url=$1 ;;
   esac
   shift
 done
+[ "$secure" = 1 ] && [ "$secure_redirect" = 1 ] || exit 90
 case "$url" in
-  */SHA256SUMS) printf '%s  %s\n' '{hash}' '{asset}' > "$out" ;;
-  *) printf 'verified cmux-herdr binary\n' > "$out" ;;
+  https://example.invalid/releases/v{VERSION}/SHA256SUMS)
+    printf '%s  %s\n' '{hash}' '{asset}' > "$out" ;;
+  https://example.invalid/releases/v{VERSION}/{asset})
+    printf 'verified cmux-herdr binary\n' > "$out" ;;
+  *) exit 91 ;;
 esac
 "#
     )
@@ -160,4 +168,19 @@ fn unsupported_platform_without_cargo_keeps_existing_install() {
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("unsupported platform"));
     assert_eq!(fs::read(installed).unwrap(), b"existing-good-binary");
+}
+
+
+#[test]
+fn refuses_symlinked_install_directory() {
+    let (tmp, fetch, fake_bin) = fixture();
+    let redirected = tempfile::tempdir().unwrap();
+    std::os::unix::fs::symlink(redirected.path(), tmp.path().join(".cmux-herdr")).unwrap();
+    let hash = format!("{:x}", Sha256::digest(PAYLOAD));
+    write_executable(&fake_bin.join("curl"), &curl_script(&hash));
+
+    let output = run_fetch(&fetch, &fake_bin);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("refusing symlinked install directory"));
+    assert!(fs::read_dir(redirected.path()).unwrap().next().is_none());
 }

@@ -30,6 +30,21 @@ case "$OS:$ARCH" in
   *) TARGET= ;;
 esac
 
+assert_safe_destination() {
+  [ ! -L "$ROOT/.cmux-herdr" ] || fail "refusing symlinked install directory: $ROOT/.cmux-herdr"
+  [ ! -L "$DEST_DIR" ] || fail "refusing symlinked install directory: $DEST_DIR"
+  [ ! -L "$DEST" ] || fail "refusing symlinked install destination: $DEST"
+  [ ! -d "$DEST" ] || fail "install destination is a directory: $DEST"
+}
+
+commit_install() {
+  source_path=$1
+  assert_safe_destination
+  mv -f "$source_path" "$DEST"
+  [ -f "$DEST" ] && [ -x "$DEST" ] || fail "installed binary is not executable: $DEST"
+}
+
+assert_safe_destination
 mkdir -p "$DEST_DIR"
 TMP_DIR=$(mktemp -d "$DEST_DIR/.fetch.XXXXXX") || fail "cannot create temporary directory"
 cleanup() {
@@ -44,16 +59,17 @@ install_source_build() {
   [ -f "$ROOT/target/release/cmux-herdr" ] || return 1
   cp "$ROOT/target/release/cmux-herdr" "$TMP_DIR/cmux-herdr" || return 1
   chmod 755 "$TMP_DIR/cmux-herdr" || return 1
-  mv -f "$TMP_DIR/cmux-herdr" "$DEST"
+  commit_install "$TMP_DIR/cmux-herdr"
 }
 
 download() {
   url=$1
   out=$2
   if command -v curl >/dev/null 2>&1; then
-    curl --fail --location --silent --show-error --output "$out" "$url"
+    curl --disable --proto '=https' --proto-redir '=https' \
+      --fail --location --silent --show-error --output "$out" "$url"
   elif command -v wget >/dev/null 2>&1; then
-    wget -q -O "$out" "$url"
+    wget --no-config --https-only --quiet --output-document="$out" "$url"
   else
     return 127
   fi
@@ -101,5 +117,5 @@ ACTUAL_LOWER=$(printf '%s' "$ACTUAL" | tr 'A-F' 'a-f')
 [ "$EXPECTED_LOWER" = "$ACTUAL_LOWER" ] || fail "checksum mismatch for $ASSET"
 
 chmod 755 "$TMP_DIR/$ASSET"
-mv -f "$TMP_DIR/$ASSET" "$DEST"
+commit_install "$TMP_DIR/$ASSET"
 printf 'cmux-herdr-fetch: installed %s at %s\n' "$ASSET" "$DEST"
