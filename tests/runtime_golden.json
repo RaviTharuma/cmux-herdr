@@ -1,0 +1,797 @@
+{
+  "engine": {
+    "apply_first": {
+      "layout": {
+        "width": 200,
+        "height": 50,
+        "x": 0,
+        "y": 0,
+        "horizontal": [
+          {
+            "width": 100,
+            "height": 50,
+            "x": 0,
+            "y": 0,
+            "pane": "w2:p1"
+          },
+          {
+            "width": 99,
+            "height": 50,
+            "x": 101,
+            "y": 0,
+            "pane": "w2:p2"
+          }
+        ]
+      },
+      "window": {
+        "tab_id": "w2:t1",
+        "title": "Build",
+        "order_index": 0,
+        "active_pane_id": "w2:p2",
+        "zoomed": false
+      },
+      "result": {
+        "created_pane_ids": [
+          "w2:p1",
+          "w2:p2"
+        ],
+        "closed_pane_ids": [],
+        "kept_pane_ids": [],
+        "structure_changed": true,
+        "title_changed": true,
+        "focus_pane_id": "w2:p2",
+        "split_specs": [
+          {
+            "pane_id": "w2:p2",
+            "split_from_pane_id": "w2:p1",
+            "direction": "right",
+            "ratio": 0.5
+          }
+        ],
+        "rendered_ids": [
+          "w2:p1",
+          "w2:p2"
+        ]
+      }
+    },
+    "session": {
+      "windows": [
+        {
+          "layout": {
+            "pane": "p-b",
+            "width": 80,
+            "height": 24
+          },
+          "tab_id": "t2",
+          "title": "Build",
+          "order_index": 2,
+          "active_pane_id": "p-b"
+        },
+        {
+          "layout": {
+            "pane": "p-a",
+            "width": 80,
+            "height": 24
+          },
+          "tab_id": "t1",
+          "title": "Build",
+          "order_index": 1,
+          "active_pane_id": "p-a"
+        }
+      ],
+      "previous": [
+        "gone",
+        "t2"
+      ],
+      "result": {
+        "created_tab_ids": [
+          "t1"
+        ],
+        "closed_tab_ids": [
+          "gone"
+        ],
+        "kept_tab_ids": [
+          "t2"
+        ],
+        "ordered_tab_ids": [
+          "t1",
+          "t2"
+        ],
+        "order_changed": false
+      }
+    },
+    "client_grid": [
+      {
+        "args": [
+          800,
+          400,
+          8,
+          16,
+          0,
+          0
+        ],
+        "out": [
+          100,
+          25
+        ]
+      },
+      {
+        "args": [
+          800,
+          400,
+          8,
+          16,
+          16,
+          32
+        ],
+        "out": [
+          98,
+          23
+        ]
+      },
+      {
+        "args": [
+          10,
+          10,
+          0,
+          16,
+          0,
+          0
+        ],
+        "out": null
+      }
+    ],
+    "resize": [
+      {
+        "args": [
+          400,
+          800,
+          100
+        ],
+        "out": 50
+      },
+      {
+        "args": [
+          0,
+          800,
+          100
+        ],
+        "out": 5
+      },
+      {
+        "args": [
+          800,
+          800,
+          100
+        ],
+        "out": 95
+      },
+      {
+        "args": [
+          1,
+          2,
+          5
+        ],
+        "out": 2
+      }
+    ],
+    "delta": [
+      {
+        "previous": null,
+        "current": "hello",
+        "out": [
+          "hello",
+          true
+        ]
+      },
+      {
+        "previous": "hello",
+        "current": "hello\nworld",
+        "out": [
+          "\nworld",
+          false
+        ]
+      },
+      {
+        "previous": "hello",
+        "current": "hello",
+        "out": [
+          "",
+          false
+        ]
+      },
+      {
+        "previous": "hello",
+        "current": "goodbye",
+        "out": [
+          "goodbye",
+          true
+        ]
+      }
+    ]
+  },
+  "session": {
+    "actions": [
+      {
+        "session": {
+          "created_tab_ids": [
+            "t1",
+            "t2"
+          ],
+          "closed_tab_ids": [
+            "gone"
+          ],
+          "kept_tab_ids": [],
+          "ordered_tab_ids": [
+            "t1",
+            "t2"
+          ],
+          "order_changed": false
+        },
+        "titles": {
+          "t1": "One",
+          "t2": "Two"
+        },
+        "previous_titles": {},
+        "defaults_open": true,
+        "focus": "t1",
+        "out": [
+          {
+            "op": "create_tab",
+            "tab_id": "t1",
+            "title": "One",
+            "ordered_tab_ids": null
+          },
+          {
+            "op": "create_tab",
+            "tab_id": "t2",
+            "title": "Two",
+            "ordered_tab_ids": null
+          },
+          {
+            "op": "close_tab",
+            "tab_id": "gone",
+            "title": null,
+            "ordered_tab_ids": null
+          },
+          {
+            "op": "close_default_tabs",
+            "tab_id": null,
+            "title": null,
+            "ordered_tab_ids": null
+          },
+          {
+            "op": "focus_tab",
+            "tab_id": "t1",
+            "title": null,
+            "ordered_tab_ids": null
+          }
+        ]
+      },
+      {
+        "session": {
+          "created_tab_ids": [],
+          "closed_tab_ids": [],
+          "kept_tab_ids": [
+            "t1"
+          ],
+          "ordered_tab_ids": [
+            "t1"
+          ],
+          "order_changed": false
+        },
+        "titles": {
+          "t1": "Now"
+        },
+        "previous_titles": {
+          "t1": "Was"
+        },
+        "defaults_open": false,
+        "focus": null,
+        "out": [
+          {
+            "op": "rename_tab",
+            "tab_id": "t1",
+            "title": "Now",
+            "ordered_tab_ids": null
+          }
+        ]
+      }
+    ]
+  },
+  "control": {
+    "keys": [
+      {
+        "name": "Up",
+        "out": {
+          "pane_id": "w2:p1",
+          "kind": "key",
+          "text": null,
+          "key": "up",
+          "csi_hex": "1b5b41"
+        }
+      },
+      {
+        "name": "C-Up",
+        "out": {
+          "pane_id": "w2:p1",
+          "kind": "key",
+          "text": null,
+          "key": "ctrl+up",
+          "csi_hex": "1b5b313b3541"
+        }
+      },
+      {
+        "name": "M-S-Left",
+        "out": {
+          "pane_id": "w2:p1",
+          "kind": "key",
+          "text": null,
+          "key": "alt+shift+left",
+          "csi_hex": "1b5b313b3444"
+        }
+      },
+      {
+        "name": "PPage",
+        "out": {
+          "pane_id": "w2:p1",
+          "kind": "key",
+          "text": null,
+          "key": null,
+          "csi_hex": "1b5b357e"
+        }
+      },
+      {
+        "name": "F1",
+        "out": {
+          "pane_id": "w2:p1",
+          "kind": "key",
+          "text": null,
+          "key": "f1",
+          "csi_hex": "1b4f50"
+        }
+      },
+      {
+        "name": "F5",
+        "out": {
+          "pane_id": "w2:p1",
+          "kind": "key",
+          "text": null,
+          "key": "f5",
+          "csi_hex": "1b5b31357e"
+        }
+      },
+      {
+        "name": "ctrl+up",
+        "out": {
+          "pane_id": "w2:p1",
+          "kind": "key",
+          "text": null,
+          "key": "ctrl+up",
+          "csi_hex": "1b5b313b3541"
+        }
+      },
+      {
+        "name": "enter",
+        "out": {
+          "pane_id": "w2:p1",
+          "kind": "key",
+          "text": null,
+          "key": "enter",
+          "csi_hex": "0d"
+        }
+      },
+      {
+        "name": "NotAKey",
+        "out": null
+      },
+      {
+        "name": "",
+        "out": null
+      }
+    ],
+    "titles": [
+      {
+        "name": "  Build\u001b[0m  ",
+        "current": "old",
+        "propagate": false,
+        "out": "Build"
+      },
+      {
+        "name": "Build",
+        "current": "Build",
+        "propagate": false,
+        "out": null
+      },
+      {
+        "name": "Build",
+        "current": "old",
+        "propagate": true,
+        "out": null
+      },
+      {
+        "name": "\n\t",
+        "current": "old",
+        "propagate": false,
+        "out": null
+      }
+    ],
+    "close": [
+      {
+        "source": "host_tab",
+        "pane_id": "p1",
+        "status": "working",
+        "out": {
+          "action": "detach",
+          "pane_id": null
+        }
+      },
+      {
+        "source": "user_pane",
+        "pane_id": "p1",
+        "status": "working",
+        "out": {
+          "action": "confirm_then_close_pane",
+          "pane_id": "p1"
+        }
+      },
+      {
+        "source": "user_pane",
+        "pane_id": "p1",
+        "status": "idle",
+        "out": {
+          "action": "close_pane",
+          "pane_id": "p1"
+        }
+      },
+      {
+        "source": "other",
+        "pane_id": null,
+        "status": null,
+        "out": {
+          "action": "noop",
+          "pane_id": null
+        }
+      }
+    ],
+    "adjacent": [
+      {
+        "layout": {
+          "width": 200,
+          "height": 50,
+          "x": 0,
+          "y": 0,
+          "horizontal": [
+            {
+              "width": 100,
+              "height": 50,
+              "x": 0,
+              "y": 0,
+              "pane": "w2:p1"
+            },
+            {
+              "width": 99,
+              "height": 50,
+              "x": 101,
+              "y": 0,
+              "pane": "w2:p2"
+            }
+          ]
+        },
+        "pane_id": "w2:p1",
+        "direction": "right",
+        "out": "w2:p2"
+      },
+      {
+        "layout": {
+          "width": 200,
+          "height": 50,
+          "x": 0,
+          "y": 0,
+          "vertical": [
+            {
+              "width": 200,
+              "height": 24,
+              "x": 0,
+              "y": 0,
+              "pane": "a"
+            },
+            {
+              "width": 200,
+              "height": 25,
+              "x": 0,
+              "y": 25,
+              "pane": "b"
+            }
+          ]
+        },
+        "pane_id": "a",
+        "direction": "down",
+        "out": "b"
+      }
+    ]
+  },
+  "io": {
+    "filters": [
+      {
+        "chunks_hex": [
+          "68656c6c6f"
+        ],
+        "out_hex": [
+          "68656c6c6f"
+        ]
+      },
+      {
+        "chunks_hex": [
+          "6563686f2022656a220d0a1b6b6563686f1b5c656a"
+        ],
+        "out_hex": [
+          "6563686f2022656a220d0a656a"
+        ]
+      },
+      {
+        "chunks_hex": [
+          "61621b6b7469",
+          "746c651b5c6364"
+        ],
+        "out_hex": [
+          "6162",
+          "6364"
+        ]
+      },
+      {
+        "chunks_hex": [
+          "1b",
+          "5b306d"
+        ],
+        "out_hex": [
+          "",
+          "1b5b306d"
+        ]
+      },
+      {
+        "chunks_hex": [
+          "1b1b6b78",
+          "1b5c7a"
+        ],
+        "out_hex": [
+          "1b",
+          "7a"
+        ]
+      }
+    ]
+  },
+  "pump": {
+    "events": [
+      {
+        "input": null,
+        "unwrapped": {},
+        "type": "",
+        "kind": "other"
+      },
+      {
+        "input": {},
+        "unwrapped": {},
+        "type": "",
+        "kind": "other"
+      },
+      {
+        "input": {
+          "event": "pane.focused",
+          "data": {
+            "type": "pane.focused",
+            "pane_id": "w2:p1"
+          }
+        },
+        "unwrapped": {
+          "type": "pane.focused",
+          "pane_id": "w2:p1"
+        },
+        "type": "pane.focused",
+        "kind": "focus"
+      },
+      {
+        "input": {
+          "event": {
+            "name": "pane.updated",
+            "pane": {
+              "pane_id": "nested"
+            }
+          }
+        },
+        "unwrapped": {
+          "name": "pane.updated",
+          "pane": {
+            "pane_id": "nested"
+          }
+        },
+        "type": "pane.updated",
+        "kind": "output"
+      },
+      {
+        "input": {
+          "params": {
+            "event": "pane.agent_status_changed",
+            "pane": {
+              "pane_id": "p",
+              "status": "working"
+            }
+          }
+        },
+        "unwrapped": {
+          "event": "pane.agent_status_changed",
+          "pane": {
+            "pane_id": "p",
+            "status": "working"
+          }
+        },
+        "type": "pane.agent_status_changed",
+        "kind": "status"
+      },
+      {
+        "input": {
+          "type": "tab.created",
+          "tab_id": "t"
+        },
+        "unwrapped": {
+          "type": "tab.created",
+          "tab_id": "t"
+        },
+        "type": "tab.created",
+        "kind": "topology"
+      },
+      {
+        "input": {
+          "type": "workspace.metadata_updated"
+        },
+        "unwrapped": {
+          "type": "workspace.metadata_updated"
+        },
+        "type": "workspace.metadata_updated",
+        "kind": "metadata"
+      },
+      {
+        "input": {
+          "type": "unknown",
+          "pane_id": "p"
+        },
+        "unwrapped": {
+          "type": "unknown",
+          "pane_id": "p"
+        },
+        "type": "unknown",
+        "kind": "other"
+      }
+    ],
+    "followup": [
+      {
+        "result": null,
+        "had_event": false,
+        "event_gap": false,
+        "out": "project"
+      },
+      {
+        "result": {
+          "kind": "output",
+          "routed_output": true
+        },
+        "had_event": false,
+        "event_gap": false,
+        "out": "none"
+      },
+      {
+        "result": {
+          "kind": "topology",
+          "resync": true
+        },
+        "had_event": true,
+        "event_gap": false,
+        "out": "project"
+      },
+      {
+        "result": {
+          "kind": "status",
+          "status_updated": true
+        },
+        "had_event": true,
+        "event_gap": false,
+        "out": "pills"
+      },
+      {
+        "result": null,
+        "had_event": false,
+        "event_gap": true,
+        "out": "project"
+      }
+    ]
+  },
+  "live_helpers": {
+    "endpoint_hash": [
+      {
+        "socket": "/tmp/herdr.sock",
+        "out": "0cb0c5e4a7465217"
+      },
+      {
+        "socket": "/var/run/herdr.sock",
+        "out": "be232314cb4a95f9"
+      }
+    ],
+    "decode_beta": [
+      {
+        "value": null,
+        "default": false,
+        "out": false
+      },
+      {
+        "value": null,
+        "default": true,
+        "out": true
+      },
+      {
+        "value": true,
+        "default": false,
+        "out": true
+      },
+      {
+        "value": 1,
+        "default": false,
+        "out": true
+      },
+      {
+        "value": 0,
+        "default": true,
+        "out": false
+      },
+      {
+        "value": " yes ",
+        "default": false,
+        "out": true
+      },
+      {
+        "value": "off",
+        "default": true,
+        "out": false
+      },
+      {
+        "value": "wat",
+        "default": true,
+        "out": true
+      }
+    ],
+    "grid_match": [
+      {
+        "args": [
+          80,
+          24,
+          80,
+          24,
+          true,
+          true
+        ],
+        "out": true
+      },
+      {
+        "args": [
+          80,
+          24,
+          90,
+          24,
+          false,
+          true
+        ],
+        "out": true
+      },
+      {
+        "args": [
+          80,
+          24,
+          79,
+          24,
+          false,
+          true
+        ],
+        "out": false
+      }
+    ]
+  }
+}
