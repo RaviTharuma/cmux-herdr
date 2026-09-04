@@ -5,6 +5,34 @@ use std::path::PathBuf;
 
 use serde_json::{json, Value};
 
+#[path = "../src/socket.rs"]
+mod socket;
+#[path = "../src/api.rs"]
+mod api;
+#[path = "../src/control.rs"]
+mod control;
+#[path = "../src/session.rs"]
+mod session;
+#[path = "../src/engine.rs"]
+mod engine;
+#[path = "../src/io.rs"]
+mod io;
+#[path = "../src/host.rs"]
+mod host;
+#[path = "../src/lifecycle.rs"]
+mod lifecycle;
+#[path = "../src/live.rs"]
+mod live;
+#[path = "../src/pump.rs"]
+mod pump;
+#[path = "../src/state.rs"]
+mod state;
+#[path = "../src/handoff.rs"]
+mod handoff;
+#[path = "../src/status.rs"]
+mod status;
+#[path = "../src/bridge.rs"]
+mod bridge;
 #[path = "../src/model.rs"]
 mod model;
 #[path = "../src/layout.rs"]
