@@ -8,4 +8,4 @@ description = "Herdr in native cmux chrome: CLI, watch, status pills, pane mirro
 command = ["bin/cmux-herdr-sidebar"]
 
 [build]
-command = ["chmod", "+x", "bin/cmux-herdr-sidebar"]
+command = ["bin/cmux-herdr-fetch"]

@@ -1,19 +1,24 @@
-#!/usr/bin/env python3
-"""cmux-herdr sidebar TUI — plugin-manager [run] executable.
+#!/bin/sh
+# cmux plugin-manager entrypoint: run the Rust sidebar subcommand.
+set -eu
 
-Ordinary terminal program. cmux hosts this in the sidebar PTY.
-"""
+SCRIPT=$0
+while [ -L "$SCRIPT" ]; do
+  SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$SCRIPT")" && pwd)
+  LINK=$(readlink "$SCRIPT") || exit 1
+  case "$LINK" in
+    /*) SCRIPT=$LINK ;;
+    *) SCRIPT=$SCRIPT_DIR/$LINK ;;
+  esac
+done
+ROOT=$(CDPATH= cd -- "$(dirname -- "$SCRIPT")/.." && pwd)
+BINARY="$ROOT/.cmux-herdr/bin/cmux-herdr"
 
-from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-_ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
-
-from bridge.cmux_herdr_sidebar import main  # noqa: E402
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+if [ ! -x "$BINARY" ]; then
+  "$ROOT/bin/cmux-herdr-fetch"
+fi
+[ -x "$BINARY" ] || {
+  printf 'cmux-herdr-sidebar: runtime binary is missing after bootstrap: %s\n' "$BINARY" >&2
+  exit 1
+}
+exec "$BINARY" sidebar "$@"

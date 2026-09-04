@@ -7,6 +7,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN_SRC="${ROOT}/bin/cmux-herdr"
+FETCH_SRC="${ROOT}/bin/cmux-herdr-fetch"
 LOCAL_BIN="${HOME}/.local/bin"
 TARGET="${LOCAL_BIN}/cmux-herdr"
 SKILL_SRC="${ROOT}/agent-skill"
@@ -14,12 +15,11 @@ SKILL_SRC="${ROOT}/agent-skill"
 echo "cmux-herdr plugin install"
 echo "  repo: ${ROOT}"
 
-if [[ ! -f "${BIN_SRC}" ]]; then
-  echo "error: missing ${BIN_SRC}" >&2
+if [[ ! -x "${BIN_SRC}" || ! -x "${FETCH_SRC}" ]]; then
+  echo "error: missing executable launcher/bootstrap under ${ROOT}/bin" >&2
   exit 1
 fi
-chmod +x "${BIN_SRC}"
-chmod +x "${ROOT}/bridge/cmux_herdr_bridge.py" 2>/dev/null || true
+"${FETCH_SRC}"
 
 mkdir -p "${LOCAL_BIN}"
 # Prefer symlink so edits in the repo are live; fall back to copy.
@@ -31,9 +31,8 @@ else
   echo "  cli:  ${TARGET} (copied)"
 fi
 
-# Ensure bridge package is importable when invoked via symlink.
-# bin/cmux-herdr already adds repo root via Path(__file__).resolve().parent.parent
-# which works for symlinks. Also drop a thin path hint file if needed later.
+# The launcher resolves this symlink back to the checkout and executes the
+# verified binary under .cmux-herdr/bin.
 
 # Do not copy sidebars/herdr.js or herdr.swift into ~/.config/cmux/sidebars/.
 # Those files stay in the repo as experimental leftovers. Uninstall removes
