@@ -18,7 +18,7 @@ serde = { version = "1", features = ["derive"] }
 # preserve_order: JSON objects keep insertion order to mirror Python dict
 # ordering, which handoff's `str(dict)` repr coercion is byte-sensitive to.
 serde_json = { version = "1", features = ["preserve_order"] }
-toml_edit = "0.22"
+toml_edit = "0.25"
 rustix = { version = "0.38", features = ["fs", "process", "net", "termios"] }
 sha2 = "0.10"
 tempfile = "3"
