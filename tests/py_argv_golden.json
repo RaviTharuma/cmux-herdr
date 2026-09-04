@@ -1,0 +1,467 @@
+[
+ {
+  "method": "ping",
+  "params": {},
+  "argv": [
+   "status"
+  ]
+ },
+ {
+  "method": "session.snapshot",
+  "params": {},
+  "argv": [
+   "api",
+   "snapshot"
+  ]
+ },
+ {
+  "method": "workspace.list",
+  "params": {},
+  "argv": [
+   "workspace",
+   "list"
+  ]
+ },
+ {
+  "method": "workspace.get",
+  "params": {
+   "workspace_id": "w1"
+  },
+  "argv": [
+   "workspace",
+   "get",
+   "w1"
+  ]
+ },
+ {
+  "method": "workspace.create",
+  "params": {
+   "cwd": "/x",
+   "label": "L"
+  },
+  "argv": [
+   "workspace",
+   "create",
+   "--cwd",
+   "/x",
+   "--label",
+   "L"
+  ]
+ },
+ {
+  "method": "workspace.create",
+  "params": {},
+  "argv": [
+   "workspace",
+   "create"
+  ]
+ },
+ {
+  "method": "workspace.move",
+  "params": {
+   "workspace_id": "w1",
+   "index": 3
+  },
+  "argv": [
+   "workspace",
+   "move",
+   "w1",
+   "--index",
+   "3"
+  ]
+ },
+ {
+  "method": "workspace.move_block",
+  "params": {
+   "workspace_id": "w1",
+   "block": "b",
+   "index": 0
+  },
+  "argv": [
+   "workspace",
+   "move-block",
+   "w1",
+   "b",
+   "--index",
+   "0"
+  ]
+ },
+ {
+  "method": "tab.create",
+  "params": {
+   "workspace_id": "w1",
+   "label": "L"
+  },
+  "argv": [
+   "tab",
+   "create",
+   "--label",
+   "L",
+   "--workspace",
+   "w1"
+  ]
+ },
+ {
+  "method": "tab.move",
+  "params": {
+   "tab_id": "t1"
+  },
+  "argv": null
+ },
+ {
+  "method": "pane.current",
+  "params": {},
+  "argv": [
+   "pane",
+   "current"
+  ]
+ },
+ {
+  "method": "pane.close",
+  "params": {
+   "pane_id": "p1",
+   "force": true
+  },
+  "argv": [
+   "pane",
+   "close",
+   "p1"
+  ]
+ },
+ {
+  "method": "pane.read",
+  "params": {
+   "pane_id": "p1"
+  },
+  "argv": [
+   "pane",
+   "read",
+   "p1",
+   "--source",
+   "recent"
+  ]
+ },
+ {
+  "method": "pane.read",
+  "params": {
+   "pane_id": "p1",
+   "source": "scrollback",
+   "lines": 50,
+   "ansi": true
+  },
+  "argv": [
+   "pane",
+   "read",
+   "p1",
+   "--source",
+   "scrollback",
+   "--lines",
+   "50",
+   "--ansi"
+  ]
+ },
+ {
+  "method": "pane.zoom",
+  "params": {
+   "mode": "toggle"
+  },
+  "argv": [
+   "pane",
+   "zoom",
+   "--toggle"
+  ]
+ },
+ {
+  "method": "pane.zoom",
+  "params": {},
+  "argv": [
+   "pane",
+   "zoom",
+   "--current"
+  ]
+ },
+ {
+  "method": "pane.resize",
+  "params": {
+   "direction": "left",
+   "pane_id": "p1",
+   "amount": 5
+  },
+  "argv": [
+   "pane",
+   "resize",
+   "--direction",
+   "left",
+   "--pane",
+   "p1",
+   "--amount",
+   "5"
+  ]
+ },
+ {
+  "method": "pane.resize",
+  "params": {},
+  "argv": null
+ },
+ {
+  "method": "pane.swap",
+  "params": {
+   "source_pane_id": "a",
+   "target_pane_id": "b"
+  },
+  "argv": [
+   "pane",
+   "swap",
+   "--source-pane",
+   "a",
+   "--target-pane",
+   "b"
+  ]
+ },
+ {
+  "method": "pane.swap",
+  "params": {
+   "direction": "up"
+  },
+  "argv": [
+   "pane",
+   "swap",
+   "--direction",
+   "up",
+   "--current"
+  ]
+ },
+ {
+  "method": "pane.split",
+  "params": {
+   "pane_id": "p1",
+   "direction": "down",
+   "ratio": 0.5,
+   "caller_pane_id": "c"
+  },
+  "argv": [
+   "pane",
+   "split",
+   "p1",
+   "--direction",
+   "down",
+   "--ratio",
+   "0.5"
+  ]
+ },
+ {
+  "method": "pane.split",
+  "params": {},
+  "argv": [
+   "pane",
+   "split",
+   "--current",
+   "--direction",
+   "right"
+  ]
+ },
+ {
+  "method": "pane.move",
+  "params": {
+   "pane_id": "p1",
+   "destination": {
+    "type": "tab",
+    "tab_id": "t2",
+    "ratio": 0.3
+   },
+   "focus": false
+  },
+  "argv": [
+   "pane",
+   "move",
+   "p1",
+   "--tab",
+   "t2",
+   "--split",
+   "right",
+   "--ratio",
+   "0.3",
+   "--no-focus"
+  ]
+ },
+ {
+  "method": "pane.move",
+  "params": {
+   "pane_id": "p1",
+   "destination": {
+    "type": "new_workspace",
+    "label": "L",
+    "tab_label": "T"
+   },
+   "focus": true
+  },
+  "argv": [
+   "pane",
+   "move",
+   "p1",
+   "--new-workspace",
+   "--label",
+   "L",
+   "--tab-label",
+   "T",
+   "--focus"
+  ]
+ },
+ {
+  "method": "pane.send_text",
+  "params": {
+   "pane_id": "p1",
+   "text": "hi"
+  },
+  "argv": [
+   "pane",
+   "send-text",
+   "p1",
+   "hi"
+  ]
+ },
+ {
+  "method": "pane.send_keys",
+  "params": {
+   "pane_id": "p1",
+   "keys": "C-c"
+  },
+  "argv": [
+   "pane",
+   "send-keys",
+   "p1",
+   "C-c"
+  ]
+ },
+ {
+  "method": "pane.wait_for_output",
+  "params": {
+   "pane_id": "p1",
+   "pattern": "done",
+   "timeout_ms": 2000
+  },
+  "argv": [
+   "pane",
+   "wait-output",
+   "p1",
+   "--match",
+   "done",
+   "--timeout",
+   "2000"
+  ]
+ },
+ {
+  "method": "layout.export",
+  "params": {
+   "tab_id": "t1"
+  },
+  "argv": null
+ },
+ {
+  "method": "layout.export",
+  "params": {},
+  "argv": [
+   "pane",
+   "layout",
+   "--current"
+  ]
+ },
+ {
+  "method": "layout.apply",
+  "params": {},
+  "argv": null
+ },
+ {
+  "method": "agent.prompt",
+  "params": {
+   "pane_id": "p1",
+   "prompt": "go",
+   "wait": {
+    "until": "idle",
+    "timeout_ms": 1000
+   }
+  },
+  "argv": [
+   "agent",
+   "prompt",
+   "p1",
+   "go",
+   "--wait",
+   "--until",
+   "idle",
+   "--timeout",
+   "1000"
+  ]
+ },
+ {
+  "method": "agent.start",
+  "params": {
+   "name": "a",
+   "agent": "claude",
+   "pane_id": "p1",
+   "timeout_ms": 500
+  },
+  "argv": [
+   "agent",
+   "start",
+   "a",
+   "--kind",
+   "claude",
+   "--pane",
+   "p1",
+   "--timeout",
+   "500"
+  ]
+ },
+ {
+  "method": "agent.view.set",
+  "params": {
+   "pane_id": "p1",
+   "view": "diff"
+  },
+  "argv": [
+   "agent",
+   "view",
+   "set",
+   "p1",
+   "diff"
+  ]
+ },
+ {
+  "method": "notification.show",
+  "params": {
+   "title": "T",
+   "body": "B"
+  },
+  "argv": [
+   "notification",
+   "show",
+   "T",
+   "--body",
+   "B"
+  ]
+ },
+ {
+  "method": "worktree.open",
+  "params": {
+   "path": "/w"
+  },
+  "argv": [
+   "worktree",
+   "open",
+   "/w"
+  ]
+ },
+ {
+  "method": "client.window_title.set",
+  "params": {
+   "title": "hi"
+  },
+  "argv": [
+   "client",
+   "window-title",
+   "set",
+   "hi"
+  ]
+ }
+]

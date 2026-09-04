@@ -1,0 +1,30 @@
+[package]
+name = "cmux-herdr"
+version = "0.6.1"
+edition = "2021"
+rust-version = "1.98"
+description = "Herdr in native cmux chrome: CLI, watch, status pills, pane mirroring"
+license = "MIT"
+repository = "https://github.com/RaviTharuma/cmux-herdr"
+default-run = "cmux-herdr"
+
+[[bin]]
+name = "cmux-herdr"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml_edit = "0.22"
+rustix = { version = "0.38", features = ["fs", "process", "net"] }
+sha2 = "0.10"
+tempfile = "3"
+
+[dev-dependencies]
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1
+panic = "abort"
