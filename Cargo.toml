@@ -20,7 +20,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 toml_edit = "0.22"
 rustix = { version = "0.38", features = ["fs", "process", "net", "termios"] }
-sha2 = "0.10"
+sha2 = "0.11"
 tempfile = "3"
 
 [dev-dependencies]
