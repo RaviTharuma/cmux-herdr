@@ -1,0 +1,440 @@
+{
+  "workspaces": [
+    {
+      "name": "empty",
+      "input": {},
+      "output": []
+    },
+    {
+      "name": "nested",
+      "input": {
+        "workspace_revision": 4,
+        "workspaces": [
+          {
+            "id": 4,
+            "key": "nested-key",
+            "name": "lab/nested",
+            "active": false,
+            "screens": [
+              {
+                "id": 1,
+                "tabs": [
+                  {
+                    "agent_status": "working"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "ws-2",
+            "name": "child",
+            "active": [
+              1
+            ],
+            "nested": {
+              "panes": [
+                1
+              ]
+            }
+          }
+        ]
+      },
+      "output": [
+        {
+          "id": 4,
+          "name": "lab/nested",
+          "active": false,
+          "key": "nested-key"
+        },
+        {
+          "id": "ws-2",
+          "name": "child",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "focused",
+      "input": {
+        "workspaces": [
+          {
+            "id": 1,
+            "name": "alpha",
+            "active": false
+          },
+          {
+            "id": 2,
+            "name": "focused",
+            "active": "yes"
+          }
+        ]
+      },
+      "output": [
+        {
+          "id": 1,
+          "name": "alpha",
+          "active": false
+        },
+        {
+          "id": 2,
+          "name": "focused",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "agent-status-extra-fields",
+      "input": {
+        "workspaces": [
+          {
+            "id": 7,
+            "name": "agents",
+            "active": true,
+            "statuses": [
+              {
+                "key": "herdr:p1",
+                "value": "bot/working"
+              }
+            ],
+            "agent_status": "blocked"
+          }
+        ]
+      },
+      "output": [
+        {
+          "id": 7,
+          "name": "agents",
+          "active": true
+        }
+      ]
+    },
+    {
+      "name": "unicode",
+      "input": {
+        "workspaces": [
+          {
+            "id": 9,
+            "key": "ключ",
+            "name": "研发🧪 café",
+            "active": 1
+          }
+        ]
+      },
+      "output": [
+        {
+          "id": 9,
+          "name": "研发🧪 café",
+          "active": true,
+          "key": "ключ"
+        }
+      ]
+    },
+    {
+      "name": "malformed-null",
+      "input": null,
+      "output": []
+    },
+    {
+      "name": "malformed-list",
+      "input": [],
+      "output": []
+    },
+    {
+      "name": "malformed-workspaces",
+      "input": {
+        "workspaces": "nope"
+      },
+      "output": []
+    },
+    {
+      "name": "malformed-items",
+      "input": {
+        "workspaces": [
+          null,
+          [],
+          {},
+          {
+            "id": null,
+            "name": "x"
+          },
+          {
+            "id": 2,
+            "name": 9
+          },
+          {
+            "id": false,
+            "name": "valid-id-bool",
+            "active": 0
+          },
+          {
+            "id": 3,
+            "name": "",
+            "key": ""
+          }
+        ]
+      },
+      "output": [
+        {
+          "id": false,
+          "name": "valid-id-bool",
+          "active": false
+        },
+        {
+          "id": 3,
+          "name": "",
+          "active": false
+        }
+      ]
+    }
+  ],
+  "renders": [
+    {
+      "name": "empty",
+      "tree": {},
+      "selected": 0,
+      "cols": 28,
+      "rows_h": 10,
+      "connected": true,
+      "message": "",
+      "output": "\u001b[H\u001b[Jcmux-herdr                  \nworkspaces                  \n                            \nno workspaces in this sessi…\n                            \n                            \n                            \n                            \n                            \n0 live                      "
+    },
+    {
+      "name": "nested",
+      "tree": {
+        "workspace_revision": 4,
+        "workspaces": [
+          {
+            "id": 4,
+            "key": "nested-key",
+            "name": "lab/nested",
+            "active": false,
+            "screens": [
+              {
+                "id": 1,
+                "tabs": [
+                  {
+                    "agent_status": "working"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "ws-2",
+            "name": "child",
+            "active": [
+              1
+            ],
+            "nested": {
+              "panes": [
+                1
+              ]
+            }
+          }
+        ]
+      },
+      "selected": 1,
+      "cols": 28,
+      "rows_h": 10,
+      "connected": true,
+      "message": "",
+      "output": "\u001b[H\u001b[Jcmux-herdr                  \nworkspaces                  \n                            \n   lab/nested               \n\u001b[7m>* child                    \u001b[0m\n                            \n                            \n                            \n                            \n2 live                      "
+    },
+    {
+      "name": "focused",
+      "tree": {
+        "workspaces": [
+          {
+            "id": 1,
+            "name": "alpha",
+            "active": false
+          },
+          {
+            "id": 2,
+            "name": "focused",
+            "active": "yes"
+          }
+        ]
+      },
+      "selected": 99,
+      "cols": 24,
+      "rows_h": 8,
+      "connected": true,
+      "message": "",
+      "output": "\u001b[H\u001b[Jcmux-herdr              \nworkspaces              \n                        \n   alpha                \n\u001b[7m>* focused              \u001b[0m\n                        \n                        \n2 live                  "
+    },
+    {
+      "name": "agent-status",
+      "tree": {
+        "workspaces": [
+          {
+            "id": 7,
+            "name": "agents",
+            "active": true,
+            "statuses": [
+              {
+                "key": "herdr:p1",
+                "value": "bot/working"
+              }
+            ],
+            "agent_status": "blocked"
+          }
+        ]
+      },
+      "selected": 0,
+      "cols": 24,
+      "rows_h": 7,
+      "connected": true,
+      "message": "ignored status",
+      "output": "\u001b[H\u001b[Jcmux-herdr              \nworkspaces              \n                        \n\u001b[7m>* agents               \u001b[0m\n                        \n                        \n1 live                  "
+    },
+    {
+      "name": "narrow-width",
+      "tree": {
+        "workspaces": [
+          {
+            "id": 1,
+            "name": "workspace-name-that-is-long",
+            "active": true
+          }
+        ]
+      },
+      "selected": -5,
+      "cols": 3,
+      "rows_h": 2,
+      "connected": true,
+      "message": "",
+      "output": "\u001b[H\u001b[Jcmux-herdr      \nworkspaces      \n                \n\u001b[7m>* workspace-na…\u001b[0m\n                \n1 live          "
+    },
+    {
+      "name": "unicode",
+      "tree": {
+        "workspaces": [
+          {
+            "id": 9,
+            "key": "ключ",
+            "name": "研发🧪 café",
+            "active": 1
+          }
+        ]
+      },
+      "selected": 0,
+      "cols": 16,
+      "rows_h": 7,
+      "connected": true,
+      "message": "",
+      "output": "\u001b[H\u001b[Jcmux-herdr      \nworkspaces      \n                \n\u001b[7m>* 研发🧪 café     \u001b[0m\n                \n                \n1 live          "
+    },
+    {
+      "name": "offline-malformed-message",
+      "tree": {},
+      "selected": 4,
+      "cols": 17,
+      "rows_h": 6,
+      "connected": false,
+      "message": "  malformed   socket\n reply  ",
+      "output": "\u001b[H\u001b[Jcmux-herdr       \nwaiting for mux …\n                 \nmalformed socket \nreply            \n                 "
+    }
+  ],
+  "helpers": {
+    "clip": [
+      {
+        "text": "abc",
+        "width": 5,
+        "output": "abc  "
+      },
+      {
+        "text": "abcdef",
+        "width": 5,
+        "output": "abcd…"
+      },
+      {
+        "text": "\u001b[1mabc\u001b[0m",
+        "width": 5,
+        "output": "abc  "
+      },
+      {
+        "text": "研发🧪 café",
+        "width": 6,
+        "output": "研发🧪 c…"
+      }
+    ],
+    "wrap": [
+      {
+        "text": "one two three",
+        "width": 7,
+        "output": [
+          "one two",
+          "three"
+        ]
+      },
+      {
+        "text": "  one\n two   ",
+        "width": 4,
+        "output": [
+          "one",
+          "two"
+        ]
+      },
+      {
+        "text": "supercalifragilistic word",
+        "width": 5,
+        "output": [
+          "supercalifragilistic",
+          "word"
+        ]
+      },
+      {
+        "text": "",
+        "width": 9,
+        "output": [
+          ""
+        ]
+      },
+      {
+        "text": "abc",
+        "width": 1,
+        "output": [
+          "abc"
+        ]
+      }
+    ],
+    "strip_ansi": [
+      {
+        "text": "\u001b[1mBold\u001b[0m \u001b[7mrev\u001b[0m",
+        "output": "Bold rev"
+      },
+      {
+        "text": "\u001b[31mred\u001b[0m",
+        "output": "\u001b[31mred"
+      }
+    ]
+  },
+  "socket_paths": [
+    {
+      "input": {},
+      "output": null
+    },
+    {
+      "input": {
+        "CMUX_MUX_SOCKET": " /tmp/legacy.sock "
+      },
+      "output": "/tmp/legacy.sock"
+    },
+    {
+      "input": {
+        "CMUX_TUI_SOCKET": "  ",
+        "CMUX_MUX_SOCKET": "legacy"
+      },
+      "output": "legacy"
+    },
+    {
+      "input": {
+        "CMUX_TUI_SOCKET": " /tmp/new.sock ",
+        "CMUX_MUX_SOCKET": "legacy"
+      },
+      "output": "/tmp/new.sock"
+    }
+  ]
+}
