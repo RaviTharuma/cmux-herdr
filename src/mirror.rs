@@ -2016,15 +2016,21 @@ fn sync_status_to_cmux(snapshot: &Snapshot, workspace: &str, log: bool) -> Value
             payload["value"].as_str().unwrap_or("").to_string(),
             "--icon".to_string(),
             payload["icon"].as_str().unwrap_or("").to_string(),
-            "--color".to_string(),
-            payload["color"].as_str().unwrap_or("").to_string(),
             "--priority".to_string(),
             payload["priority"].as_i64().unwrap_or(0).to_string(),
         ];
         match runner.run(&args, Some(workspace)) {
             Ok(output) if output.returncode == 0 => {
                 applied.push(key);
-                write_meta.insert(pane.pane_id.clone(), payload);
+                write_meta.insert(
+                    pane.pane_id.clone(),
+                    json!({
+                        "last_status_value": payload["value"],
+                        "last_icon": payload["icon"],
+                        "last_color": null,
+                        "last_priority": payload["priority"],
+                    }),
+                );
             }
             Ok(output) => errors.push(command_error(&args, &output).to_string()),
             Err(error) => errors.push(error.to_string()),

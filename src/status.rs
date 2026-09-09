@@ -1,9 +1,6 @@
 //! Status-pill styling and payload construction.
 //!
-//! Ported from `bridge/cmux_herdr_bridge.py`: `STATUS_STYLE`, `DEFAULT_STYLE`,
-//! `map_status_to_style`, `status_value_for_pane`, `locked_display_name`,
-//! `status_write_payload`, and `should_write_status_pill`. Values are exact so
-//! cmux pills render identically.
+//! Status text, SF Symbols and priority are plugin-owned; cmux owns colors.
 
 use std::collections::HashMap;
 
@@ -11,28 +8,21 @@ use serde_json::{json, Value};
 
 use crate::model::{Pane, Tab};
 
-/// One pill style: SF Symbol icon, hex color, priority (`STATUS_STYLE` values).
+/// One native pill style: SF Symbol icon and priority.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Style {
     pub icon: &'static str,
-    pub color: &'static str,
     pub priority: i64,
 }
 
 /// Fallback style for an unmapped status (`DEFAULT_STYLE`).
 pub const DEFAULT_STYLE: Style = Style {
     icon: "circle",
-    color: "#8e8e93",
     priority: 10,
 };
 
-/// Return `(icon, color, priority)` for a Herdr `agent_status`
-/// (`map_status_to_style`). Case-insensitive; trims; unknown → [`DEFAULT_STYLE`].
-///
-/// The map is exact (`STATUS_STYLE`):
-/// working `hammer/#ff9500/80`, idle `pause.circle/#8e8e93/40`,
-/// done `checkmark.circle/#34c759/30`, blocked
-/// `exclamationmark.triangle/#ff3b30/90`, unknown `questionmark.circle/#8e8e93/10`.
+/// Return icon and priority for a Herdr status. Case-insensitive; trims;
+/// unmapped statuses use [`DEFAULT_STYLE`]. Colors are inherited from cmux.
 pub fn map_status_to_style(status: Option<&str>) -> Style {
     let key = status
         .filter(|s| !s.is_empty())
@@ -42,27 +32,22 @@ pub fn map_status_to_style(status: Option<&str>) -> Style {
     match key {
         "working" => Style {
             icon: "hammer",
-            color: "#ff9500",
             priority: 80,
         },
         "idle" => Style {
             icon: "pause.circle",
-            color: "#8e8e93",
             priority: 40,
         },
         "done" => Style {
             icon: "checkmark.circle",
-            color: "#34c759",
             priority: 30,
         },
         "blocked" => Style {
             icon: "exclamationmark.triangle",
-            color: "#ff3b30",
             priority: 90,
         },
         "unknown" => Style {
             icon: "questionmark.circle",
-            color: "#8e8e93",
             priority: 10,
         },
         _ => DEFAULT_STYLE,
@@ -152,7 +137,6 @@ pub fn status_write_payload(
     json!({
         "value": value,
         "icon": style.icon,
-        "color": style.color,
         "priority": style.priority,
         "title_lock": truthy(prior.get("title_lock")),
         "locked_title": locked,
@@ -168,7 +152,8 @@ pub fn should_write_status_pill(payload: &Value, prior: Option<&Value>) -> bool 
     let eq = |a: &str, b: &str| prior.get(a) == payload.get(b);
     !(eq("last_status_value", "value")
         && eq("last_icon", "icon")
-        && eq("last_color", "color")
+        // A legacy explicit color must be reset by a successful color-free write.
+        && !truthy(prior.get("last_color"))
         && eq("last_priority", "priority"))
 }
 
@@ -205,7 +190,7 @@ mod tests {
         assert_eq!(map_status_to_style(Some("working")).icon, "hammer");
         assert_eq!(map_status_to_style(Some("WORKING")).priority, 80);
         assert_eq!(map_status_to_style(Some("Done")).icon, "checkmark.circle");
-        assert_eq!(map_status_to_style(Some("blocked")).color, "#ff3b30");
+        assert_eq!(map_status_to_style(Some("blocked")).priority, 90);
         assert_eq!(map_status_to_style(None).icon, "questionmark.circle");
         assert_eq!(map_status_to_style(Some("weird")), DEFAULT_STYLE);
     }
@@ -253,16 +238,16 @@ mod tests {
 
     #[test]
     fn diff_before_write() {
-        let payload = json!({"value": "v", "icon": "i", "color": "c", "priority": 1});
+        let payload = json!({"value": "v", "icon": "i", "priority": 1});
         assert!(should_write_status_pill(&payload, None));
         let same = json!({
             "last_status_value": "v", "last_icon": "i",
-            "last_color": "c", "last_priority": 1
+            "last_color": null, "last_priority": 1
         });
         assert!(!should_write_status_pill(&payload, Some(&same)));
         let diff = json!({
             "last_status_value": "v2", "last_icon": "i",
-            "last_color": "c", "last_priority": 1
+            "last_color": null, "last_priority": 1
         });
         assert!(should_write_status_pill(&payload, Some(&diff)));
     }

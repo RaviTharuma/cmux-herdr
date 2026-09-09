@@ -206,17 +206,34 @@ Full design: [docs/PLUGIN_DESIGN.md](docs/PLUGIN_DESIGN.md) ·
 
 ## Status mapping
 
-| Herdr status | Pill color | Icon |
+| Herdr status | Native icon | Priority |
 |---|---|---|
-| working | orange `#ff9500` | `hammer` |
-| idle | gray | `pause.circle` |
-| done | green | `checkmark.circle` |
-| blocked | red | `exclamationmark.triangle` |
-| unknown | gray | `questionmark.circle` |
+| working | `hammer` | 80 |
+| idle | `pause.circle` | 40 |
+| done | `checkmark.circle` | 30 |
+| blocked | `exclamationmark.triangle` | 90 |
+| unknown | `questionmark.circle` | 10 |
 
 Every sync removes stale `herdr:*` keys and leaves unrelated cmux status alone.
 Progress is the fraction of agents still working. The sidebar shows the status
 label (working, idle, done), not the raw key.
+
+Native metadata receives text, SF Symbols and priority, without `--color`.
+cmux owns theme and selected-row contrast. Its audited generic status API
+interprets explicit hex colors, not adaptive semantic color tokens; omission
+also clears a previous explicit tint on successful replacement. Legacy cached
+colors remain retryable until that write succeeds, then unchanged syncs deduplicate.
+Status meaning remains visible in text and icons, not plugin-owned state colors.
+cmux deliberately substitutes selected foregrounds for contrast; this is not
+an upstream defect established by #75, and the full colored-selected request
+is not closed by this change.
+
+The plugin-manager `sidebar` entrypoint is a **terminal workspace fallback**,
+not a native metadata component. It retains socket navigation, `>` selection
+and `*` active-workspace markers, using terminal-default foreground/background
+without a reverse-video selection palette. Agent status uses native metadata
+where exposed; no separate custom sidebar/theme or invented native plugin API
+is introduced. See the [source-pinned capability audit](docs/upstream/STABILIZATION_AUDIT.md).
 
 ## Deep mirror
 

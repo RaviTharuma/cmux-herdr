@@ -45,7 +45,7 @@
       "stdout": "herdr sync: 1 panes → cmux ws=workspace:1 (working=1 idle=0 done=0 blocked=0 unknown=0)\ncleared stale: herdr:stale\n",
       "stderr": "",
       "herdr_argv": "status\npane list\ntab list\nworkspace list\napi snapshot",
-      "cmux_argv": "set-status herdr:p1 pi/working · Bot --icon hammer --color #ff9500 --priority 80 --workspace workspace:1\nlist-status --workspace workspace:1\nclear-status herdr:stale --workspace workspace:1"
+      "cmux_argv": "set-status herdr:p1 pi/working · Bot --icon hammer --priority 80 --workspace workspace:1\nlist-status --workspace workspace:1\nclear-status herdr:stale --workspace workspace:1"
     },
     {
       "name": "invalid ratio path fails before transport",

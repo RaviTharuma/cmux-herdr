@@ -291,52 +291,42 @@
   "styles": {
     "\"working\"": [
       "hammer",
-      "#ff9500",
       80
     ],
     "\"WORKING\"": [
       "hammer",
-      "#ff9500",
       80
     ],
     "\"Idle\"": [
       "pause.circle",
-      "#8e8e93",
       40
     ],
     "\"done\"": [
       "checkmark.circle",
-      "#34c759",
       30
     ],
     "\"blocked\"": [
       "exclamationmark.triangle",
-      "#ff3b30",
       90
     ],
     "\"unknown\"": [
       "questionmark.circle",
-      "#8e8e93",
       10
     ],
     "\"weird\"": [
       "circle",
-      "#8e8e93",
       10
     ],
     "\"\"": [
       "questionmark.circle",
-      "#8e8e93",
       10
     ],
     "\"  working  \"": [
       "hammer",
-      "#ff9500",
       80
     ],
     "null": [
       "questionmark.circle",
-      "#8e8e93",
       10
     ]
   },
@@ -426,7 +416,6 @@
       "payload": {
         "value": "bot/blocked · TabLabel · realtitle",
         "icon": "exclamationmark.triangle",
-        "color": "#ff3b30",
         "priority": 90,
         "title_lock": false,
         "locked_title": null
@@ -440,7 +429,6 @@
       "payload": {
         "value": "bot/blocked · TabLabel · L",
         "icon": "exclamationmark.triangle",
-        "color": "#ff3b30",
         "priority": 90,
         "title_lock": true,
         "locked_title": "L"
@@ -454,7 +442,6 @@
       "payload": {
         "value": "bot/blocked · TabLabel · spaced",
         "icon": "exclamationmark.triangle",
-        "color": "#ff3b30",
         "priority": 90,
         "title_lock": true,
         "locked_title": "spaced"
@@ -468,7 +455,6 @@
       "payload": {
         "value": "bot/blocked · TabLabel · realtitle",
         "icon": "exclamationmark.triangle",
-        "color": "#ff3b30",
         "priority": 90,
         "title_lock": false,
         "locked_title": null
@@ -483,7 +469,6 @@
       "payload": {
         "value": "bot/blocked · TabLabel · realtitle",
         "icon": "exclamationmark.triangle",
-        "color": "#ff3b30",
         "priority": 90,
         "title_lock": true,
         "locked_title": null
@@ -498,7 +483,6 @@
       "payload": {
         "value": "bot/blocked · TabLabel · realtitle",
         "icon": "exclamationmark.triangle",
-        "color": "#ff3b30",
         "priority": 90,
         "title_lock": true,
         "locked_title": null
@@ -509,7 +493,6 @@
       "payload": {
         "value": "bot/blocked · TabLabel · realtitle",
         "icon": "exclamationmark.triangle",
-        "color": "#ff3b30",
         "priority": 90,
         "title_lock": false,
         "locked_title": null
@@ -521,7 +504,6 @@
       "payload": {
         "value": "v",
         "icon": "i",
-        "color": "c",
         "priority": 1
       },
       "prior": null,
@@ -531,13 +513,12 @@
       "payload": {
         "value": "v",
         "icon": "i",
-        "color": "c",
         "priority": 1
       },
       "prior": {
         "last_status_value": "v",
         "last_icon": "i",
-        "last_color": "c",
+        "last_color": null,
         "last_priority": 1
       },
       "result": false
@@ -546,13 +527,12 @@
       "payload": {
         "value": "v",
         "icon": "i",
-        "color": "c",
         "priority": 1
       },
       "prior": {
         "last_status_value": "v2",
         "last_icon": "i",
-        "last_color": "c",
+        "last_color": null,
         "last_priority": 1
       },
       "result": true
