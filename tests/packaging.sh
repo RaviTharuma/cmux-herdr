@@ -15,6 +15,15 @@ printf '#!/bin/sh\nexit 0\n' > "$TMP/repo/bin/cmux-herdr-fetch"
 printf '#!/bin/sh\necho invoked >> "$HOME/host-called"\n' > "$TMP/repo/bin/cmux-herdr"
 chmod +x "$TMP/repo/bin/"*
 printf 'skill original\n' > "$TMP/repo/agent-skill/SKILL.md"
+# Exercise the zero-entry manifest before any artifact has ever been installed.
+# Invoke the selected Bash so this also covers Bash 3.2's nounset array behavior.
+HOME="$TMP/empty-home" XDG_STATE_HOME="$TMP/empty-state" bash -eu -o pipefail -c '
+  source "$1"
+  packaging_init
+  packaging_save
+  [[ -f "$MANIFEST" && ! -s "$MANIFEST" ]]
+' _ "$ROOT/scripts/packaging-manifest.sh"
+HOME="$TMP/empty-home" XDG_STATE_HOME="$TMP/empty-state" bash "$TMP/repo/scripts/uninstall.sh"
 printf 'foreign binary\n' > "$HOME/.local/bin/cmux-herdr"
 bash "$TMP/repo/scripts/install.sh" > "$TMP/install.log" 2>&1 || true
 [[ $(cat "$HOME/.local/bin/cmux-herdr") == 'foreign binary' ]]

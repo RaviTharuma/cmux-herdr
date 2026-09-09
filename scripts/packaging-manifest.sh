@@ -84,6 +84,8 @@ packaging_init() {
   pending_dest='' pending_backup='' manifest_temp=''
   trap packaging_cleanup EXIT
   # Sentinel keeps arrays nonempty under macOS Bash 3.2 nounset semantics.
+  # Keep index zero and clear removed slots rather than unsetting them: all
+  # indexed loops rely on dense arrays, including while saving partial removals.
   kinds=('') values=('') destinations=('')
   local kind value dest
   if [[ -f "$MANIFEST" ]]; then
