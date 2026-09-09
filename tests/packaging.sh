@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
+# macOS temporary roots may traverse /var -> /private/var. Resolve only the
+# fixture root; deliberately redirected paths created below must stay symlinks.
+TMP=$(cd "$TMP" && pwd -P)
 export HOME="$TMP/home" XDG_STATE_HOME="$TMP/state"
 mkdir -p "$HOME/.local/bin" "$TMP/repo/scripts" "$TMP/repo/bin" "$TMP/repo/agent-skill"
 cp "$ROOT/scripts/install.sh" "$ROOT/scripts/uninstall.sh" "$TMP/repo/scripts/"
