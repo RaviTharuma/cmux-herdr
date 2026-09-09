@@ -207,6 +207,7 @@ fn write_native_lease(state_dir: &Path, plugin_writer: &Path) -> PathBuf {
         serde_json::from_str(&fs::read_to_string(plugin_writer).unwrap()).unwrap();
     lease["owner"] = json!("native");
     lease["pid"] = json!(std::process::id());
+    lease["token"] = json!("native-successor");
     lease["heartbeat_ms"] = json!(SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -268,8 +269,18 @@ esac
         &temp.path().join("cmux"),
         r#"#!/bin/sh
 printf '%s\n' "$*" >> "$FAKE_CMUX_LOG"
+if [ "$2" = '--help' ]; then
+  case "$1" in
+    new-split) echo 'Usage: cmux new-split <direction> --surface <id>' ;;
+    new-surface) echo 'Usage: cmux new-surface --pane <id>' ;;
+    respawn-pane) echo 'Usage: cmux respawn-pane --surface <id> --command <cmd>' ;;
+    rename-tab) echo 'Usage: cmux rename-tab --surface <id> --title <title>' ;;
+    *) exit 9 ;;
+  esac
+  exit 0
+fi
 case "$1" in
-  create-terminal|run) printf '%s\n' '{"surface_id":"surface-p1","pane_id":"pane-p1"}' ;;
+  new-surface|new-split) printf '%s\n' '{"surface_ref":"surface:2","pane_ref":"pane:2"}' ;;
   tree|list-terminals|ids) printf '%s\n' '{"items":[]}' ;;
   *) printf '%s\n' '{"ok":true}' ;;
 esac
@@ -363,6 +374,9 @@ esac
         }),
         "watch did not finish yielding before shutdown"
     );
+    let restore = find_state_file(&state_dir, "restore-").unwrap();
+    let successor_restore = br#"{"mode":"reattach","writer_owner":"native","writer_token":"native-successor","session_ids":["successor"]}"#;
+    fs::write(&restore, successor_restore).unwrap();
 
     let output = child.terminate();
     assert!(
@@ -374,10 +388,89 @@ esac
     fs::remove_file(native_lease).unwrap();
     assert!(find_state_file(&state_dir, "writer-").is_none());
     assert!(find_state_file(&state_dir, "plugin-live").is_none());
-    assert!(find_state_file(&state_dir, "restore-").is_none());
+    assert_eq!(fs::read(restore).unwrap(), successor_restore);
     let herdr_calls = fs::read_to_string(herdr_log).unwrap_or_default();
     assert!(
         !herdr_calls.contains("server stop") && !herdr_calls.contains("server.stop"),
         "watch shutdown must leave Herdr running: {herdr_calls}"
+    );
+}
+
+#[test]
+fn continuous_dry_run_reads_events_without_writing_state_or_cmux() {
+    let temp = tempfile::tempdir().unwrap();
+    let socket_path = temp.path().join("herdr.sock");
+    let socket = TestSocket::start(&socket_path);
+    write_executable(
+        &temp.path().join("herdr"),
+        "#!/bin/sh\nprintf '%s\\n' '{\"status\":\"ok\"}'\n",
+    );
+    let cmux_log = temp.path().join("cmux.log");
+    write_executable(
+        &temp.path().join("cmux"),
+        r#"#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_CMUX_LOG"
+printf '%s\n' '{"items":[]}'
+"#,
+    );
+    let state_dir = temp.path().join("state/cmux-herdr");
+    fs::create_dir_all(&state_dir).unwrap();
+    let foreign_restore = state_dir.join("restore-foreign.json");
+    fs::write(&foreign_restore, b"foreign restore").unwrap();
+    let child = ChildGuard(Some(
+        Command::new(env!("CARGO_BIN_EXE_cmux-herdr"))
+            .args([
+                "watch",
+                "--dry-run",
+                "--interval",
+                "0.5",
+                "--workspace",
+                "ws1",
+            ])
+            .env(
+                "PATH",
+                format!(
+                    "{}:{}",
+                    temp.path().display(),
+                    std::env::var("PATH").unwrap_or_default()
+                ),
+            )
+            .env("HOME", temp.path())
+            .env("XDG_STATE_HOME", temp.path().join("state"))
+            .env("CMUX_HERDR_NATIVE_STATE_DIR", temp.path().join("native"))
+            .env("HERDR_SOCKET_PATH", &socket_path)
+            .env("HERDR_WORKSPACE_ID", "w1")
+            .env("CMUX_SURFACE_ID", "surface-cli")
+            .env("HERDR_ENV", "1")
+            .env_remove("CMUX_HERDR_NATIVE_LIVE")
+            .env_remove("CMUX_HERDR_FORCE_PLUGIN")
+            .env("FAKE_CMUX_LOG", &cmux_log)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap(),
+    ));
+    assert!(wait_until(Duration::from_secs(3), || socket
+        .stats
+        .snapshots
+        .load(Ordering::SeqCst)
+        >= 2
+        && socket.stats.subscriptions.load(Ordering::SeqCst) > 0));
+    let output = child.terminate();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(fs::read(&foreign_restore).unwrap(), b"foreign restore");
+    assert_eq!(fs::read_dir(&state_dir).unwrap().count(), 1);
+    assert!(!temp.path().join("native").exists());
+    let calls = fs::read_to_string(cmux_log).unwrap_or_default();
+    assert!(
+        calls.lines().all(|line| matches!(
+            line.split_whitespace().next(),
+            Some("tree" | "list-terminals" | "ids" | "identify")
+        )),
+        "{calls}"
     );
 }

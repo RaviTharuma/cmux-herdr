@@ -78,6 +78,7 @@ fn run_fetch(fetch: &Path, fake_bin: &Path) -> std::process::Output {
     Command::new("sh")
         .arg(fetch)
         .env("PATH", format!("{}:{system_path}", fake_bin.display()))
+        .env_remove("CMUX_HERDR_ALLOW_SOURCE_BUILD")
         .env(
             "CMUX_HERDR_RELEASE_BASE_URL",
             "https://example.invalid/releases",
@@ -164,21 +165,23 @@ fn rejects_non_https_release_base_before_touching_install() {
 }
 
 #[test]
-fn unsupported_platform_uses_source_build_when_cargo_exists() {
+fn unsupported_platform_uses_source_build_only_with_opt_in() {
     let (tmp, fetch, fake_bin) = fixture();
     write_executable(
         &fake_bin.join("uname"),
         "#!/bin/sh\ncase \"${1-}\" in -s) echo Plan9;; -m) echo mips;; esac\n",
     );
-    let root = tmp.path().to_string_lossy();
     write_executable(
         &fake_bin.join("cargo"),
-        &format!(
-            "#!/bin/sh\nmkdir -p '{root}/target/release'\nprintf 'source-built binary\\n' > '{root}/target/release/cmux-herdr'\n"
-        ),
+        "#!/bin/sh\nmkdir -p \"$CARGO_TARGET_DIR/release\"\nprintf 'source-built binary\\n' > \"$CARGO_TARGET_DIR/release/cmux-herdr\"\n",
     );
 
-    let output = run_fetch(&fetch, &fake_bin);
+    let output = Command::new("sh")
+        .arg(&fetch)
+        .env("PATH", format!("{}:/usr/bin:/bin", fake_bin.display()))
+        .env("CMUX_HERDR_ALLOW_SOURCE_BUILD", "1")
+        .output()
+        .unwrap();
     assert!(
         output.status.success(),
         "stderr={}",
@@ -229,4 +232,66 @@ fn refuses_symlinked_install_directory() {
         String::from_utf8_lossy(&output.stderr).contains("refusing symlinked install directory")
     );
     assert!(fs::read_dir(redirected.path()).unwrap().next().is_none());
+}
+
+#[test]
+fn network_failure_never_invokes_cargo_or_replaces_existing_binary() {
+    let (tmp, fetch, fake_bin) = fixture();
+    let installed = tmp.path().join(".cmux-herdr/bin/cmux-herdr");
+    fs::create_dir_all(installed.parent().unwrap()).unwrap();
+    fs::write(&installed, b"existing-good-binary").unwrap();
+    write_executable(&fake_bin.join("curl"), "#!/bin/sh\nexit 7\n");
+    write_executable(
+        &fake_bin.join("cargo"),
+        &format!(
+            "#!/bin/sh\ntouch '{}/cargo-called'\nexit 1\n",
+            tmp.path().display()
+        ),
+    );
+    let output = run_fetch(&fetch, &fake_bin);
+    assert!(!output.status.success());
+    assert!(!tmp.path().join("cargo-called").exists());
+    assert_eq!(fs::read(installed).unwrap(), b"existing-good-binary");
+    assert!(String::from_utf8_lossy(&output.stderr).contains("CMUX_HERDR_ALLOW_SOURCE_BUILD=1"));
+}
+
+#[test]
+fn bootstraps_real_binary_and_executes_help_and_version_offline() {
+    let (tmp, fetch, fake_bin) = fixture();
+    let binary = std::env::var("CMUX_HERDR_SMOKE_BINARY")
+        .unwrap_or_else(|_| env!("CARGO_BIN_EXE_cmux-herdr").to_string());
+    let payload = fs::read(&binary).unwrap();
+    let hash = format!("{:x}", Sha256::digest(&payload));
+    fs::write(tmp.path().join("payload"), payload).unwrap();
+    fs::write(
+        tmp.path().join("SHA256SUMS"),
+        format!("{hash}  cmux-herdr-{VERSION}-{TARGET}\n"),
+    )
+    .unwrap();
+    write_executable(&fake_bin.join("curl"), &format!(
+        "#!/bin/sh\nwhile [ \"$#\" -gt 0 ]; do case \"$1\" in --output) shift; out=$1;; https://*) url=$1;; esac; shift; done\ncase \"$url\" in */SHA256SUMS) cp '{0}/SHA256SUMS' \"$out\";; *) cp '{0}/payload' \"$out\";; esac\n", tmp.path().display()));
+    let output = run_fetch(&fetch, &fake_bin);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let provenance = String::from_utf8_lossy(&output.stdout);
+    assert!(provenance.contains(&hash));
+    assert!(provenance.contains("https://example.invalid/releases/"));
+    let launcher = tmp.path().join("bin/cmux-herdr");
+    fs::copy(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/bin/cmux-herdr"),
+        &launcher,
+    )
+    .unwrap();
+    let output = Command::new(&launcher).arg("--version").output().unwrap();
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        format!("cmux-herdr {VERSION}")
+    );
+    let output = Command::new(&launcher).arg("--help").output().unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("watch"));
 }

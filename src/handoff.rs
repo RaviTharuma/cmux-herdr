@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -130,6 +130,7 @@ pub fn state_dirs() -> Vec<PathBuf> {
 pub struct WriterLease {
     pub owner: String,
     pub pid: i64,
+    pub token: String,
     pub heartbeat_ms: i64,
     pub fingerprint: String,
     pub endpoint_hash: String,
@@ -140,7 +141,7 @@ pub struct WriterLease {
 
 impl WriterLease {
     pub fn to_dict(&self) -> Value {
-        json!({
+        let mut payload = json!({
             "schema": self.schema,
             "owner": self.owner,
             "pid": self.pid,
@@ -148,7 +149,11 @@ impl WriterLease {
             "fingerprint": self.fingerprint,
             "endpoint_hash": self.endpoint_hash,
             "socket_path": self.socket_path,
-        })
+        });
+        if !self.token.is_empty() {
+            payload["token"] = json!(self.token);
+        }
+        payload
     }
 
     pub fn is_fresh(&self, now: Option<i64>, ttl: Option<i64>) -> bool {
@@ -297,6 +302,11 @@ pub fn parse_lease_text(
         return Some(WriterLease {
             owner,
             pid,
+            token: payload
+                .get("token")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .into(),
             heartbeat_ms,
             fingerprint: if truthy(fingerprint_value) {
                 py_string(fingerprint_value)
@@ -326,6 +336,7 @@ pub fn parse_lease_text(
         return Some(WriterLease {
             owner: fallback_owner.unwrap().to_string(),
             pid: 0,
+            token: String::new(),
             heartbeat_ms: _mtime_ms(path),
             fingerprint: fallback_fingerprint.to_string(),
             endpoint_hash: String::new(),
@@ -402,6 +413,7 @@ pub fn load_leases(fingerprint: &str) -> Vec<WriterLease> {
     candidate_paths(fingerprint)
         .into_iter()
         .filter_map(|path| read_lease_file(&path, fingerprint))
+        .filter(|lease| lease.fingerprint == fingerprint)
         .collect()
 }
 
@@ -435,6 +447,7 @@ pub struct WriterDecision {
     pub owner: Option<String>,
     pub native_live: bool,
     pub plugin_live: bool,
+    pub foreign_plugin: bool,
     pub native_detected: bool,
     pub plugin_detected: bool,
     pub force_plugin: bool,
@@ -446,7 +459,7 @@ pub struct WriterDecision {
 
 impl WriterDecision {
     pub fn yields(&self) -> bool {
-        !self.force_plugin && self.native_live
+        (!self.force_plugin && self.native_live) || self.foreign_plugin
     }
 
     pub fn outcome(&self) -> &'static str {
@@ -501,7 +514,7 @@ pub fn resolve_writer(fingerprint: &str, our_pid: Option<i64>, now: Option<i64>)
     } else if let Some(lease) = &live {
         owner = Some(lease.owner.clone());
     }
-    let _ours = our_pid.unwrap_or(std::process::id() as i64);
+    let ours = our_pid.unwrap_or(std::process::id() as i64);
     let native_live = owner.as_deref() == Some(OWNER_NATIVE) && !force;
     let plugin_live = owner.as_deref() == Some(OWNER_PLUGIN) && !native_live;
     let writer = if force
@@ -525,6 +538,7 @@ pub fn resolve_writer(fingerprint: &str, our_pid: Option<i64>, now: Option<i64>)
         },
         native_live,
         plugin_live,
+        foreign_plugin: plugin_live && live.as_ref().is_some_and(|lease| lease.pid != ours),
         native_detected: env_native || native_file,
         plugin_detected: plugin_file,
         force_plugin: force,
@@ -536,18 +550,37 @@ pub fn resolve_writer(fingerprint: &str, our_pid: Option<i64>, now: Option<i64>)
 }
 
 fn atomic_write(path: &Path, payload: &Value) -> io::Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    fs::create_dir_all(parent)?;
+    let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+    serde_json::to_writer_pretty(&mut temporary, payload).map_err(io::Error::other)?;
+    temporary.write_all(b"\n")?;
+    temporary.persist(path).map_err(|error| error.error)?;
+    Ok(())
+}
+
+// Keep lock inodes stable, including global compatibility markers. All writers
+// acquire shared state roots in lexical order to avoid cross-root deadlocks.
+fn lock_state() -> io::Result<Vec<fs::File>> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut roots = state_dirs();
+    roots.sort();
+    roots.dedup();
+    let mut locks = Vec::with_capacity(roots.len());
+    for root in roots {
+        fs::create_dir_all(&root)?;
+        let file = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .mode(0o600)
+            .custom_flags(rustix::fs::OFlags::NOFOLLOW.bits() as i32)
+            .open(root.join("writer.guard"))?;
+        rustix::fs::flock(&file, rustix::fs::FlockOperation::LockExclusive)?;
+        locks.push(file);
     }
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or_default();
-    let temporary = path.with_file_name(format!("{file_name}.tmp"));
-    let mut encoded = serde_json::to_string_pretty(payload).map_err(io::Error::other)?;
-    encoded.push('\n');
-    fs::write(&temporary, encoded)?;
-    fs::rename(temporary, path)
+    Ok(locks)
 }
 
 fn unlink(path: &Path) -> bool {
@@ -558,7 +591,44 @@ fn unlink(path: &Path) -> bool {
     }
 }
 
-pub fn write_lease(
+fn write_lease_locked(lease: &WriterLease) -> io::Result<WriterLease> {
+    let payload = lease.to_dict();
+    let paths = writer_paths(&lease.fingerprint, &lease.owner)
+        .map_err(|message| io::Error::new(io::ErrorKind::InvalidInput, message))?;
+    for path in paths {
+        atomic_write(&path, &payload)?;
+    }
+    Ok(lease.clone())
+}
+
+fn new_lease(
+    owner: &str,
+    fingerprint: &str,
+    socket_path: &str,
+    endpoint_hash: &str,
+    pid: i64,
+) -> WriterLease {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let nonce = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    WriterLease {
+        owner: owner.into(),
+        pid,
+        token: format!("{}-{time:x}-{nonce:x}", std::process::id()),
+        heartbeat_ms: now_ms(),
+        fingerprint: fingerprint.into(),
+        endpoint_hash: endpoint_hash.into(),
+        socket_path: socket_path.into(),
+        schema: SCHEMA,
+        path: String::new(),
+    }
+}
+
+#[cfg(test)]
+fn write_lease(
     owner: &str,
     fingerprint: &str,
     socket_path: &str,
@@ -566,36 +636,124 @@ pub fn write_lease(
     pid: Option<i64>,
     heartbeat: Option<i64>,
 ) -> io::Result<WriterLease> {
-    let lease = WriterLease {
-        owner: owner.into(),
-        pid: pid.unwrap_or(std::process::id() as i64),
-        heartbeat_ms: heartbeat.unwrap_or_else(now_ms),
-        fingerprint: fingerprint.into(),
-        endpoint_hash: endpoint_hash.into(),
-        socket_path: socket_path.into(),
-        schema: SCHEMA,
-        path: String::new(),
-    };
-    let payload = lease.to_dict();
-    let paths = writer_paths(fingerprint, owner)
-        .map_err(|message| io::Error::new(io::ErrorKind::InvalidInput, message))?;
-    let mut last = String::new();
-    for path in paths {
-        atomic_write(&path, &payload)?;
-        last = path.to_string_lossy().into_owned();
-    }
-    Ok(WriterLease {
-        path: last,
-        ..lease
-    })
+    let _locks = lock_state()?;
+    let mut lease = new_lease(
+        owner,
+        fingerprint,
+        socket_path,
+        endpoint_hash,
+        pid.unwrap_or(std::process::id() as i64),
+    );
+    lease.heartbeat_ms = heartbeat.unwrap_or_else(now_ms);
+    write_lease_locked(&lease)
 }
 
-pub fn clear_owner(owner: &str, fingerprint: &str) {
+fn same_writer(left: &WriterLease, right: &WriterLease) -> bool {
+    !left.token.is_empty()
+        && left.token == right.token
+        && left.pid == right.pid
+        && left.owner == right.owner
+        && left.fingerprint == right.fingerprint
+}
+
+fn clear_owner_locked(owner: &str, fingerprint: &str, expected: Option<&WriterLease>) {
     if let Ok(paths) = writer_paths(fingerprint, owner) {
         for path in paths {
-            unlink(&path);
+            if read_lease_file(&path, fingerprint).is_some_and(|lease| {
+                lease.owner == owner
+                    && lease.fingerprint == fingerprint
+                    && expected.is_none_or(|expected| same_writer(&lease, expected))
+            }) {
+                unlink(&path);
+            }
         }
     }
+}
+
+fn owns_writer(lease: &WriterLease) -> bool {
+    if lease.pid != std::process::id() as i64 {
+        return false;
+    }
+    let decision = resolve_writer(&lease.fingerprint, Some(lease.pid), None);
+    decision
+        .lease
+        .as_ref()
+        .is_some_and(|current| same_writer(current, lease))
+        && !(lease.owner == OWNER_PLUGIN && decision.yields())
+}
+
+pub fn release_writer(lease: &WriterLease) {
+    if lease.pid != std::process::id() as i64 {
+        return;
+    }
+    let Ok(_locks) = lock_state() else { return };
+    clear_owner_locked(&lease.owner, &lease.fingerprint, Some(lease));
+}
+
+pub fn heartbeat_writer(
+    lease: &WriterLease,
+    socket_path: &str,
+    endpoint_hash: &str,
+) -> io::Result<Option<WriterLease>> {
+    if lease.pid != std::process::id() as i64 {
+        return Ok(None);
+    }
+    let _locks = lock_state()?;
+    let decision = resolve_writer(&lease.fingerprint, Some(lease.pid), None);
+    if !decision
+        .lease
+        .as_ref()
+        .is_some_and(|current| same_writer(current, lease))
+        || (lease.owner == OWNER_PLUGIN && decision.yields())
+    {
+        return Ok(None);
+    }
+    let mut renewed = lease.clone();
+    renewed.heartbeat_ms = now_ms();
+    if !socket_path.is_empty() {
+        renewed.socket_path = socket_path.into();
+    }
+    if !endpoint_hash.is_empty() {
+        renewed.endpoint_hash = endpoint_hash.into();
+    }
+    write_lease_locked(&renewed).map(Some)
+}
+
+fn claim_writer(
+    owner: &str,
+    fingerprint: &str,
+    socket_path: &str,
+    endpoint_hash: &str,
+    pid: i64,
+) -> io::Result<Option<WriterLease>> {
+    let _locks = lock_state()?;
+    let decision = resolve_writer(fingerprint, Some(pid), None);
+    if owner == OWNER_PLUGIN {
+        if decision.yields() || decision.plugin_live {
+            return Ok(None);
+        }
+        if decision.force_plugin {
+            clear_owner_locked(OWNER_NATIVE, fingerprint, None);
+        }
+    } else {
+        if decision
+            .lease
+            .as_ref()
+            .is_some_and(|lease| lease.owner == OWNER_NATIVE)
+            || (decision.plugin_live && !decision.env_native_live)
+        {
+            return Ok(None);
+        }
+        clear_owner_locked(OWNER_PLUGIN, fingerprint, None);
+    }
+    write_lease_locked(&new_lease(
+        owner,
+        fingerprint,
+        socket_path,
+        endpoint_hash,
+        pid,
+    ))
+    .map(Some)
 }
 
 pub fn claim_plugin_writer(
@@ -603,104 +761,13 @@ pub fn claim_plugin_writer(
     socket_path: &str,
     endpoint_hash: &str,
 ) -> io::Result<Option<WriterLease>> {
-    let decision = resolve_writer(fingerprint, None, None);
-    if decision.yields() {
-        return Ok(None);
-    }
-    if decision.force_plugin {
-        clear_owner(OWNER_NATIVE, fingerprint);
-    }
-    write_lease(
+    claim_writer(
         OWNER_PLUGIN,
         fingerprint,
         socket_path,
         endpoint_hash,
-        None,
-        None,
+        std::process::id() as i64,
     )
-    .map(Some)
-}
-
-pub fn release_plugin_writer(fingerprint: &str) {
-    clear_owner(OWNER_PLUGIN, fingerprint);
-}
-
-pub fn heartbeat_plugin_writer(
-    fingerprint: &str,
-    socket_path: &str,
-    endpoint_hash: &str,
-) -> io::Result<Option<WriterLease>> {
-    let decision = resolve_writer(fingerprint, Some(std::process::id() as i64), None);
-    if decision.yields() {
-        return Ok(None);
-    }
-    let Some(lease) = decision.lease.filter(|lease| lease.owner == OWNER_PLUGIN) else {
-        return claim_plugin_writer(fingerprint, socket_path, endpoint_hash);
-    };
-    write_lease(
-        OWNER_PLUGIN,
-        fingerprint,
-        if socket_path.is_empty() {
-            &lease.socket_path
-        } else {
-            socket_path
-        },
-        if endpoint_hash.is_empty() {
-            &lease.endpoint_hash
-        } else {
-            endpoint_hash
-        },
-        None,
-        None,
-    )
-    .map(Some)
-}
-
-pub fn heartbeat_native_writer(
-    fingerprint: &str,
-    socket_path: &str,
-    endpoint_hash: &str,
-    pid: Option<i64>,
-) -> io::Result<Option<WriterLease>> {
-    let owner_pid = pid.unwrap_or(std::process::id() as i64);
-    let decision = resolve_writer(fingerprint, None, None);
-    if decision.native_live {
-        if decision
-            .lease
-            .as_ref()
-            .is_some_and(|lease| lease.pid > 0 && lease.pid != owner_pid)
-        {
-            return Ok(None);
-        }
-        let prior_socket = decision
-            .lease
-            .as_ref()
-            .map(|lease| lease.socket_path.as_str())
-            .unwrap_or("");
-        let prior_hash = decision
-            .lease
-            .as_ref()
-            .map(|lease| lease.endpoint_hash.as_str())
-            .unwrap_or("");
-        return write_lease(
-            OWNER_NATIVE,
-            fingerprint,
-            if socket_path.is_empty() {
-                prior_socket
-            } else {
-                socket_path
-            },
-            if endpoint_hash.is_empty() {
-                prior_hash
-            } else {
-                endpoint_hash
-            },
-            Some(owner_pid),
-            None,
-        )
-        .map(Some);
-    }
-    claim_native_writer(fingerprint, socket_path, endpoint_hash, Some(owner_pid))
 }
 
 pub fn claim_native_writer(
@@ -709,32 +776,13 @@ pub fn claim_native_writer(
     endpoint_hash: &str,
     pid: Option<i64>,
 ) -> io::Result<Option<WriterLease>> {
-    let decision = resolve_writer(fingerprint, None, None);
-    let owner_pid = pid.unwrap_or(std::process::id() as i64);
-    if decision.plugin_live
-        && decision
-            .lease
-            .as_ref()
-            .is_some_and(|lease| lease.pid != owner_pid)
-        && !env_truthy(NATIVE_LIVE_ENV)
-        && !decision.force_plugin
-    {
-        return Ok(None);
-    }
-    clear_owner(OWNER_PLUGIN, fingerprint);
-    write_lease(
+    claim_writer(
         OWNER_NATIVE,
         fingerprint,
         socket_path,
         endpoint_hash,
-        pid,
-        None,
+        pid.unwrap_or(std::process::id() as i64),
     )
-    .map(Some)
-}
-
-pub fn release_native_writer(fingerprint: &str) {
-    clear_owner(OWNER_NATIVE, fingerprint);
 }
 
 pub fn writer_status(fingerprint: &str) -> Value {
@@ -748,6 +796,7 @@ pub fn writer_status(fingerprint: &str) -> Value {
         "writer": decision.writer,
         "native_live": decision.native_live,
         "plugin_live": decision.plugin_live,
+        "yields": decision.yields(),
         "native_detected": decision.native_detected,
         "plugin_detected": decision.plugin_detected,
         "force_plugin": decision.force_plugin,
@@ -770,7 +819,14 @@ pub fn restore_paths(endpoint_hash: &str) -> Vec<PathBuf> {
         .collect()
 }
 
-pub fn write_shared_restore(endpoint_hash: &str, payload: &Value) -> io::Result<String> {
+pub fn write_shared_restore(lease: &WriterLease, payload: &Value) -> io::Result<String> {
+    let _locks = lock_state()?;
+    if !owns_writer(lease) {
+        return Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "writer ownership lost",
+        ));
+    }
     let Some(payload) = payload.as_object() else {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -784,10 +840,13 @@ pub fn write_shared_restore(endpoint_hash: &str, payload: &Value) -> io::Result<
         ));
     }
     let mut body = payload.clone();
+    body.insert("writer_owner".into(), json!(lease.owner));
+    body.insert("writer_fingerprint".into(), json!(lease.fingerprint));
+    body.insert("writer_token".into(), json!(lease.token));
     body.entry("mode").or_insert_with(|| json!("reattach"));
     let body = Value::Object(body);
     let mut last = String::new();
-    for path in restore_paths(endpoint_hash) {
+    for path in restore_paths(&lease.endpoint_hash) {
         atomic_write(&path, &body)?;
         last = path.to_string_lossy().into_owned();
     }
@@ -813,11 +872,24 @@ pub fn read_shared_restore(endpoint_hash: &str) -> Option<Value> {
     None
 }
 
-pub fn clear_shared_restore(endpoint_hash: &str) -> bool {
+pub fn clear_shared_restore(lease: &WriterLease) -> bool {
+    let Ok(_locks) = lock_state() else {
+        return false;
+    };
+    if !owns_writer(lease) {
+        return false;
+    }
     let mut removed = false;
-    for path in restore_paths(endpoint_hash) {
-        if unlink(&path) {
-            removed = true;
+    for path in restore_paths(&lease.endpoint_hash) {
+        let payload = fs::read(&path)
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
+        if payload.is_some_and(|body| {
+            body["writer_owner"] == lease.owner
+                && body["writer_fingerprint"] == lease.fingerprint
+                && body["writer_token"] == lease.token
+        }) {
+            removed |= unlink(&path);
         }
     }
     removed
@@ -889,6 +961,7 @@ mod tests {
         let lease = WriterLease {
             owner: OWNER_PLUGIN.into(),
             pid: 0,
+            token: String::new(),
             heartbeat_ms: 100,
             fingerprint: "fp".into(),
             endpoint_hash: String::new(),
@@ -914,17 +987,17 @@ mod tests {
             .unwrap()
             .join("plugin-live-fp")
             .is_file());
-        release_plugin_writer("fp");
+        release_writer(&claim);
         assert!(!resolve_writer("fp", None, None).plugin_live);
     }
 
     #[test]
     fn fresh_native_claim_blocks_plugin() {
         let _env = TestEnv::new();
-        claim_native_writer("fp", "", "", None).unwrap().unwrap();
+        let claim = claim_native_writer("fp", "", "", None).unwrap().unwrap();
         assert!(claim_plugin_writer("fp", "", "").unwrap().is_none());
         assert!(resolve_writer("fp", None, None).native_live);
-        release_native_writer("fp");
+        release_writer(&claim);
     }
 
     #[test]
@@ -944,7 +1017,7 @@ mod tests {
             .unwrap()
             .unwrap();
         std::thread::sleep(Duration::from_millis(2));
-        let heartbeat = heartbeat_plugin_writer("fp", "", "").unwrap().unwrap();
+        let heartbeat = heartbeat_writer(&first, "", "").unwrap().unwrap();
         assert_eq!(heartbeat.socket_path, "/tmp/herdr.sock");
         assert_eq!(heartbeat.endpoint_hash, "hash");
         assert!(heartbeat.heartbeat_ms >= first.heartbeat_ms);
@@ -963,14 +1036,113 @@ mod tests {
     }
 
     #[test]
+    fn foreign_plugin_cannot_be_claimed_heartbeaten_or_released() {
+        let _env = TestEnv::new();
+        let mut child = std::process::Command::new("sleep")
+            .arg("30")
+            .spawn()
+            .unwrap();
+        let pid = child.id() as i64;
+        let foreign = write_lease(OWNER_PLUGIN, "fp", "socket", "hash", Some(pid), None).unwrap();
+        let claim = claim_plugin_writer("fp", "other", "other").unwrap();
+        let heartbeat = heartbeat_writer(&foreign, "other", "other").unwrap();
+        release_writer(&foreign);
+        let remaining = resolve_writer("fp", Some(pid), None);
+        child.kill().unwrap();
+        child.wait().unwrap();
+        assert!(claim.is_none(), "must not steal a live plugin lease");
+        assert!(heartbeat.is_none(), "heartbeat must not steal ownership");
+        assert_eq!(remaining.lease.unwrap().pid, pid);
+    }
+
+    #[test]
+    fn plugin_release_preserves_native_successor() {
+        let _env = TestEnv::new();
+        let plugin = claim_plugin_writer("fp", "", "").unwrap().unwrap();
+        std::env::set_var(NATIVE_LIVE_ENV, "1");
+        claim_native_writer("fp", "", "", None).unwrap().unwrap();
+        release_writer(&plugin);
+        assert!(xdg_state_dir().join("writer-fp.json").exists());
+        assert!(resolve_writer("fp", None, None).native_live);
+    }
+
+    #[test]
+    fn global_marker_does_not_claim_another_fingerprint() {
+        let _env = TestEnv::new();
+        claim_native_writer("host-a", "", "", None)
+            .unwrap()
+            .unwrap();
+        assert!(!resolve_writer("host-b", None, None).native_live);
+        assert!(claim_plugin_writer("host-b", "", "").unwrap().is_some());
+        assert!(resolve_writer("host-a", None, None).native_live);
+    }
+
+    #[test]
+    fn second_instance_cannot_claim_same_process_lease() {
+        let _env = TestEnv::new();
+        let first = claim_plugin_writer("fp", "socket", "hash")
+            .unwrap()
+            .unwrap();
+        assert!(claim_plugin_writer("fp", "socket", "hash")
+            .unwrap()
+            .is_none());
+        assert_eq!(
+            resolve_writer("fp", None, None).lease.unwrap().token,
+            first.token
+        );
+    }
+
+    #[test]
+    fn heartbeat_after_release_does_not_resurrect_plugin_lease() {
+        let _env = TestEnv::new();
+        let claim = claim_plugin_writer("fp", "socket", "hash")
+            .unwrap()
+            .unwrap();
+        release_writer(&claim);
+        assert!(heartbeat_writer(&claim, "socket", "hash")
+            .unwrap()
+            .is_none());
+        assert!(!resolve_writer("fp", None, None).plugin_live);
+    }
+
+    #[test]
+    fn stale_generation_cannot_change_successor_restore() {
+        let _env = TestEnv::new();
+        let old = claim_plugin_writer("fp", "socket", "hash")
+            .unwrap()
+            .unwrap();
+        write_shared_restore(&old, &json!({"session_ids": ["old"]})).unwrap();
+        release_writer(&old);
+        let successor = claim_plugin_writer("fp", "socket", "hash")
+            .unwrap()
+            .unwrap();
+        write_shared_restore(&successor, &json!({"session_ids": ["new"]})).unwrap();
+        assert!(heartbeat_writer(&old, "", "").unwrap().is_none());
+        assert!(write_shared_restore(&old, &json!({})).is_err());
+        assert!(!clear_shared_restore(&old));
+        release_writer(&old);
+        assert_eq!(
+            read_shared_restore("hash").unwrap()["session_ids"],
+            json!(["new"])
+        );
+        assert_eq!(
+            resolve_writer("fp", None, None).lease.unwrap().token,
+            successor.token
+        );
+    }
+
+    #[test]
     fn restore_round_trip_and_replay_rejection() {
         let _env = TestEnv::new();
+        let lease = claim_plugin_writer("fp", "/tmp/herdr.sock", "deadbeef")
+            .unwrap()
+            .unwrap();
         let payload = json!({"socket_path": "/tmp/herdr.sock", "session_ids": ["main"]});
-        write_shared_restore("deadbeef", &payload).unwrap();
+        write_shared_restore(&lease, &payload).unwrap();
         let restored = read_shared_restore("deadbeef").unwrap();
         assert_eq!(restored["mode"], "reattach");
-        assert!(clear_shared_restore("deadbeef"));
+        assert!(clear_shared_restore(&lease));
         assert!(read_shared_restore("deadbeef").is_none());
-        assert!(write_shared_restore("deadbeef", &json!({"mode": "replay_tree"})).is_err());
+        assert!(write_shared_restore(&lease, &json!({"mode": "replay_tree"})).is_err());
     }
 }

@@ -12,6 +12,12 @@ Current version line: **v0.7.0** (tag after this merge). `VERSION` has no `v` pr
 - `VERSION` contains `X.Y.Z`
 - `CHANGELOG.md` has a `## [X.Y.Z]` section
 - `./scripts/test.sh` is green
+- Release notes agree with the [README capability matrix](README.md#capability-matrix).
+  Native attach and integrated multi-workspace native sidebars are **planned,
+  not shipped**; never advertise native attach as always available or `true`.
+  `attach-pane` provides external viewers, not native TTY takeover. Native
+  Sidebar issue #75 remains **blocked**. Lease records and lifecycle models do
+  not establish native runtime support.
 
 ## Publish
 

@@ -13,9 +13,9 @@
        (older macOS: launchctl load ~/Library/LaunchAgents/com.cmux-herdr.watch.plist)
 
   Notes:
-  - watch needs Herdr + cmux CLI context. Prefer nesting: run from a Herdr session
-    so HERDR_* env and sockets exist. This agent uses a login shell so PATH picks up
-    ~/.local/bin and typical user tools; it does not inject Herdr env itself.
+  - Set CMUX_WORKSPACE_ID, CMUX_SURFACE_ID and HERDR_SOCKET_PATH explicitly in
+    EnvironmentVariables before loading. Missing binding fails before any CLI call.
+  - No login shell: user startup files cannot redirect the binding.
   - Logs: ~/Library/Logs/cmux-herdr-watch.{out,err}.log
   - Uninstall: ./scripts/uninstall-watch-service.sh
 -->
@@ -27,8 +27,8 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>-lc</string>
-    <string>exec "$HOME/.local/bin/cmux-herdr" watch --interval 3</string>
+    <string>-c</string>
+    <string>set -eu; : "${CMUX_WORKSPACE_ID:?explicit workspace required}" "${CMUX_SURFACE_ID:?explicit surface required}" "${HERDR_SOCKET_PATH:?explicit Herdr socket required}"; case "$HERDR_SOCKET_PATH" in /*) ;; *) exit 1;; esac; test -e "$HERDR_SOCKET_PATH"; exec "$HOME/.local/bin/cmux-herdr" watch --interval 3 --workspace "$CMUX_WORKSPACE_ID"</string>
   </array>
 
   <key>RunAtLoad</key>

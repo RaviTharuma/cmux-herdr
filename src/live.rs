@@ -493,6 +493,7 @@ pub struct LiveApplyHost {
     pub agent_names: Vec<(String, String)>,
     pub focused_workspace_id: Option<String>,
     pub native_live: bool,
+    pub writer_lease: Option<handoff::WriterLease>,
     pub server_stopped: bool,
     pub log: Vec<String>,
 }
@@ -520,6 +521,7 @@ impl LiveApplyHost {
             agent_names: Vec::new(),
             focused_workspace_id: None,
             native_live: false,
+            writer_lease: None,
             server_stopped: false,
             log: Vec::new(),
         }
@@ -755,6 +757,10 @@ impl LiveApplyHost {
     }
 
     pub fn detach(&mut self) -> Value {
+        if let Some(lease) = self.writer_lease.take() {
+            handoff::clear_shared_restore(&lease);
+            handoff::release_writer(&lease);
+        }
         for mirror in self.windows.values_mut() {
             mirror.teardown();
         }
@@ -995,11 +1001,7 @@ pub fn sessions_from_snapshot(snapshot: &Snapshot) -> Vec<DiscoveredSession> {
 
 pub fn persist_host_restore(host: &LiveApplyHost) -> Option<String> {
     let record = host.lifecycle.persist.as_ref()?;
-    handoff::write_shared_restore(&record.endpoint_hash, &record.to_value()).ok()
-}
-
-pub fn clear_host_restore(socket_path: &str) -> bool {
-    handoff::clear_shared_restore(&endpoint_hash(socket_path))
+    handoff::write_shared_restore(host.writer_lease.as_ref()?, &record.to_value()).ok()
 }
 
 fn foreign_payload(action: &str, method: Option<&str>) -> Option<Value> {
@@ -1044,6 +1046,17 @@ pub fn attach_live(
         return (None, yielded);
     }
     let mut host = LiveApplyHost::new(true, socket_path, false);
+    match handoff::claim_plugin_writer(&fingerprint_key(), socket_path, &endpoint_hash(socket_path))
+    {
+        Ok(Some(lease)) => host.writer_lease = Some(lease),
+        Ok(None) => {
+            return (
+                None,
+                handoff::resolve_writer(&fingerprint_key(), None, None).payload("attach", None),
+            )
+        }
+        Err(error) => return (None, json!({"ok": false, "error": error.to_string()})),
+    }
     let applied = host
         .apply_session(windows)
         .unwrap_or_else(|error| json!({"ok": false, "error": error}));
@@ -1053,12 +1066,8 @@ pub fn attach_live(
     } else {
         None
     };
-    if attached["ok"].as_bool() == Some(true) {
-        let _ = handoff::claim_plugin_writer(
-            &fingerprint_key(),
-            socket_path,
-            &endpoint_hash(socket_path),
-        );
+    if attached["ok"].as_bool() != Some(true) || applied["ok"].as_bool() != Some(true) {
+        host.detach();
     }
     let result = json!({
         "ok": applied["ok"].as_bool().unwrap_or(false) && attached["ok"].as_bool().unwrap_or(false),
@@ -1096,6 +1105,16 @@ pub fn restore_live(
             json!({"ok": false, "outcome": "no_persist", "server_stopped": false}),
         );
     };
+    match handoff::claim_plugin_writer(&fingerprint_key(), socket_path, &hashed) {
+        Ok(Some(lease)) => host.writer_lease = Some(lease),
+        Ok(None) => {
+            return (
+                None,
+                handoff::resolve_writer(&fingerprint_key(), None, None).payload("restore", None),
+            )
+        }
+        Err(error) => return (None, json!({"ok": false, "error": error.to_string()})),
+    }
     host.lifecycle.persist = Some(record);
     let mut restored = host.restore(sessions, windows);
     let path = if restored["ok"].as_bool() == Some(true) {
@@ -1103,8 +1122,8 @@ pub fn restore_live(
     } else {
         None
     };
-    if restored["ok"].as_bool() == Some(true) {
-        let _ = handoff::claim_plugin_writer(&fingerprint_key(), socket_path, &hashed);
+    if restored["ok"].as_bool() != Some(true) {
+        host.detach();
     }
     let object = restored.as_object_mut().unwrap();
     object.insert("restore_path".into(), json!(path));
@@ -1146,12 +1165,8 @@ pub fn detach_live(windows: &[HerdrWindow], socket_path: &str) -> Value {
     host.socket_path = socket_path.into();
     let mut closed = host.detach();
     let object = closed.as_object_mut().unwrap();
-    object.insert(
-        "restore_cleared".into(),
-        json!(clear_host_restore(socket_path)),
-    );
+    object.insert("restore_cleared".into(), json!(false));
     object.insert("detached".into(), json!(true));
-    handoff::release_plugin_writer(&fingerprint_key());
     closed
 }
 

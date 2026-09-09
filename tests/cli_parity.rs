@@ -291,6 +291,131 @@ fn base_command(temp: &tempfile::TempDir) -> Command {
     command
 }
 
+#[test]
+fn native_follower_sync_preserves_all_persistent_state() {
+    let temp = tempfile::tempdir().unwrap();
+    write_fake_herdr(&temp.path().join("herdr"));
+    write_fake_cmux(&temp.path().join("cmux"));
+    let state = temp.path().join("state/cmux-herdr");
+    fs::create_dir_all(&state).unwrap();
+    let sentinel = state.join("associations-sentinel.json");
+    let bytes = br#"{"owner":"native","panes":{"p1":{"title_lock":true}}}"#;
+    fs::write(&sentinel, bytes).unwrap();
+    let output = base_command(&temp)
+        .args(["sync", "--workspace", "workspace:1", "--json"])
+        .env("CMUX_HERDR_NATIVE_LIVE", "1")
+        .env_remove("CMUX_HERDR_FORCE_PLUGIN")
+        .env("CMUX_HERDR_NATIVE_STATE_DIR", temp.path().join("native"))
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("foreign_writer"));
+    assert_eq!(fs::read(sentinel).unwrap(), bytes);
+    assert_eq!(
+        fs::read_dir(state).unwrap().count(),
+        1,
+        "follower created persistent state"
+    );
+    assert!(!temp.path().join("native").exists());
+    assert_eq!(
+        fs::read_to_string(temp.path().join("cmux.log")).unwrap_or_default(),
+        ""
+    );
+}
+
+#[test]
+fn mirror_executes_supported_surface_creation_launch_and_rename() {
+    let temp = tempfile::tempdir().unwrap();
+    write_fake_herdr(&temp.path().join("herdr"));
+    fs::write(
+        temp.path().join("cmux"),
+        r#"#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_CMUX_LOG"
+if [ "$2" = '--help' ]; then
+  case "$1" in
+    new-split) echo 'Usage: cmux new-split <direction> --surface <id>' ;;
+    new-surface) echo 'Usage: cmux new-surface --pane <id>' ;;
+    respawn-pane) echo 'Usage: cmux respawn-pane --surface <id> --command <cmd>' ;;
+    rename-tab) echo 'Usage: cmux rename-tab --surface <id> --title <title>' ;;
+    *) exit 9 ;;
+  esac
+  exit 0
+fi
+case "$1" in
+  new-surface)
+    [ "$2 $3" = '--type terminal' ] || exit 9
+    printf '%s\n' '{"surface_ref":"surface:2","pane_id":null,"pane_ref":"pane:2"}' ;;
+  rename-tab)
+    [ "$2 $3" = '--surface surface:2' ] || exit 9
+    case "$4" in --title=*) ;; *) exit 9 ;; esac
+    printf '%s\n' '{"ok":true}' ;;
+  respawn-pane)
+    [ "$2 $3 $4" = '--surface surface:2 --command' ] || exit 9
+    printf '%s\n' "$5" > "$LAUNCHED_COMMAND"
+    printf '%s\n' '{"ok":true}' ;;
+  tree|list-terminals|ids) printf '%s\n' '{"items":[]}' ;;
+  *) echo "unsupported: $*" >&2; exit 9 ;;
+esac
+"#,
+    )
+    .unwrap();
+    fs::set_permissions(temp.path().join("cmux"), fs::Permissions::from_mode(0o755)).unwrap();
+    let launched = temp.path().join("launched");
+    let output = base_command(&temp)
+        .args([
+            "mirror",
+            "--all",
+            "--workspace",
+            "workspace:1",
+            "--no-layout",
+            "--no-status",
+            "--no-log",
+            "--json",
+        ])
+        .env_remove("CMUX_HERDR_NATIVE_LIVE")
+        .env_remove("CMUX_HERDR_FORCE_PLUGIN")
+        .env("CMUX_HERDR_NATIVE_STATE_DIR", temp.path().join("native"))
+        .env("LAUNCHED_COMMAND", &launched)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let report: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(report["plan"]["errors"], serde_json::json!([]));
+    assert_eq!(report["plan"]["created"], serde_json::json!(["p1"]));
+    let command = fs::read_to_string(launched).unwrap_or_else(|error| {
+        panic!(
+            "{error}; stdout={}; calls={}",
+            String::from_utf8_lossy(&output.stdout),
+            fs::read_to_string(temp.path().join("cmux.log")).unwrap_or_default()
+        )
+    });
+    assert!(command.contains("'attach-pane' 'p1'"), "{command}");
+    let state = temp.path().join("state/cmux-herdr");
+    let mirror = fs::read_dir(state)
+        .unwrap()
+        .filter_map(Result::ok)
+        .find(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with("associations-")
+        })
+        .unwrap();
+    let saved: Value = serde_json::from_slice(&fs::read(mirror.path()).unwrap()).unwrap();
+    assert_eq!(saved["mirrors"]["p1"]["cmux_surface_id"], "surface:2");
+    assert_eq!(saved["mirrors"]["p1"]["cmux_pane_id"], "pane:2");
+}
+
 fn update_command_without_herdr(temp: &tempfile::TempDir) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_cmux-herdr"));
     command
@@ -434,19 +559,96 @@ fn update_service_status_inspects_installed_state_after_herdr_is_removed() {
 }
 
 #[test]
-fn update_service_uninstall_removes_installed_state_after_herdr_is_removed() {
+fn update_service_uninstall_preserves_unowned_artifacts_without_herdr() {
     let temp = tempfile::tempdir().unwrap();
     let (runtime, definitions) = installed_update_service_paths(&temp);
     let config = temp.path().join("config/herdr/config.toml");
     let original = "[update]\nversion_check = true\n";
-    let installed = cmux_herdr::update::install_settings(
-        original,
-        "preview",
-        "https://example.com/preview.json",
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    fs::write(&config, original).unwrap();
+    let output = update_command_without_herdr(&temp)
+        .args(["update-service", "uninstall", "--json"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("ownership manifest is missing"));
+    assert_eq!(fs::read_to_string(runtime).unwrap(), "runtime");
+    for definition in definitions {
+        assert_eq!(
+            fs::read_to_string(definition).unwrap(),
+            "configured herdr: /removed/herdr\n"
+        );
+    }
+    assert_eq!(fs::read_to_string(config).unwrap(), original);
+}
+
+#[test]
+fn update_service_uninstall_removes_installed_state_after_herdr_is_removed() {
+    let temp = tempfile::tempdir().unwrap();
+    use cmux_herdr::update::{
+        CommandOutput, CommandRunner, InstallRequest, ServiceManager, ServicePaths,
+    };
+    struct InstallRunner;
+    impl CommandRunner for InstallRunner {
+        fn run(
+            &self,
+            _program: &std::path::Path,
+            args: &[String],
+        ) -> std::io::Result<CommandOutput> {
+            let inactive = args
+                .iter()
+                .any(|arg| matches!(arg.as_str(), "print" | "is-enabled" | "is-active"));
+            Ok(CommandOutput {
+                status: i32::from(inactive),
+                stdout: if args.iter().any(|arg| arg == "--default-config") {
+                    "# manifest_url = \"https://example.com/preview.json\"\n".into()
+                } else {
+                    String::new()
+                },
+                stderr: String::new(),
+            })
+        }
+    }
+    let manager = if cfg!(target_os = "macos") {
+        ServiceManager::Launchd {
+            domain: format!("gui/{}", rustix::process::getuid().as_raw()),
+        }
+    } else {
+        ServiceManager::Systemd
+    };
+    let config = temp.path().join("config/herdr/config.toml");
+    let original = "[update]\nversion_check = true\n";
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    fs::write(&config, original).unwrap();
+    let paths = ServicePaths {
+        home: temp.path().join("home"),
+        config_path: config.clone(),
+        state_root: temp.path().join("state/cmux-herdr"),
+        data_root: temp.path().join("data/cmux-herdr"),
+        definition_dir: if cfg!(target_os = "macos") {
+            temp.path().join("home/Library/LaunchAgents")
+        } else {
+            temp.path().join("config/systemd/user")
+        },
+        source_binary: temp.path().join("source-cmux-herdr"),
+        herdr_binary: temp.path().join("herdr"),
+    };
+    fs::write(&paths.source_binary, b"isolated service runtime").unwrap();
+    write_fake_herdr(&paths.herdr_binary);
+    let result = cmux_herdr::update::install_service(
+        &InstallRequest::new(
+            manager,
+            paths.clone(),
+            "preview".into(),
+            "https://example.com/preview.json".into(),
+        ),
+        &InstallRunner,
     )
     .unwrap();
-    fs::create_dir_all(config.parent().unwrap()).unwrap();
-    fs::write(&config, installed).unwrap();
+    let runtime = result.runtime_binary;
+    let definitions = result.definitions;
+    fs::remove_file(&paths.herdr_binary).unwrap();
+    fs::remove_file(&paths.source_binary).unwrap();
 
     let output = update_command_without_herdr(&temp)
         .args(["update-service", "uninstall", "--json"])

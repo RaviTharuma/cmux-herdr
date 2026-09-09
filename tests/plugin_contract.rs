@@ -99,7 +99,7 @@ fn launchers_exec_cached_binary_and_resolve_symlink() {
 }
 
 #[test]
-fn installer_copy_fallback_installs_a_runnable_cli() {
+fn installer_link_failure_preserves_source_and_leaves_no_launcher() {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"));
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().join("checkout");
@@ -112,14 +112,14 @@ fn installer_copy_fallback_installs_a_runnable_cli() {
         &source.join("scripts/install.sh"),
         &root.join("scripts/install.sh"),
     );
+    fs::copy(
+        source.join("scripts/packaging-manifest.sh"),
+        root.join("scripts/packaging-manifest.sh"),
+    )
+    .unwrap();
     copy_executable(&source.join("bin/cmux-herdr"), &root.join("bin/cmux-herdr"));
     let original_launcher = fs::read(root.join("bin/cmux-herdr")).unwrap();
     fs::create_dir_all(home.join(".local/bin")).unwrap();
-    std::os::unix::fs::symlink(
-        root.join("bin/cmux-herdr"),
-        home.join(".local/bin/cmux-herdr"),
-    )
-    .unwrap();
     let fetch = root.join("bin/cmux-herdr-fetch");
     fs::write(
         &fetch,
@@ -147,32 +147,18 @@ chmod +x "$root/.cmux-herdr/bin/cmux-herdr"
     );
     let install = Command::new(root.join("scripts/install.sh"))
         .env("HOME", &home)
+        .env("XDG_STATE_HOME", tmp.path().join("state"))
         .env("PATH", path)
         .output()
         .unwrap();
-    assert!(
-        install.status.success(),
-        "install failed: {}",
-        String::from_utf8_lossy(&install.stderr)
-    );
+    assert!(!install.status.success());
     assert_eq!(
         fs::read(root.join("bin/cmux-herdr")).unwrap(),
         original_launcher,
-        "copy fallback overwrote the launcher through the existing symlink"
+        "failed installation overwrote the source launcher"
     );
-    assert!(!fs::symlink_metadata(home.join(".local/bin/cmux-herdr"))
-        .unwrap()
-        .file_type()
-        .is_symlink());
-
-    let cli = Command::new(home.join(".local/bin/cmux-herdr"))
-        .arg("status")
-        .output()
-        .unwrap();
-    assert!(
-        cli.status.success(),
-        "copied CLI failed: {}",
-        String::from_utf8_lossy(&cli.stderr)
-    );
-    assert_eq!(String::from_utf8(cli.stdout).unwrap(), "runtime status\n");
+    assert!(matches!(
+        fs::symlink_metadata(home.join(".local/bin/cmux-herdr")),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound
+    ));
 }
