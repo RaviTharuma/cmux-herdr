@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import plistlib
 import subprocess
+import shutil
 import tempfile
 import unittest
 
@@ -81,6 +82,10 @@ elif a[:2] == ['release', 'edit']:
 else: sys.exit(99)
 ''')
         fake.chmod(0o755)
+        if shutil.which('sha256sum') is None:
+            checksum = root / 'sha256sum'
+            checksum.write_text('#!/bin/sh\nexec shasum -a 256 "$@"\n')
+            checksum.chmod(0o755)
         env = dict(os.environ, PATH=str(root) + ':' + os.environ['PATH'], FIXTURE=str(root),
                    MODE=mode, GITHUB_REF_NAME='v0.7.0')
         return root, env
