@@ -1,9 +1,8 @@
 <h1 align="center">cmux-herdr</h1>
 <p align="center"><strong>A cmux plugin for Herdr</strong></p>
 <p align="center">
-  cmux becomes the official UI of Herdr. Herdr is the engine.
-  Native cmux chrome — mouse, Reorderable, tabs, and panes —
-  not a boxed-in Herdr window.
+  Herdr pane viewers and agent status inside cmux.
+  External attach through the plugin today; native Herdr UI is a roadmap.
 </p>
 
 <p align="center">
@@ -25,12 +24,12 @@
   <a href="CHANGELOG.md">changelog</a>
 </p>
 
-**cmux-herdr** is the plugin you install when [Herdr](https://github.com/herdrdev/herdr)
-runs *inside* [cmux](https://github.com/manaflow-ai/cmux). cmux is the official
-GUI. Herdr is the engine. Without this plugin, every agent collapses into one
-cmux tab titled roughly `herdr`. With it, Herdr sessions are real cmux
-workspaces, tabs, and panes — mouse, drag-and-drop, focus, order — not an
-iframe and not a nested Herdr chrome box.
+**cmux-herdr** is a plugin for [Herdr](https://github.com/herdrdev/herdr)
+running inside [cmux](https://github.com/manaflow-ai/cmux). It projects agent
+status and creates external pane viewers using `cmux-herdr attach-pane`.
+It does not transfer Herdr TTY ownership into Ghostty or implement cmux's
+builtin native tmux integration. Making cmux the native UI of Herdr is a
+roadmap, not a capability shipped by this plugin.
 
 The current source version is **v0.7.0**. This is a plugin for `cmux.app`, not
 a patch to it. The plugin manager downloads a checksum-verified Rust binary;
@@ -39,10 +38,12 @@ users need neither Python nor a Rust toolchain.
 ## Install
 
 Official install is the cmux plugin manager plus the `cmux-herdr` CLI.
-Native Herdr chrome is parent cmux ([#8736](https://github.com/manaflow-ai/cmux/pull/8736)
-`__herdr-compat`, [#10045](https://github.com/manaflow-ai/cmux/pull/10045) nested
-topology). This plugin does not copy a custom `herdr` sidebar into
-`~/.config/cmux/sidebars/`.
+Native Herdr chrome is roadmap work associated with upstream proposals
+[#8736](https://github.com/manaflow-ai/cmux/pull/8736) and
+[#10045](https://github.com/manaflow-ai/cmux/pull/10045), not present in the
+audited cmux commit `829c6af45478ef5c2196801824c35f5cb4dc5d69`.
+Native Sidebar issue #75 remains **blocked**, not fixed by v0.7.0.
+This plugin does not copy a custom `herdr` sidebar into `~/.config/cmux/sidebars/`.
 
 ```bash
 cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
@@ -87,17 +88,23 @@ of the CLI (not a custom-sidebar copy): [CONTRIBUTING.md](CONTRIBUTING.md).
 Release notes: [RELEASE.md](RELEASE.md). `sidebars/herdr.js` and `herdr.swift`
 remain in the repo as experimental leftovers, not the default install.
 
-## Features
+## Capability matrix
 
-| | |
-|---|---|
-| **Native cmux chrome** | Parent cmux owns Herdr windows, tabs, and panes (`#8736` / `#10045`). This plugin does not install a custom `herdr` sidebar. |
-| **Live watch** | `cmux-herdr watch` keeps pills and surfaces in sync and projects Herdr tabs/panes into real cmux tabs and splits. Optional LaunchAgent so it survives closing the pane. |
-| **Tab and pane mirror** | Layout, focus, order, and prune — the same contract cmux gives tmux over SSH. `watch` projects Herdr tabs/panes into real cmux tabs and splits. |
-| **Status pills** | Every Herdr agent becomes a status chip on the cmux workspace — working, idle, done, blocked — plus a progress bar for the session. |
-| **One CLI** | Topology (`tree`, `agents`), control (`new-tab`, `send`, `agent-prompt`), attach/detach/restore, and the published Herdr socket API — never `server.stop`. |
-| **Agent skill** | Ships a `cmux-herdr` skill so coding agents drive Herdr through cmux chrome instead of treating it as tmux. |
-| **Safe handoff** | Plugin and native cmux share one writer lease. If native nested topology is live, this plugin yields. If native dies, watch can resume. |
+This is the release capability summary. Native design documents describe targets,
+not additional features shipped by the plugin.
+
+| Capability | Status | Scope |
+|---|---|---|
+| **External pane viewers** | Shipped plugin path | cmux terminal surfaces run `attach-pane`; Herdr retains the TTYs. |
+| **Live watch and mirror** | Shipped plugin path | Userspace tab/split, layout, focus, order and prune projection; not builtin ssh-tmux output streaming or native TTY takeover. |
+| **Status pills** | Shipped plugin path | Agent status chips and session progress on the containing cmux workspace. |
+| **CLI and agent skill** | Shipped plugin path | Topology, control, external viewers and the allowlisted Herdr socket API; never `server.stop`. |
+| **Writer coordination** | Shipped protocol | Instance-owned leases and recognition of native ownership records; a record does not prove a native controller exists. |
+| **Native Herdr attach / window mirror** | Planned, not shipped | Requires upstream AppKit/Bonsplit/Ghostty integration; plugin lifecycle models are not native attachment. |
+| **Integrated multi-workspace native sidebars** | Planned, blocked | Native Sidebar issue #75 remains blocked. The plugin sidebar TUI and experimental custom sidebars are not this integration. |
+
+Source evidence and command-level constraints:
+[stabilization audit](docs/upstream/STABILIZATION_AUDIT.md#source-pinned-capability-matrix).
 
 ## Quick start
 
@@ -154,7 +161,7 @@ building from source additionally need Rust/Cargo; users do not.
 ## How it works
 
 ```text
-cmux.app  (the Herdr GUI: windows, workspaces, tabs, panes)
+cmux.app  (outer terminal host; plugin creates external Herdr viewers)
    └── Herdr engine
           └── tabs / panes / agents
                  └── cmux-herdr
@@ -185,10 +192,11 @@ Missing fingerprint pieces fail closed with a clear error — the plugin will no
 guess a host and write pills onto a random workspace. `--workspace` still
 overrides. This cache is not authoritative restore state for cmux.
 
-**Single writer.** If native nested topology holds the lease, plugin `sync` /
-`watch` / `mirror` / `attach` / `observe` / `restore` yield. A dead pid or
-expired heartbeat is stale and the other path may resume. `CMUX_HERDR_NATIVE_LIVE=1`
-is an explicit native claim. `CMUX_HERDR_FORCE_PLUGIN=1` forces the plugin.
+**Single writer.** Plugin `sync` / `watch` / `mirror` / `attach` / `observe` /
+`restore` yield to a fresh foreign writer. A dead pid or expired heartbeat
+is stale. Native records are a compatibility protocol for future integration,
+not evidence of shipped native topology. `CMUX_HERDR_NATIVE_LIVE=1` explicitly
+asserts native ownership; `CMUX_HERDR_FORCE_PLUGIN=1` forces the plugin.
 `CMUX_HERDR_LOCK_TITLES=1` locks each display name after the first successful
 write. This is a handoff, not Ghostty PTY theft.
 
@@ -215,8 +223,9 @@ label (working, idle, done), not the raw key.
 `cmux-herdr watch` is the product path. It turns on the full reconcile
 contract (all tabs, prune, layout tree, ratios, tab order, focus) so inner
 Herdr sessions appear as real cmux tabs and panes. `mirror` remains the
-one-shot / scoped tool. Matrix:
-[docs/upstream/TMUX_PARITY.md](docs/upstream/TMUX_PARITY.md).
+one-shot / scoped tool. Shipped versus planned status is defined by the
+[capability matrix](#capability-matrix); [tmux design targets](docs/upstream/TMUX_PARITY.md)
+are not release guarantees.
 
 | Herdr | cmux projection |
 |---|---|
@@ -244,7 +253,7 @@ the live Herdr session — the same idea as attaching a second tmux client.
 
 ## Limitations
 
-- Extra viewers, not PTY theft. Native window mirror is the cmux `RemoteHerdrWindowMirror` track.
+- Extra viewers, not TTY takeover. `RemoteHerdrWindowMirror` is roadmap work, absent from the audited cmux source. Native Sidebar issue #75 remains blocked.
 - Nested shells can carry stale outer cmux IDs. The plugin re-resolves the live containing workspace before writing status.
 - Multi-parent hosts need a complete fingerprint (`CMUX_SURFACE_ID` + `HERDR_SOCKET_PATH`).
 - The plugin does not inject a fake `tmux` binary; see [shims/README.md](shims/README.md).
@@ -265,18 +274,22 @@ install, `cmux-herdr` CLI, `watch` as the live GUI path, and agent skill.
 You can use one or both; they share the idea, not the install.
 
 **Will native cmux nested topology replace this?**
-That work lives on [cmux#8737](https://github.com/manaflow-ai/cmux/issues/8737)
-and related PRs. This plugin is the supported path today and stays the
-compatibility fallback. Plugin and native share a writer lease so they do not
-fight.
+That roadmap is tracked by [cmux#8737](https://github.com/manaflow-ai/cmux/issues/8737)
+and related proposals. This plugin provides external viewers today. Its lease
+protocol anticipates native cooperation but does not ship a native controller.
 
 **Does it need a cmux PR to work?**
 No. Install it with the plugin manager and run it.
 
-## Native cmux track
+## Planned native Herdr GUI
 
-Not required to use the plugin. Design notes live in
-[docs/upstream/](docs/upstream/README.md).
+Integrated multi-workspace native sidebars and native pane attachment are
+**planned capabilities, not shipped features**. They require upstream cmux
+integration; installing this plugin does not enable them. Native Sidebar issue
+#75 is **blocked**; plugin stabilization does not close it. The
+[capability matrix](#capability-matrix) above defines current release scope;
+[the stabilization audit](docs/upstream/STABILIZATION_AUDIT.md) provides source evidence.
+Design notes live in [docs/upstream/](docs/upstream/README.md).
 
 | Track | Link |
 |---|---|

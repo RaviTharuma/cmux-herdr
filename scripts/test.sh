@@ -5,6 +5,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT}"
 
+echo "== offline packaging fixtures =="
+bash -n scripts/install.sh scripts/uninstall.sh scripts/packaging-manifest.sh tests/packaging.sh
+sh -n bin/cmux-herdr-fetch
+bash tests/packaging.sh
+python3 tests/packaging_release.py
+
 echo "== cargo fmt =="
 cargo fmt --all --check
 

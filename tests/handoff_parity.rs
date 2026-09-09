@@ -86,6 +86,7 @@ fn pure_behavior_matches_python() {
         let lease = handoff::WriterLease {
             owner: handoff::OWNER_PLUGIN.into(),
             pid: 0,
+            token: String::new(),
             heartbeat_ms: entry["heartbeat_ms"].as_i64().unwrap(),
             fingerprint: "fp".into(),
             endpoint_hash: String::new(),

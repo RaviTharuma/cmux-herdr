@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use toml_edit::{value, DocumentMut, Item, Table};
 
@@ -1312,11 +1312,177 @@ fn rollback(snapshots: &[FileSnapshot]) -> Result<()> {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ServiceOwnership {
+    manager: String,
+    config_path: PathBuf,
+    artifacts: Vec<(PathBuf, String)>,
+}
+
+fn service_owner_path(paths: &ServicePaths) -> PathBuf {
+    paths.state_root.join("herdr-auto-update-service.json")
+}
+
+fn service_manager_key(manager: &ServiceManager) -> String {
+    match manager {
+        ServiceManager::Launchd { domain } => format!("launchd:{domain}"),
+        ServiceManager::Systemd => "systemd".into(),
+    }
+}
+
+fn service_artifacts(manager: &ServiceManager, paths: &ServicePaths) -> Vec<PathBuf> {
+    let mut artifacts = vec![paths.runtime_binary()];
+    match manager {
+        ServiceManager::Launchd { .. } => artifacts.push(paths.launchd_plist()),
+        ServiceManager::Systemd => {
+            artifacts.extend([paths.systemd_service(), paths.systemd_timer()])
+        }
+    }
+    artifacts
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn macos_service_alias(path: &Path, target: &Path, owner: u32) -> bool {
+    owner == 0
+        && matches!(
+            (path.to_str(), target.to_str()),
+            (Some("/var"), Some("private/var" | "/private/var"))
+                | (Some("/tmp"), Some("private/tmp" | "/private/tmp"))
+        )
+}
+
+fn trusted_service_alias(path: &Path, metadata: &fs::Metadata) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::unix::fs::MetadataExt;
+        let Ok(target) = fs::read_link(path) else {
+            return false;
+        };
+        if !macos_service_alias(path, &target, metadata.uid()) {
+            return false;
+        }
+        let target = Path::new("/").join(target);
+        // Do not let the exception hide a redirected /private or target directory.
+        // /private/tmp is legitimately root-owned and sticky (01777).
+        [Path::new("/private"), target.as_path()]
+            .iter()
+            .all(|path| {
+                fs::symlink_metadata(path).is_ok_and(|metadata| {
+                    let mode = metadata.permissions().mode();
+                    metadata.is_dir()
+                        && metadata.uid() == 0
+                        && (mode & 0o022 == 0 || (*path == target.as_path() && mode & 0o1000 != 0))
+                })
+            })
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (path, metadata);
+        false
+    }
+}
+
+// Reject redirected user parents; only macOS's verified root-owned OS aliases pass.
+fn service_regular_file(path: &Path) -> Result<bool> {
+    for ancestor in path.ancestors() {
+        match fs::symlink_metadata(ancestor) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                if ancestor != path && trusted_service_alias(ancestor, &metadata) {
+                    continue;
+                }
+                return Err(UpdateError::Config(format!(
+                    "refusing symlinked service path: {}",
+                    ancestor.display()
+                )));
+            }
+            Ok(metadata) if ancestor == path => {
+                if !metadata.is_file() {
+                    return Err(UpdateError::Config(format!(
+                        "service path is not a regular file: {}",
+                        path.display()
+                    )));
+                }
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(UpdateError::io(
+                    format!("inspect {}", ancestor.display()),
+                    error,
+                ))
+            }
+        }
+    }
+    Ok(path.is_file())
+}
+
+fn verify_service_ownership(manager: &ServiceManager, paths: &ServicePaths) -> Result<bool> {
+    let owner_path = service_owner_path(paths);
+    let artifacts = service_artifacts(manager, paths);
+    let has_owner = service_regular_file(&owner_path)?;
+    service_regular_file(&paths.config_path)?;
+    for artifact in &artifacts {
+        service_regular_file(artifact)?;
+    }
+    if !has_owner {
+        if artifacts.iter().any(|path| path.exists()) {
+            return Err(UpdateError::Config(
+                "refusing unowned service artifacts; ownership manifest is missing".into(),
+            ));
+        }
+        return Ok(false);
+    }
+    let bytes =
+        fs::read(&owner_path).map_err(|error| UpdateError::io("read service ownership", error))?;
+    let owner: ServiceOwnership = serde_json::from_slice(&bytes).map_err(|error| {
+        UpdateError::Config(format!("invalid service ownership manifest: {error}"))
+    })?;
+    if owner.manager != service_manager_key(manager)
+        || owner.config_path != paths.config_path
+        || owner.artifacts.len() != artifacts.len()
+        || owner
+            .artifacts
+            .iter()
+            .zip(&artifacts)
+            .any(|((recorded, _), expected)| recorded != expected)
+    {
+        return Err(UpdateError::Config(
+            "service ownership manifest does not match this installation".into(),
+        ));
+    }
+    for (path, digest) in &owner.artifacts {
+        if !path.is_file() || sha256(path)? != *digest {
+            return Err(UpdateError::Config(format!(
+                "refusing modified or missing owned service artifact: {}",
+                path.display()
+            )));
+        }
+    }
+    Ok(true)
+}
+
+fn save_service_ownership(manager: &ServiceManager, paths: &ServicePaths) -> Result<()> {
+    let artifacts = service_artifacts(manager, paths)
+        .into_iter()
+        .map(|path| sha256(&path).map(|digest| (path, digest)))
+        .collect::<Result<Vec<_>>>()?;
+    let owner = ServiceOwnership {
+        manager: service_manager_key(manager),
+        config_path: paths.config_path.clone(),
+        artifacts,
+    };
+    let bytes = serde_json::to_vec(&owner)
+        .map_err(|error| UpdateError::Config(format!("serialize service ownership: {error}")))?;
+    atomic_write(&service_owner_path(paths), &bytes, 0o600)
+}
+
 pub fn install_service(
     request: &InstallRequest,
     runner: &dyn CommandRunner,
 ) -> Result<InstallResult> {
     let paths = &request.paths;
+    let owned = verify_service_ownership(&request.manager, paths)?;
     let defaults = command_required(runner, &paths.herdr_binary, &["--default-config"])?;
     if !defaults
         .stdout
@@ -1332,7 +1498,7 @@ pub fn install_service(
         ServiceManager::Launchd { domain } => {
             let target = format!("{domain}/{LABEL}");
             let (loaded, _) = probe_status(runner, "launchctl", &["print", &target])?;
-            if loaded && !paths.launchd_plist().exists() {
+            if loaded && !owned {
                 return Err(UpdateError::Config(format!(
                     "launchd label {LABEL} is loaded from an unmanaged definition"
                 )));
@@ -1355,6 +1521,16 @@ pub fn install_service(
             let (enabled, _) =
                 probe_status(runner, "systemctl", &["--user", "is-enabled", &timer])?;
             let (active, _) = probe_status(runner, "systemctl", &["--user", "is-active", &timer])?;
+            let service = format!("{LABEL}.service");
+            let (service_active, _) =
+                probe_status(runner, "systemctl", &["--user", "is-active", &service])?;
+            let (service_enabled, _) =
+                probe_status(runner, "systemctl", &["--user", "is-enabled", &service])?;
+            if !owned && (enabled || active || service_active || service_enabled) {
+                return Err(UpdateError::Config(
+                    "refusing active or enabled unmanaged systemd service".into(),
+                ));
+            }
             PriorServiceState::Systemd { enabled, active }
         }
     };
@@ -1364,6 +1540,7 @@ pub fn install_service(
     };
     let mut targets = vec![paths.config_path.clone(), paths.runtime_binary()];
     targets.extend(definitions.iter().cloned());
+    targets.push(service_owner_path(paths));
     let snapshots = targets
         .into_iter()
         .map(FileSnapshot::capture)
@@ -1421,6 +1598,7 @@ pub fn install_service(
                 )?;
             }
         }
+        save_service_ownership(&request.manager, paths)?;
         Ok(config)
     })();
     let config = match attempt {
@@ -1536,6 +1714,13 @@ pub fn uninstall_service(
     paths: &ServicePaths,
     runner: &dyn CommandRunner,
 ) -> Result<UninstallResult> {
+    if !verify_service_ownership(manager, paths)? {
+        return Ok(UninstallResult {
+            config: FileChange::Unchanged,
+            removed: Vec::new(),
+            command_warnings: Vec::new(),
+        });
+    }
     let mut warnings = Vec::new();
     match manager {
         ServiceManager::Launchd { domain } => {
@@ -1595,6 +1780,7 @@ pub fn uninstall_service(
             &mut warnings,
         );
     }
+    remove_existing(&service_owner_path(paths), &mut removed)?;
     Ok(UninstallResult {
         config,
         removed,
@@ -2225,5 +2411,198 @@ mod tests {
         );
         assert!(paths.source_binary.as_os_str().is_empty());
         assert!(paths.herdr_binary.as_os_str().is_empty());
+    }
+
+    #[test]
+    fn service_ownership_refuses_foreign_definitions_before_commands() {
+        for manager in [
+            ServiceManager::Launchd {
+                domain: "gui/501".into(),
+            },
+            ServiceManager::Systemd,
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let paths = service_paths(dir.path());
+            prepare_install(&paths);
+            fs::create_dir_all(&paths.definition_dir).unwrap();
+            let definition = match manager {
+                ServiceManager::Launchd { .. } => paths.launchd_plist(),
+                ServiceManager::Systemd => paths.systemd_service(),
+            };
+            fs::write(&definition, b"foreign service").unwrap();
+            let original = fs::read(&paths.config_path).unwrap();
+            let runner = FakeRunner::supporting();
+            let request = InstallRequest::new(
+                manager.clone(),
+                paths.clone(),
+                "preview".into(),
+                MANIFEST.into(),
+            );
+            assert!(install_service(&request, &runner).is_err());
+            assert!(uninstall_service(&manager, &paths, &runner).is_err());
+            assert!(runner.calls.borrow().is_empty());
+            assert_eq!(fs::read(definition).unwrap(), b"foreign service");
+            assert_eq!(fs::read(&paths.config_path).unwrap(), original);
+        }
+    }
+
+    #[test]
+    fn service_ownership_preserves_edited_and_symlinked_artifacts() {
+        for manager in [
+            ServiceManager::Launchd {
+                domain: "gui/501".into(),
+            },
+            ServiceManager::Systemd,
+        ] {
+            for symlink in [false, true] {
+                let dir = tempfile::tempdir().unwrap();
+                let paths = service_paths(dir.path());
+                prepare_install(&paths);
+                let runner = FakeRunner::supporting();
+                let request = InstallRequest::new(
+                    manager.clone(),
+                    paths.clone(),
+                    "preview".into(),
+                    MANIFEST.into(),
+                );
+                let installed = install_service(&request, &runner).unwrap();
+                let mut artifacts = installed.definitions;
+                artifacts.push(paths.runtime_binary());
+                for artifact in artifacts {
+                    let original = fs::read(&artifact).unwrap();
+                    let foreign = dir.path().join("foreign");
+                    if symlink {
+                        fs::write(&foreign, &original).unwrap();
+                        fs::remove_file(&artifact).unwrap();
+                        std::os::unix::fs::symlink(&foreign, &artifact).unwrap();
+                    } else {
+                        fs::write(&artifact, b"user modification").unwrap();
+                    }
+                    runner.calls.borrow_mut().clear();
+                    let config = fs::read(&paths.config_path).unwrap();
+                    assert!(install_service(&request, &runner).is_err());
+                    assert!(uninstall_service(&manager, &paths, &runner).is_err());
+                    assert!(runner.calls.borrow().is_empty());
+                    assert_eq!(fs::read(&paths.config_path).unwrap(), config);
+                    if symlink {
+                        assert_eq!(fs::read_link(&artifact).unwrap(), foreign);
+                        assert_eq!(fs::read(&foreign).unwrap(), original);
+                        fs::remove_file(&artifact).unwrap();
+                    } else {
+                        assert_eq!(fs::read(&artifact).unwrap(), b"user modification");
+                    }
+                    fs::write(&artifact, original).unwrap();
+                }
+                // Uninstall must not need the source executable or Herdr to survive.
+                let mut state_only = paths.clone();
+                state_only.source_binary = PathBuf::new();
+                state_only.herdr_binary = PathBuf::new();
+                uninstall_service(&manager, &state_only, &runner).unwrap();
+                assert!(!paths.runtime_binary().exists());
+            }
+        }
+    }
+
+    #[test]
+    fn service_ownership_rejects_stale_manifest_and_redirected_parents() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = service_paths(dir.path());
+        prepare_install(&paths);
+        let manager = ServiceManager::Systemd;
+        let runner = FakeRunner::supporting();
+        let request = InstallRequest::new(
+            manager.clone(),
+            paths.clone(),
+            "preview".into(),
+            MANIFEST.into(),
+        );
+        install_service(&request, &runner).unwrap();
+        let owner_path = service_owner_path(&paths);
+        let original = fs::read(&owner_path).unwrap();
+        let mut owner: ServiceOwnership = serde_json::from_slice(&original).unwrap();
+        owner.artifacts[0].0 = dir.path().join("foreign");
+        fs::write(&owner_path, serde_json::to_vec(&owner).unwrap()).unwrap();
+        runner.calls.borrow_mut().clear();
+        assert!(uninstall_service(&manager, &paths, &runner).is_err());
+        assert!(runner.calls.borrow().is_empty());
+        fs::write(&owner_path, original).unwrap();
+        let redirected = dir.path().join("redirected");
+        fs::rename(&paths.definition_dir, &redirected).unwrap();
+        std::os::unix::fs::symlink(&redirected, &paths.definition_dir).unwrap();
+        assert!(install_service(&request, &runner).is_err());
+        assert!(uninstall_service(&manager, &paths, &runner).is_err());
+        assert!(runner.calls.borrow().is_empty());
+        assert!(redirected.join(format!("{LABEL}.service")).exists());
+    }
+
+    #[test]
+    fn service_ownership_failed_upgrade_retains_uninstall_authority() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = service_paths(dir.path());
+        prepare_install(&paths);
+        let manager = ServiceManager::Systemd;
+        let request = InstallRequest::new(
+            manager.clone(),
+            paths.clone(),
+            "preview".into(),
+            MANIFEST.into(),
+        );
+        install_service(&request, &FakeRunner::supporting()).unwrap();
+        fs::write(&paths.source_binary, b"new runtime").unwrap();
+        let mut failed = FakeRunner::supporting();
+        failed.failures.insert("systemd-analyze".into(), 1);
+        assert!(install_service(&request, &failed).is_err());
+        assert_eq!(fs::read(paths.runtime_binary()).unwrap(), b"cmux binary");
+        uninstall_service(&manager, &paths, &FakeRunner::supporting()).unwrap();
+        assert!(!paths.runtime_binary().exists());
+        assert!(!paths.systemd_service().exists());
+    }
+
+    #[test]
+    fn service_ownership_macos_alias_policy_is_narrow() {
+        for (path, target) in [("/var", "private/var"), ("/tmp", "/private/tmp")] {
+            assert!(macos_service_alias(Path::new(path), Path::new(target), 0));
+            assert!(!macos_service_alias(
+                Path::new(path),
+                Path::new(target),
+                501
+            ));
+        }
+        for (path, target) in [
+            ("/var", "/tmp/foreign"),
+            ("/home/user/var", "private/var"),
+            ("/var/folders", "/private/var/folders"),
+            ("/tmp", "private/var"),
+        ] {
+            assert!(!macos_service_alias(Path::new(path), Path::new(target), 0));
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn service_ownership_native_macos_aliases_allow_install_and_uninstall() {
+        let native_temp = std::env::temp_dir();
+        for base in [
+            Path::new("/tmp"),
+            Path::new("/var/tmp"),
+            native_temp.as_path(),
+        ] {
+            let dir = tempfile::tempdir_in(base).unwrap();
+            let paths = service_paths(dir.path());
+            prepare_install(&paths);
+            let manager = ServiceManager::Launchd {
+                domain: "gui/501".into(),
+            };
+            let runner = FakeRunner::supporting();
+            let request = InstallRequest::new(
+                manager.clone(),
+                paths.clone(),
+                "preview".into(),
+                MANIFEST.into(),
+            );
+            install_service(&request, &runner).unwrap();
+            uninstall_service(&manager, &paths, &runner).unwrap();
+            assert!(!paths.runtime_binary().exists());
+        }
     }
 }

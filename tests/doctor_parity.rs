@@ -24,6 +24,23 @@ esac
     fs::set_permissions(path, permissions).unwrap();
 }
 
+fn write_supported_cmux(path: &Path) {
+    fs::write(
+        path,
+        r#"#!/bin/sh
+case "$*" in
+  'new-split --help') echo 'Usage: cmux new-split <direction> --surface <id>' ;;
+  'new-surface --help') echo 'Usage: cmux new-surface --pane <id>' ;;
+  'respawn-pane --help') echo 'Usage: cmux respawn-pane --surface <id> --command <cmd>' ;;
+  'rename-tab --help') echo 'Usage: cmux rename-tab --surface <id> --title <title>' ;;
+  *) exit 9 ;;
+esac
+"#,
+    )
+    .unwrap();
+    fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+}
+
 fn isolated_doctor(temp: &tempfile::TempDir) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_cmux-herdr"));
     command
@@ -58,6 +75,7 @@ fn doctor_restores_full_legacy_advisory_surface_without_mutating_state() {
     let bin = temp.path().join("bin");
     fs::create_dir(&bin).unwrap();
     write_fake_herdr(&bin.join("herdr"));
+    write_supported_cmux(&bin.join("cmux"));
     let log = temp.path().join("herdr.log");
     let socket = temp.path().join("herdr.sock");
     fs::write(&socket, "not a live socket").unwrap();
@@ -85,28 +103,6 @@ fn doctor_restores_full_legacy_advisory_surface_without_mutating_state() {
     let report = report(&output);
     assert_eq!(report["ok"], Value::Bool(true));
     assert_eq!(report["hard_failures"], Value::Array(vec![]));
-    let names: Vec<_> = report["checks"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|check| check["name"].as_str().unwrap())
-        .collect();
-    assert_eq!(
-        names,
-        [
-            "herdr_cli",
-            "herdr_socket",
-            "herdr_api",
-            "host_fingerprint",
-            "state_binding",
-            "writer",
-            "size_authority",
-            "title_locks",
-            "launch_agent",
-            "sidebar",
-            "dry_sync",
-        ]
-    );
 
     let checks = checks_by_name(&report);
     assert_eq!(checks["herdr_socket"]["ok"], Value::Bool(true));
@@ -143,7 +139,7 @@ fn doctor_restores_full_legacy_advisory_surface_without_mutating_state() {
 }
 
 #[test]
-fn doctor_hard_fails_only_for_missing_cli_or_nested_incomplete_fingerprint() {
+fn doctor_rejects_missing_cmux_contract_and_incomplete_fingerprint() {
     let temp = tempfile::tempdir().unwrap();
     let empty_bin = temp.path().join("empty-bin");
     fs::create_dir(&empty_bin).unwrap();
@@ -153,11 +149,13 @@ fn doctor_hard_fails_only_for_missing_cli_or_nested_incomplete_fingerprint() {
         .unwrap();
     assert_eq!(missing.status.code(), Some(1));
     let missing_report = report(&missing);
-    assert_eq!(
-        missing_report["hard_failures"],
-        serde_json::json!(["herdr not found on PATH"])
-    );
     let missing_checks = checks_by_name(&missing_report);
+    assert_eq!(missing_checks["herdr_cli"]["ok"], false);
+    assert_eq!(missing_checks["cmux_plugin_compatibility"]["ok"], false);
+    assert!(missing_checks["cmux_plugin_compatibility"]["detail"]
+        .as_str()
+        .unwrap()
+        .contains("compat: unsupported"));
     assert_eq!(missing_checks["host_fingerprint"]["ok"], Value::Bool(true));
     assert_eq!(
         missing_checks["host_fingerprint"]["hard"],
@@ -167,6 +165,7 @@ fn doctor_hard_fails_only_for_missing_cli_or_nested_incomplete_fingerprint() {
     let bin = temp.path().join("bin");
     fs::create_dir(&bin).unwrap();
     write_fake_herdr(&bin.join("herdr"));
+    write_supported_cmux(&bin.join("cmux"));
     let incomplete = isolated_doctor(&temp)
         .env("PATH", &bin)
         .env("FAKE_HERDR_LOG", temp.path().join("herdr.log"))

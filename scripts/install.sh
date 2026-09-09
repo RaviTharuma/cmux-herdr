@@ -1,84 +1,27 @@
 #!/usr/bin/env bash
-# Contributor/dev install (CLI symlink + agent skill).
-# End users should run: cmux sidebar plugin install <this-repo.git>
-# Does not copy custom sidebars. Native Herdr chrome is parent cmux.
-# No root required.
+# Contributor install only; never adopt artifacts merely because their names match.
 set -euo pipefail
-
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BIN_SRC="${ROOT}/bin/cmux-herdr"
-FETCH_SRC="${ROOT}/bin/cmux-herdr-fetch"
-LOCAL_BIN="${HOME}/.local/bin"
-TARGET="${LOCAL_BIN}/cmux-herdr"
-SKILL_SRC="${ROOT}/agent-skill"
-
-echo "cmux-herdr plugin install"
-echo "  repo: ${ROOT}"
-
-if [[ ! -x "${BIN_SRC}" || ! -x "${FETCH_SRC}" ]]; then
-  echo "error: missing executable launcher/bootstrap under ${ROOT}/bin" >&2
-  exit 1
-fi
-"${FETCH_SRC}"
-
-mkdir -p "${LOCAL_BIN}"
-# Prefer a symlink so checkout updates stay live. If symlinks are unavailable,
-# copy the bootstrapped runtime itself; a copied launcher cannot resolve the
-# checkout-local fetch script or binary from ~/.local/bin.
-if ln -sfn "${BIN_SRC}" "${TARGET}" 2>/dev/null; then
-  echo "  cli:  ${TARGET} -> ${BIN_SRC}"
-else
-  rm -f "${TARGET}"
-  cp "${ROOT}/.cmux-herdr/bin/cmux-herdr" "${TARGET}"
-  chmod +x "${TARGET}"
-  echo "  cli:  ${TARGET} (runtime copied)"
-fi
-
-# The launcher resolves this symlink back to the checkout and executes the
-# verified binary under .cmux-herdr/bin.
-
-# Do not copy sidebars/herdr.js or herdr.swift into ~/.config/cmux/sidebars/.
-# Those files stay in the repo as experimental leftovers. Uninstall removes
-# leftover copies from older installs.
-echo "  sidebar: not installed (experimental leftover in repo; native chrome is parent cmux)"
-
-install_skill_dir() {
-  local dest="$1"
-  mkdir -p "${dest}"
-  if [[ -d "${SKILL_SRC}" ]]; then
-    cp -R "${SKILL_SRC}/." "${dest}/"
-    echo "  skill: ${dest}"
-    return 0
+source "$ROOT/scripts/packaging-manifest.sh"
+packaging_init
+[[ -x "$ROOT/bin/cmux-herdr" && -x "$ROOT/bin/cmux-herdr-fetch" ]] || packaging_fail 'missing launcher/bootstrap'
+"$ROOT/bin/cmux-herdr-fetch"
+packaging_install link "$ROOT/bin/cmux-herdr" "$HOME/.local/bin/cmux-herdr"
+for dest in "$HOME/.agents/skills/cmux-herdr" "$HOME/.pi/agent/skills/cmux-herdr"; do
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    owned=0
+    for recorded in "${destinations[@]}"; do
+      case "$recorded" in "$dest/"*) owned=1 ;; esac
+    done
+    if [[ "$owned" == 0 ]]; then
+      echo "preserved unowned skill directory: $dest"
+      continue
+    fi
   fi
-  return 1
-}
-
-SKILL_INSTALLED=0
-if [[ -d "${HOME}/.agents/skills" ]] || mkdir -p "${HOME}/.agents/skills" 2>/dev/null; then
-  if install_skill_dir "${HOME}/.agents/skills/cmux-herdr"; then
-    SKILL_INSTALLED=1
-  fi
-fi
-if [[ -d "${HOME}/.pi/agent" ]] || mkdir -p "${HOME}/.pi/agent/skills" 2>/dev/null; then
-  if install_skill_dir "${HOME}/.pi/agent/skills/cmux-herdr"; then
-    SKILL_INSTALLED=1
-  fi
-fi
-if [[ "${SKILL_INSTALLED}" -eq 0 ]]; then
-  echo "  skill: (skipped)"
-fi
-
-# Optional: shims note only (no automatic PATH mutation)
-if [[ -d "${ROOT}/shims" ]]; then
-  echo "  shims: see ${ROOT}/shims/README.md (optional)"
-fi
-
-echo
-echo "Next steps:"
-echo "  1. Ensure ~/.local/bin is on PATH"
-echo "  2. Inside a Herdr pane nested in cmux, run:"
-echo "       cmux-herdr doctor"
-echo "       cmux-herdr watch"
-echo "  3. Agents: skill installed as cmux-herdr (if skill dirs present)"
-echo
-echo "Plugin installed."
+  # Enumerate only regular source files, without following source symlinks.
+  while IFS= read -r -d '' file; do
+    packaging_install file "$file" "$dest/${file#"$ROOT/agent-skill/"}"
+  done < <(find "$ROOT/agent-skill" -type f -print0)
+done
+packaging_save
+echo 'cmux-herdr contributor install complete; unowned or modified files preserved.'

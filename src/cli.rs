@@ -1563,17 +1563,10 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
     let fingerprint = state::collect_host_fingerprint(&SystemEnv);
     let fingerprint_key = state::parent_key(&fingerprint);
     let writer = crate::handoff::writer_status(&fingerprint_key);
-    if writer["native_live"].as_bool().unwrap_or(false) {
-        let associations =
-            match state::update_association_map(&SystemEnv, &snap, Some(&workspace), None) {
-                Ok(value) => value,
-                Err(error) => return die(error),
-            };
-        let summary=format!("herdr sync: skipped (native attachment live) ws={workspace} fingerprint={fingerprint_key}");
-        if !b(m, "no-log") {
-            let _ = bridge::cmux_cmd(&["log", &summary], Some(&workspace));
-        }
-        let result = json!({"workspace":workspace,"applied":[],"skipped_unchanged":[],"stale_cleared":[],"counts":{"working":0,"idle":0,"done":0,"blocked":0,"unknown":0,"other":0},"progress":null,"errors":[],"summary":summary,"pane_count":snap.panes.len(),"agent_count":0,"associations":associations,"host_fingerprint_key":fingerprint_key,"writer":writer["writer"],"native_live":true,"skipped_reason":"native_live"});
+    if writer["yields"].as_bool().unwrap_or(false) {
+        let associations = state::load_association_map(&SystemEnv, &fingerprint);
+        let summary = format!("herdr sync: skipped (another writer owns host) ws={workspace} fingerprint={fingerprint_key}");
+        let result = json!({"workspace":workspace,"applied":[],"skipped_unchanged":[],"stale_cleared":[],"counts":{"working":0,"idle":0,"done":0,"blocked":0,"unknown":0,"other":0},"progress":null,"errors":[],"summary":summary,"pane_count":snap.panes.len(),"agent_count":0,"associations":associations,"host_fingerprint_key":fingerprint_key,"writer":writer["writer"],"native_live":writer["native_live"],"skipped_reason":"foreign_writer"});
         println!("{}", result["summary"].as_str().unwrap());
         if b(m, "json") {
             pretty(&result)
@@ -2109,6 +2102,14 @@ fn diagnose_install() -> Value {
     if !herdr_ok {
         hard_failures.push("herdr not found on PATH".to_string());
     }
+    let compatibility = crate::mirror::plugin_command_compatibility();
+    checks.push(json!({
+        "name": "cmux_plugin_compatibility", "ok": compatibility.is_ok(), "hard": true,
+        "detail": format!("{}; plugin mirrors external panes via attach-pane; not native TTY takeover. Native Herdr UI is roadmap; native Sidebar issue #75 is blocked", compatibility.as_ref().map(|_| "cmux projection CLI available".to_string()).unwrap_or_else(|error| error.to_string())),
+    }));
+    if let Err(error) = compatibility {
+        hard_failures.push(error.to_string());
+    }
 
     let env_socket = std::env::var("HERDR_SOCKET_PATH")
         .ok()
@@ -2599,12 +2600,14 @@ fn watch_reconcile_host(
     live_host: &mut Option<crate::live::LiveApplyHost>,
     note: &mut String,
 ) -> Result<(), String> {
+    if b(m, "dry-run") {
+        return Ok(());
+    }
     let fingerprint = watch_fingerprint_key();
     let decision = crate::handoff::resolve_writer(&fingerprint, None, None);
     if decision.yields() {
         if let Some(mut host) = live_host.take() {
             let _ = host.detach();
-            crate::handoff::release_plugin_writer(&fingerprint);
             watch_note(
                 note,
                 "cmux-herdr watch: yielded to native (Herdr session left running)".into(),
@@ -2619,20 +2622,21 @@ fn watch_reconcile_host(
     }
     if let Some(host) = live_host.as_mut() {
         let endpoint_hash = crate::live::endpoint_hash(&host.socket_path);
-        let lease = crate::handoff::heartbeat_plugin_writer(
-            &fingerprint,
-            &host.socket_path,
-            &endpoint_hash,
-        )
-        .map_err(|error| format!("writer heartbeat failed: {error}"))?;
+        let owned = host
+            .writer_lease
+            .as_ref()
+            .ok_or("live host has no writer lease")?;
+        let lease = crate::handoff::heartbeat_writer(owned, &host.socket_path, &endpoint_hash)
+            .map_err(|error| format!("writer heartbeat failed: {error}"))?;
         if lease.is_none() {
             let _ = host.detach();
             *live_host = None;
-            crate::handoff::release_plugin_writer(&fingerprint);
             watch_note(
                 note,
                 "cmux-herdr watch: yielded to native (Herdr session left running)".into(),
             );
+        } else {
+            host.writer_lease = lease;
         }
         return Ok(());
     }
@@ -2707,7 +2711,7 @@ fn watch_project(m: &ArgMatches) -> Result<(), String> {
         b(m, "order") || tmux,
         b(m, "ratios") || tmux,
         tmux,
-        false,
+        b(m, "dry-run"),
         false,
     )
     .map_err(|error| error.to_string())?;
@@ -2795,15 +2799,11 @@ fn cmd_watch(m: &ArgMatches) -> i32 {
         eprintln!("cmux-herdr watch: holding Herdr events.subscribe session");
     }
     let mut live_host = None;
-    let mut restore_socket = None;
     let mut pump: Option<WatchPump> = None;
     let mut note = String::new();
     let mut errors = ErrorDeduplicator::default();
     if tmux_parity(m) {
         let _ = watch_reconcile_host(m, &mut live_host, &mut note);
-        if let Some(host) = live_host.as_ref() {
-            restore_socket = Some(host.socket_path.clone());
-        }
         if live_host.is_some() {
             pump = Some(make_watch_pump());
             eprintln!(
@@ -2819,9 +2819,6 @@ fn cmd_watch(m: &ArgMatches) -> i32 {
         let iteration = (|| -> Result<(), String> {
             if tmux_parity(m) {
                 watch_reconcile_host(m, &mut live_host, &mut note)?;
-                if let Some(host) = live_host.as_ref() {
-                    restore_socket = Some(host.socket_path.clone());
-                }
                 if live_host.is_some() && pump.is_none() {
                     pump = Some(make_watch_pump());
                 } else if live_host.is_none() {
@@ -2900,20 +2897,12 @@ fn cmd_watch(m: &ArgMatches) -> i32 {
     }
 
     eprintln!("\ncmux-herdr watch: stopping…");
-    let cleanup_socket = live_host
-        .as_ref()
-        .map(|host| host.socket_path.clone())
-        .or(restore_socket);
     if let Some(host) = live_host.as_mut() {
         let closed = host.detach();
         eprintln!(
             "cmux-herdr watch: detached (server_stopped={})",
             closed["server_stopped"].as_bool().unwrap_or(false)
         );
-    }
-    if let Some(socket_path) = cleanup_socket.as_deref() {
-        crate::live::clear_host_restore(socket_path);
-        crate::handoff::release_plugin_writer(&watch_fingerprint_key());
     }
     if let Some(mut pump) = pump {
         pump.close();

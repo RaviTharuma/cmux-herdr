@@ -1138,61 +1138,56 @@ fn create_terminal_with<R: CmuxRunner>(
     workspace: Option<&str>,
     pane: Option<&str>,
 ) -> Result<Value, MirrorError> {
-    let mut attempts = Vec::new();
+    let mut args = vec![
+        "new-surface".to_string(),
+        "--type".into(),
+        "terminal".into(),
+    ];
     if let Some(pane) = pane {
-        attempts.push(vec![
-            "create-terminal",
-            "--key",
-            key,
-            "--name",
-            name,
-            "--command",
-            command,
-            "--pane",
-            pane,
-        ]);
+        args.extend(["--pane".into(), pane.into()]);
     }
-    attempts.extend([
-        vec![
-            "create-terminal",
-            "--key",
-            key,
-            "--name",
-            name,
-            "--command",
-            command,
+    let payload = cmux_json_with(runner, &args, workspace)?;
+    let surface = extract_cmux_id(&payload, &["surface_id", "surface_ref"]).ok_or_else(|| {
+        MirrorError(format!(
+            "new-surface returned no surface identity for {key}"
+        ))
+    })?;
+    if let Err(error) = launch_surface_with(runner, &surface, name, command, workspace) {
+        return match close_surface_with(runner, &surface, workspace) {
+            Ok(()) => Err(error),
+            Err(rollback) => Err(MirrorError(format!(
+                "{error}; surface rollback failed: {rollback}"
+            ))),
+        };
+    }
+    Ok(json!({
+        "cmux_surface_id": surface,
+        "cmux_pane_id": extract_cmux_id(&payload, &["pane_id", "pane_ref"]),
+        "payload": payload,
+        "args": args,
+    }))
+}
+
+fn launch_surface_with<R: CmuxRunner>(
+    runner: &mut R,
+    surface: &str,
+    name: &str,
+    command: &str,
+    workspace: Option<&str>,
+) -> Result<(), MirrorError> {
+    rename_surface_with(runner, surface, name, workspace)?;
+    cmux_json_with(
+        runner,
+        &[
+            "respawn-pane".into(),
+            "--surface".into(),
+            surface.into(),
+            "--command".into(),
+            command.into(),
         ],
-        vec!["run", "--key", key, "--name", name, "--command", command],
-        vec!["run", "--name", name, "--command", command],
-    ]);
-    let mut errors = Vec::new();
-    for attempt in attempts {
-        let args: Vec<String> = attempt.into_iter().map(str::to_string).collect();
-        match cmux_json_with(runner, &args, workspace) {
-            Ok(payload) => {
-                return Ok(json!({
-                    "cmux_surface_id": extract_cmux_id(&payload, &["surface_id", "surface_ref", "id", "pane_id", "terminal_id"]),
-                    "cmux_pane_id": extract_cmux_id(&payload, &["pane_id", "pane_ref", "pane"]),
-                    "payload": payload,
-                    "args": args,
-                }))
-            }
-            Err(error) => errors.push(error.to_string()),
-        }
-    }
-    let tail = errors
-        .iter()
-        .rev()
-        .take(3)
-        .cloned()
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect::<Vec<_>>();
-    Err(MirrorError(format!(
-        "could not create cmux terminal for mirror key {key}: {}",
-        tail.join(" | ")
-    )))
+        workspace,
+    )?;
+    Ok(())
 }
 
 pub fn create_terminal(
@@ -1211,52 +1206,22 @@ fn split_pane_with<R: CmuxRunner>(
     direction: &str,
     workspace: Option<&str>,
 ) -> Result<Value, MirrorError> {
-    let dir = if direction == "right" {
-        "right"
-    } else {
-        "down"
-    };
-    let attempts = if direction == "right" {
-        vec![
-            vec!["split", "--pane", from_surface, "--dir", dir],
-            vec!["split", from_surface, dir],
-            vec!["new-pane-right", "--pane", from_surface],
-        ]
-    } else {
-        vec![
-            vec!["split", "--pane", from_surface, "--dir", dir],
-            vec!["split", from_surface, dir],
-            vec!["new-pane", "--pane", from_surface],
-        ]
-    };
-    let mut errors = Vec::new();
-    for attempt in attempts {
-        let args: Vec<String> = attempt.into_iter().map(str::to_string).collect();
-        match cmux_json_with(runner, &args, workspace) {
-            Ok(payload) => {
-                return Ok(json!({
-                    "cmux_surface_id": extract_cmux_id(&payload, &["surface_id", "surface_ref", "id"]),
-                    "cmux_pane_id": extract_cmux_id(&payload, &["pane_id", "pane_ref", "id"]),
-                    "payload": payload,
-                    "args": args,
-                }))
-            }
-            Err(error) => errors.push(error.to_string()),
-        }
+    if !matches!(direction, "left" | "right" | "up" | "down") {
+        return Err(MirrorError(format!("invalid split direction: {direction}")));
     }
-    let tail = errors
-        .iter()
-        .rev()
-        .take(3)
-        .cloned()
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect::<Vec<_>>();
-    Err(MirrorError(format!(
-        "could not split cmux surface {from_surface}: {}",
-        tail.join(" | ")
-    )))
+    let args = vec![
+        "new-split".into(),
+        direction.into(),
+        "--surface".into(),
+        from_surface.into(),
+    ];
+    let payload = cmux_json_with(runner, &args, workspace)?;
+    Ok(json!({
+        "cmux_surface_id": extract_cmux_id(&payload, &["surface_id", "surface_ref"]),
+        "cmux_pane_id": extract_cmux_id(&payload, &["pane_id", "pane_ref"]),
+        "payload": payload,
+        "args": args,
+    }))
 }
 
 pub fn split_pane(
@@ -1290,16 +1255,12 @@ fn rename_surface_with<R: CmuxRunner>(
 ) -> Result<(), MirrorError> {
     attempt_cmux_commands(
         runner,
-        vec![
-            vec!["rename-surface".into(), surface.into(), title.into()],
-            vec![
-                "rename-surface".into(),
-                "--surface".into(),
-                surface.into(),
-                "--name".into(),
-                title.into(),
-            ],
-        ],
+        vec![vec![
+            "rename-tab".into(),
+            "--surface".into(),
+            surface.into(),
+            format!("--title={title}"),
+        ]],
         workspace,
     )
 }
@@ -1319,11 +1280,11 @@ fn close_surface_with<R: CmuxRunner>(
 ) -> Result<(), MirrorError> {
     attempt_cmux_commands(
         runner,
-        vec![
-            vec!["close-surface".into(), surface.into()],
-            vec!["close-surface".into(), "--surface".into(), surface.into()],
-            vec!["close-terminal".into(), surface.into()],
-        ],
+        vec![vec![
+            "close-surface".into(),
+            "--surface".into(),
+            surface.into(),
+        ]],
         workspace,
     )
 }
@@ -1546,7 +1507,7 @@ pub fn read_size_authority() -> Option<String> {
 pub fn may_claim_client_size(pane_id: &str) -> bool {
     let fingerprint = state::collect_host_fingerprint(&SystemEnv);
     let decision = handoff::resolve_writer(&state::parent_key(&fingerprint), None, None);
-    if decision.native_live && !handoff::env_truthy(handoff::FORCE_PLUGIN_ENV) {
+    if decision.yields() {
         return false;
     }
     let environment = env::var(SIZE_AUTHORITY_ENV).unwrap_or_default();
@@ -1560,6 +1521,14 @@ pub fn may_claim_client_size(pane_id: &str) -> bool {
         return authority == pane_id;
     }
     true
+}
+
+fn attach_command(pane_id: &str) -> String {
+    attach_argv(pane_id)
+        .iter()
+        .map(|arg| format!("'{}'", arg.replace('\'', "'\\''")))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn attach_argv(pane_id: &str) -> Vec<String> {
@@ -1714,7 +1683,7 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
                     focused.push(action.pane_id.clone());
                 }
                 "create_tab" | "create_split" => {
-                    let command = attach_argv(&action.pane_id).join(" ");
+                    let command = attach_command(&action.pane_id);
                     let mut created_info = if action.op == "create_split" {
                         let split_from = action
                             .split_from_pane_id
@@ -1739,27 +1708,22 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
                         .map_err(|error| {
                             MirrorError(format!("{error} (refusing orphan-tab fallback)"))
                         })?;
-                        let pane = split
-                            .get("cmux_pane_id")
-                            .or_else(|| split.get("cmux_surface_id"))
-                            .and_then(Value::as_str);
-                        let mut created = create_terminal_with(
-                            runner,
-                            &action.key,
-                            &action.title,
-                            &command,
-                            workspace,
-                            pane,
-                        )?;
-                        if created.get("cmux_surface_id").is_none_or(Value::is_null) {
-                            created["cmux_surface_id"] =
-                                split.get("cmux_surface_id").cloned().unwrap_or(Value::Null);
+                        // new-split already creates a terminal surface. Launch there rather
+                        // than leaking an empty surface and adding another tab to its pane.
+                        let surface = split.get("cmux_surface_id").and_then(Value::as_str)
+                            .filter(|surface| !surface.is_empty() && *surface != split_from)
+                            .ok_or_else(|| MirrorError("split returned no distinct surface; refusing untargeted launch".into()))?;
+                        if let Err(error) =
+                            launch_surface_with(runner, surface, &action.title, &command, workspace)
+                        {
+                            if let Err(rollback) = close_surface_with(runner, surface, workspace) {
+                                return Err(MirrorError(format!(
+                                    "{error}; split rollback failed: {rollback}"
+                                )));
+                            }
+                            return Err(error);
                         }
-                        if created.get("cmux_pane_id").is_none_or(Value::is_null) {
-                            created["cmux_pane_id"] =
-                                split.get("cmux_pane_id").cloned().unwrap_or(Value::Null);
-                        }
-                        created
+                        split
                     } else {
                         create_terminal_with(
                             runner,
@@ -1777,7 +1741,6 @@ pub fn apply_mirror_plan_with<R: CmuxRunner>(
                     if action.role == "tab-root" {
                         if let Some(surface) = surface.as_deref() {
                             tab_root_surface.insert(action.tab_id.clone(), surface.to_string());
-                            let _ = rename_surface_with(runner, surface, &action.title, workspace);
                         }
                     }
                     mirrors.insert(action.pane_id.clone(), json!({
@@ -2124,6 +2087,29 @@ fn live_report(windows: &[HerdrWindow]) -> Result<Value, MirrorError> {
     }))
 }
 
+pub fn plugin_command_compatibility() -> Result<(), MirrorError> {
+    for (command, required) in [
+        ("new-split", "--surface"),
+        ("new-surface", "--pane"),
+        ("respawn-pane", "--command"),
+        ("rename-tab", "--surface"),
+    ] {
+        let output = bridge::run_cmd(&["cmux", command, "--help"], Duration::from_secs(5), None)
+            .map_err(|error| {
+                MirrorError(format!("cmux compat: unsupported ({command}: {error})"))
+            })?;
+        if output.returncode != 0
+            || !output.stdout.contains(&format!("Usage: cmux {command}"))
+            || !output.stdout.contains(required)
+        {
+            return Err(MirrorError(format!(
+                "cmux compat: unsupported (requires {command} {required})"
+            )));
+        }
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn mirror_to_cmux_with_snapshot(
     snapshot: &Snapshot,
@@ -2149,7 +2135,7 @@ pub fn mirror_to_cmux_with_snapshot(
     }
     let fingerprint = state::collect_host_fingerprint(&SystemEnv);
     let writer = handoff::writer_status(&state::parent_key(&fingerprint));
-    if writer["native_live"].as_bool() == Some(true) {
+    if writer["yields"].as_bool() == Some(true) {
         let mirrors = load_mirrors();
         return Ok(json!({
             "scope": scope,
@@ -2166,9 +2152,12 @@ pub fn mirror_to_cmux_with_snapshot(
             "status_sync": Value::Null,
             "host_fingerprint": fingerprint_json(),
             "writer": writer["writer"],
-            "native_live": true,
-            "skipped_reason": "native_live",
+            "native_live": writer["native_live"],
+            "skipped_reason": "foreign_writer",
         }));
+    }
+    if !dry_run {
+        plugin_command_compatibility()?;
     }
     let (scope, prune, use_layout, sync_focus, sync_order, sync_ratios) = if tmux_parity {
         ("all", true, true, true, true, true)
@@ -2882,7 +2871,7 @@ mod tests {
             None,
         );
         let mut runner = FakeCmuxRunner::default();
-        for _ in 0..6 {
+        for _ in 0..2 {
             runner
                 .replies
                 .push_back(Ok(command_output(1, "", "split denied")));
@@ -2900,7 +2889,194 @@ mod tests {
         assert!(runner
             .calls
             .iter()
-            .all(|args| !args.iter().any(|arg| arg == "create-terminal")));
+            .all(|args| args.first().is_some_and(|arg| arg == "new-split")));
+    }
+
+    // Swift CLI 829c6a: reject aliases/flags absent from actual dispatch.
+    struct PinnedCmuxRunner {
+        launched: Vec<String>,
+        titles: Vec<String>,
+    }
+    impl CmuxRunner for PinnedCmuxRunner {
+        fn run(
+            &mut self,
+            args: &[String],
+            workspace: Option<&str>,
+        ) -> Result<CmdOutput, MirrorError> {
+            assert_eq!(workspace, Some("workspace:1"));
+            let args: Vec<&str> = args
+                .iter()
+                .map(String::as_str)
+                .filter(|arg| *arg != "--json")
+                .collect();
+            let payload = match args.as_slice() {
+                ["new-split", "down", "--surface", "surface:1"] => {
+                    json!({"surface_ref":"surface:2", "pane_id":null, "pane_ref":"pane:2"})
+                }
+                ["new-surface", "--type", "terminal", "--pane", "pane:2"] => {
+                    json!({"surface_ref":"surface:3", "pane_ref":"pane:2"})
+                }
+                ["respawn-pane", "--surface", surface, "--command", command]
+                    if surface.starts_with("surface:") =>
+                {
+                    self.launched.push(format!("{surface} {command}"));
+                    json!({"ok":true})
+                }
+                ["rename-tab", "--surface", surface, title]
+                    if surface.starts_with("surface:") && title.starts_with("--title=") =>
+                {
+                    self.titles.push(format!(
+                        "{surface} {}",
+                        title.strip_prefix("--title=").unwrap()
+                    ));
+                    json!({"ok":true})
+                }
+                _ => {
+                    return Ok(command_output(
+                        1,
+                        "",
+                        "unsupported pinned cmux command or flags",
+                    ))
+                }
+            };
+            Ok(command_output(0, &payload.to_string(), ""))
+        }
+    }
+
+    #[test]
+    fn pinned_cli_splits_and_launches_in_returned_pane_ref() {
+        let mut runner = PinnedCmuxRunner {
+            launched: vec![],
+            titles: vec![],
+        };
+        let split = split_pane_with(&mut runner, "surface:1", "down", Some("workspace:1")).unwrap();
+        assert_eq!(split["cmux_pane_id"], "pane:2");
+        let created = create_terminal_with(
+            &mut runner,
+            "key",
+            "Agent",
+            "exec 'herdr attach'",
+            Some("workspace:1"),
+            split["cmux_pane_id"].as_str(),
+        )
+        .unwrap();
+        assert_eq!(created["cmux_surface_id"], "surface:3");
+        assert_eq!(created["cmux_pane_id"], "pane:2");
+        assert_eq!(runner.launched, ["surface:3 exec 'herdr attach'"]);
+        assert_eq!(runner.titles, ["surface:3 Agent"]);
+    }
+
+    #[test]
+    fn rename_binds_flag_shaped_title_before_target_option_scan() {
+        let mut runner = FakeCmuxRunner::default();
+        runner.replies.push_back(Ok(command_output(0, "{}", "")));
+        rename_surface_with(
+            &mut runner,
+            "surface:1",
+            "--workspace=workspace:other",
+            Some("workspace:1"),
+        )
+        .unwrap();
+        let args = &runner.calls[0];
+        // cmux parseOption scans each token for target-option prefixes before titles.
+        assert!(!args
+            .iter()
+            .any(|arg| arg.starts_with("--workspace=workspace:other")));
+        assert_eq!(
+            args.iter().find_map(|arg| arg.strip_prefix("--title=")),
+            Some("--workspace=workspace:other")
+        );
+    }
+
+    #[test]
+    fn targeted_terminal_failure_never_creates_untargeted_tab() {
+        let mut runner = FakeCmuxRunner::default();
+        runner
+            .replies
+            .push_back(Ok(command_output(1, "", "target denied")));
+        runner
+            .replies
+            .push_back(Ok(command_output(1, "", "target denied")));
+        assert!(create_terminal_with(
+            &mut runner,
+            "key",
+            "name",
+            "command",
+            None,
+            Some("pane-new")
+        )
+        .is_err());
+        assert!(runner
+            .calls
+            .iter()
+            .all(|args| args.windows(2).any(|pair| pair == ["--pane", "pane-new"])));
+    }
+
+    #[test]
+    fn attach_command_preserves_shell_metacharacters() {
+        let pane = "pane with 'quote'; $(printf injected) *";
+        let command = attach_command(pane);
+        let output = std::process::Command::new("sh")
+            .args(["-c", &format!("set -- {command}; printf '%s' \"$3\"")])
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8(output.stdout).unwrap(), pane);
+    }
+
+    #[test]
+    fn terminal_failure_rolls_back_only_created_split() {
+        let plan = MirrorPlan {
+            actions: vec![MirrorAction {
+                op: "create_split".into(),
+                pane_id: "p2".into(),
+                title: "child".into(),
+                tab_id: "t".into(),
+                role: "split".into(),
+                split_direction: "right".into(),
+                key: "key".into(),
+                surface_id: None,
+                split_from_surface_id: Some("source".into()),
+                split_from_pane_id: None,
+                ratio: None,
+                tab_index: None,
+                reason: String::new(),
+            }],
+            ..MirrorPlan::default()
+        };
+        let mut runner = FakeCmuxRunner::default();
+        runner
+            .replies
+            .push_back(Ok(command_output(0, r#"{"surface_id":"new-surface"}"#, "")));
+        runner.replies.push_back(Ok(command_output(0, "{}", "")));
+        runner
+            .replies
+            .push_back(Ok(command_output(1, "", "terminal denied")));
+        runner
+            .replies
+            .push_back(Ok(command_output(1, "", "terminal denied")));
+        runner.replies.push_back(Ok(command_output(0, "{}", "")));
+        let result = apply_mirror_plan_with(
+            &plan,
+            &json!({}),
+            None,
+            false,
+            false,
+            None,
+            &mut runner,
+            false,
+        )
+        .unwrap();
+        assert_eq!(result["created"], json!([]));
+        assert!(runner.calls.iter().any(|args| args.starts_with(&[
+            "close-surface".into(),
+            "--surface".into(),
+            "new-surface".into()
+        ])));
+        assert!(!runner.calls.iter().any(|args| args
+            .first()
+            .is_some_and(|arg| arg.starts_with("close"))
+            && args.iter().any(|arg| arg == "source")));
     }
 
     #[test]

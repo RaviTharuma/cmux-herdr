@@ -21,6 +21,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - CI and release publishing now run `cargo fmt`, strict Clippy, and the Rust
   parity/behavior suite. Release tags publish four target binaries plus
   `SHA256SUMS`.
+- Release capability clarification: pane mirroring uses external `attach-pane`
+  viewers, not native Herdr attachment or TTY takeover. Integrated multi-workspace
+  native sidebars and the native window mirror remain planned upstream work;
+  native Sidebar issue #75 is blocked. The [README capability matrix](README.md#capability-matrix)
+  is the current release scope; older native-sidebar descriptions below are
+  historical and do not establish shipped native integration.
 
 ### Added
 

@@ -3,7 +3,7 @@
 # Existing installs are replaced only after a complete checksum verification.
 set -eu
 
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 VERSION=$(tr -d '[:space:]' < "$ROOT/VERSION")
 DEST_DIR="$ROOT/.cmux-herdr/bin"
 DEST="$DEST_DIR/cmux-herdr"
@@ -53,11 +53,16 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 install_source_build() {
+  [ "${CMUX_HERDR_ALLOW_SOURCE_BUILD:-0}" = 1 ] || {
+    printf 'cmux-herdr-fetch: source fallback disabled; set CMUX_HERDR_ALLOW_SOURCE_BUILD=1 to opt in\n' >&2
+    return 1
+  }
   command -v cargo >/dev/null 2>&1 || return 1
-  printf 'cmux-herdr-fetch: release asset unavailable; building from source\n' >&2
-  cargo build --release --locked --manifest-path "$ROOT/Cargo.toml" || return 1
-  [ -f "$ROOT/target/release/cmux-herdr" ] || return 1
-  cp "$ROOT/target/release/cmux-herdr" "$TMP_DIR/cmux-herdr" || return 1
+  printf 'cmux-herdr-fetch: explicit source build from %s (version %s; not a release asset)\n' "$ROOT" "$VERSION" >&2
+  build_dir="$TMP_DIR/source-target"
+  CARGO_TARGET_DIR="$build_dir" cargo build --release --locked --manifest-path "$ROOT/Cargo.toml" || return 1
+  [ -f "$build_dir/release/cmux-herdr" ] || return 1
+  cp "$build_dir/release/cmux-herdr" "$TMP_DIR/cmux-herdr" || return 1
   chmod 755 "$TMP_DIR/cmux-herdr" || return 1
   commit_install "$TMP_DIR/cmux-herdr"
 }
@@ -118,4 +123,4 @@ ACTUAL_LOWER=$(printf '%s' "$ACTUAL" | tr 'A-F' 'a-f')
 
 chmod 755 "$TMP_DIR/$ASSET"
 commit_install "$TMP_DIR/$ASSET"
-printf 'cmux-herdr-fetch: installed %s at %s\n' "$ASSET" "$DEST"
+printf 'cmux-herdr-fetch: installed %s at %s; source=%s/%s sha256=%s\n' "$ASSET" "$DEST" "$URL" "$ASSET" "$ACTUAL_LOWER"
