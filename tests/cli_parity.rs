@@ -292,6 +292,91 @@ fn base_command(temp: &tempfile::TempDir) -> Command {
 }
 
 #[test]
+fn native_theme_sync_retries_legacy_color_then_deduplicates() {
+    let temp = tempfile::tempdir().unwrap();
+    write_fake_herdr(&temp.path().join("herdr"));
+    write_fake_cmux(&temp.path().join("cmux"));
+    let cmux = temp.path().join("cmux");
+    let script = fs::read_to_string(&cmux).unwrap().replace(
+        "if [ \"$1\" = \"list-status\" ]; then",
+        "if [ \"$1\" = \"set-status\" ] && [ \"$FAIL_STATUS\" = 1 ]; then exit 7; fi\nif [ \"$1\" = \"list-status\" ]; then",
+    );
+    fs::write(&cmux, script).unwrap();
+    let sync = |fail: bool| {
+        base_command(&temp)
+            .args(["sync", "--workspace", "workspace:1", "--json"])
+            .env("CMUX_HERDR_FORCE_PLUGIN", "1")
+            .env_remove("CMUX_HERDR_NATIVE_LIVE")
+            .env("FAIL_STATUS", if fail { "1" } else { "0" })
+            .output()
+            .unwrap()
+    };
+    let output = sync(false);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let state_path = fs::read_dir(temp.path().join("state/cmux-herdr"))
+        .unwrap()
+        .filter_map(Result::ok)
+        .find(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with("associations-")
+        })
+        .unwrap()
+        .path();
+    let mut saved: Value = serde_json::from_slice(&fs::read(&state_path).unwrap()).unwrap();
+    for pane in saved["panes"].as_object_mut().unwrap().values_mut() {
+        pane["last_color"] = serde_json::json!("#ff9500");
+    }
+    fs::write(&state_path, serde_json::to_vec(&saved).unwrap()).unwrap();
+    let log = temp.path().join("cmux.log");
+    fs::write(&log, "").unwrap();
+    let _failed = sync(true);
+    let calls = fs::read_to_string(&log).unwrap();
+    assert!(
+        calls
+            .lines()
+            .any(|line| line.starts_with("set-status herdr:p1 ")),
+        "legacy color must force a retry: {calls}"
+    );
+    let stdout = String::from_utf8_lossy(&_failed.stdout);
+    let failed: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
+    assert_eq!(failed["applied"], serde_json::json!([]));
+    assert_eq!(
+        failed["errors"].as_array().unwrap().len(),
+        1,
+        "fake set-status failure must be observed"
+    );
+    let saved: Value = serde_json::from_slice(&fs::read(&state_path).unwrap()).unwrap();
+    assert!(saved["panes"]
+        .as_object()
+        .unwrap()
+        .values()
+        .all(|pane| pane["last_color"] == "#ff9500"));
+    fs::write(&log, "").unwrap();
+    let output = sync(false);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let calls = fs::read_to_string(&log).unwrap();
+    assert_eq!(calls.lines().find(|line| line.starts_with("set-status ")), Some("set-status herdr:p1 pi/working · Bot --icon hammer --priority 80 --workspace workspace:1"));
+    fs::write(&log, "").unwrap();
+    let output = sync(false);
+    assert!(output.status.success());
+    let calls = fs::read_to_string(&log).unwrap();
+    assert!(
+        !calls.lines().any(|line| line.starts_with("set-status ")),
+        "successful color reset must deduplicate: {calls}"
+    );
+}
+
+#[test]
 fn native_follower_sync_preserves_all_persistent_state() {
     let temp = tempfile::tempdir().unwrap();
     write_fake_herdr(&temp.path().join("herdr"));
@@ -358,6 +443,7 @@ case "$1" in
     printf '%s\n' "$5" > "$LAUNCHED_COMMAND"
     printf '%s\n' '{"ok":true}' ;;
   tree|list-terminals|ids) printf '%s\n' '{"items":[]}' ;;
+  set-status|list-status|clear-status) exit 0 ;;
   *) echo "unsupported: $*" >&2; exit 9 ;;
 esac
 "#,
@@ -372,7 +458,6 @@ esac
             "--workspace",
             "workspace:1",
             "--no-layout",
-            "--no-status",
             "--no-log",
             "--json",
         ])
@@ -392,6 +477,7 @@ esac
     let report: Value = serde_json::from_str(&stdout[stdout.find('{').unwrap()..]).unwrap();
     assert_eq!(report["plan"]["errors"], serde_json::json!([]));
     assert_eq!(report["plan"]["created"], serde_json::json!(["p1"]));
+    assert_eq!(report["status_sync"]["errors"], serde_json::json!([]));
     let command = fs::read_to_string(launched).unwrap_or_else(|error| {
         panic!(
             "{error}; stdout={}; calls={}",
@@ -400,6 +486,12 @@ esac
         )
     });
     assert!(command.contains("'attach-pane' 'p1'"), "{command}");
+    let calls = fs::read_to_string(temp.path().join("cmux.log")).unwrap();
+    assert_eq!(
+        calls.lines().find(|line| line.starts_with("set-status ")),
+        Some("set-status herdr:p1 pi/working · Bot --icon hammer --priority 80 --workspace workspace:1"),
+        "native mirror must leave status color to cmux: {calls}"
+    );
     let state = temp.path().join("state/cmux-herdr");
     let mirror = fs::read_dir(state)
         .unwrap()
@@ -414,6 +506,28 @@ esac
     let saved: Value = serde_json::from_slice(&fs::read(mirror.path()).unwrap()).unwrap();
     assert_eq!(saved["mirrors"]["p1"]["cmux_surface_id"], "surface:2");
     assert_eq!(saved["mirrors"]["p1"]["cmux_pane_id"], "pane:2");
+    fs::write(temp.path().join("cmux.log"), "").unwrap();
+    let output = base_command(&temp)
+        .args([
+            "sync",
+            "--workspace",
+            "workspace:1",
+            "--no-progress",
+            "--no-log",
+        ])
+        .env("CMUX_HERDR_FORCE_PLUGIN", "1")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let calls = fs::read_to_string(temp.path().join("cmux.log")).unwrap();
+    assert!(
+        !calls.lines().any(|line| line.starts_with("set-status ")),
+        "sync must reuse the successful native mirror status: {calls}"
+    );
 }
 
 fn update_command_without_herdr(temp: &tempfile::TempDir) -> Command {

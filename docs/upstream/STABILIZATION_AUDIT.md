@@ -6,10 +6,40 @@ Initial findings were recorded before implementation; the capability matrix belo
 
 | Domain | Checkout | Exact commit |
 | --- | --- | --- |
-| Plugin | cmux-herdr isolated stabilization worktree | `ce057b8e66bfc05e98ef314d1c9e7b18b8a155fd` |
-| Native Herdr integration | manaflow-ai/cmux | `829c6af45478ef5c2196801824c35f5cb4dc5d69` |
+| Plugin | cmux-herdr native-theme baseline | `20f200738740f6c4140b3e5cb42bff65d935433b` |
+| Native host (no Herdr implementation found) | manaflow-ai/cmux | `829c6af45478ef5c2196801824c35f5cb4dc5d69` |
 | Builtin RemoteTmux / tmux compatibility | same cmux checkout, not a separate repository | `829c6af45478ef5c2196801824c35f5cb4dc5d69` |
 | Herdr runtime / protocol | herdrdev/herdr | `b9ce96869e89937278d673d70ae4c135dd318469` |
+
+### Native theme passthrough and terminal fallback
+
+At the pinned cmux source, `Sources/TerminalController.swift`'s
+`upsertSidebarMetadata` (14728 onward) reads optional `color` and replaces the
+entire `SidebarStatusEntry`; omitting color resets an old tint. The generic
+status path exposes hex, not an adaptive semantic-token contract.
+`Sources/ContentView.swift:16639` deliberately returns the active foreground
+for a selected explicitly colored entry; otherwise it uses explicit hex or
+native secondary foreground. Its `usesInvertedActiveForeground` is `isActive`
+(15563), passed to metadata rows at 15836. The AppKit row-cell path likewise
+substitutes selected foreground for contrast (row-cell source, line 747).
+This is deliberate native behavior, not an upstream defect justified solely
+by #75; the full colored-selected request remains unfulfilled.
+
+The plugin sends native status text/icons/priorities without a color argument.
+Successful writes clear legacy cached colors; failed writes preserve retry
+state. Neither native selection nor a host theme is overridden.
+Separately, `cmux-plugin.toml` declares `kind = "sidebar"` and launches
+`bin/cmux-herdr-sidebar`, which executes the Rust terminal `sidebar` command.
+`src/sidebar.rs` uses the JSON-lines socket commands `identify`,
+`list-workspaces`, and `select-workspace`; this fallback is not a native
+metadata row. It preserves textual selection/active markers and default
+terminal colors, with no reverse-video selection background. Native metadata
+is preferred for agent status; no unavailable native plugin component API is
+invented and no separate custom theme/sidebar or tmux shim is added.
+
+These are source-only capabilities, not a macOS visual/E2E verification.
+No native upstream Herdr implementation files were found in the inspected
+cmux Sources/CLI checkout; builtin RemoteTmux remains a distinct reference.
 
 ## Capability findings
 

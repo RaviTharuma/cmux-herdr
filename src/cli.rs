@@ -1623,7 +1623,6 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
         }
         let value = payload["value"].as_str().unwrap_or("");
         let icon = payload["icon"].as_str().unwrap_or("");
-        let color = payload["color"].as_str().unwrap_or("");
         let priority = payload["priority"].as_i64().unwrap_or(0).to_string();
         match bridge::cmux_cmd(
             &[
@@ -1632,8 +1631,6 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
                 value,
                 "--icon",
                 icon,
-                "--color",
-                color,
                 "--priority",
                 &priority,
             ],
@@ -1641,7 +1638,8 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
         ) {
             Ok(proc) if proc.returncode == 0 => {
                 applied.push(key);
-                write_meta.insert(pane.pane_id.clone(),json!({"last_status_value":value,"last_icon":icon,"last_color":color,"last_priority":payload["priority"]}));
+                // Clear legacy palette state only after cmux accepts the native-color write.
+                write_meta.insert(pane.pane_id.clone(),json!({"last_status_value":value,"last_icon":icon,"last_color":null,"last_priority":payload["priority"]}));
             }
             Ok(proc) => errors.push(if proc.stderr.trim().is_empty() {
                 proc.stdout.trim().into()

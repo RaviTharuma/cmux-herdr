@@ -92,7 +92,7 @@ pub fn workspaces_from_tree(payload: &Value) -> Vec<WorkspaceRow> {
         .collect()
 }
 
-/// Render one complete ANSI frame, byte-for-byte with Python `render_sidebar`.
+/// Render an ANSI frame using terminal-default colors and textual selection markers.
 pub fn render_sidebar(
     rows: &[WorkspaceRow],
     selected: i64,
@@ -132,11 +132,7 @@ pub fn render_sidebar(
             let marker = if index == selected { '>' } else { ' ' };
             let active = if row.active { '*' } else { ' ' };
             let body = clip(&format!("{marker}{active} {}", row.name), width);
-            if index == selected {
-                lines.push(format!("\x1b[7m{body}\x1b[0m"));
-            } else {
-                lines.push(body);
-            }
+            lines.push(body);
         }
     }
 
@@ -674,11 +670,15 @@ mod tests {
     }
 
     #[test]
-    fn selected_row_is_the_only_reverse_video_row() {
+    fn selected_row_preserves_markers_without_palette_override() {
         let frame = render_sidebar(&rows(), 1, 20, 8, true, "");
-        assert_eq!(frame.matches("\x1b[7m").count(), 1);
-        assert!(frame.contains("\x1b[7m>* two"));
-        assert!(!frame.contains("\x1b[32m"));
+        assert!(frame.contains(">* two"));
+        assert!(frame.contains("   one"));
+        let selected = frame.lines().find(|line| line.contains(">* two")).unwrap();
+        assert!(
+            !selected.contains('\x1b'),
+            "selection must inherit terminal colors"
+        );
     }
 
     #[test]

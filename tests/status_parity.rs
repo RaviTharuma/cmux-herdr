@@ -1,11 +1,7 @@
 #![allow(dead_code, unused_imports)]
 
-//! Golden parity: Rust model parsers + status-pill builders must match the
-//! Python bridge byte-for-byte across a captured battery.
-//!
-//! Golden committed at `tests/status_golden.json`; regenerate from the Python
-//! bridge if the model/status layer changes (both sides move together per the
-//! clean-cutover rule).
+//! Captured model behavior and native status metadata contracts.
+//! Status fixtures preserve text, icons and priorities; colors belong to cmux.
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -123,8 +119,7 @@ fn map_status_to_style_matches_python() {
         let status: Value = serde_json::from_str(key).unwrap();
         let style = status::map_status_to_style(status.as_str());
         assert_eq!(json!(style.icon), want[0], "icon for {key}");
-        assert_eq!(json!(style.color), want[1], "color for {key}");
-        assert_eq!(json!(style.priority), want[2], "priority for {key}");
+        assert_eq!(json!(style.priority), want[1], "priority for {key}");
     }
 }
 
@@ -184,4 +179,24 @@ fn locked_display_name_matches_python() {
         let got = status::locked_display_name(prior_ref);
         assert_eq!(json!(got), entry["result"], "locked for {prior}");
     }
+}
+
+#[test]
+fn native_theme_payload_and_legacy_cache_contract() {
+    let pane = mk_pane(&json!({"agent": "pi", "agent_status": "working", "label": "Bot"}));
+    let payload = status::status_write_payload(&pane, None, None);
+    assert!(
+        payload.get("color").is_none(),
+        "native theme owns color: {payload}"
+    );
+    assert_eq!(payload["icon"], "hammer");
+    assert_eq!(payload["priority"], 80);
+    let mut prior = json!({"last_status_value":payload["value"],"last_icon":payload["icon"],"last_priority":payload["priority"]});
+    assert!(!status::should_write_status_pill(&payload, Some(&prior)));
+    for color in [Value::Null, json!("")] {
+        prior["last_color"] = color;
+        assert!(!status::should_write_status_pill(&payload, Some(&prior)));
+    }
+    prior["last_color"] = json!("#ff9500");
+    assert!(status::should_write_status_pill(&payload, Some(&prior)));
 }
