@@ -66,6 +66,7 @@ fn representative_dispatch_matches_python_goldens() {
             .args(argv)
             .env("PATH", &path)
             .env("HERDR_SOCKET_PATH", temp.path().join("missing.sock"))
+            .env("CMUX_SURFACE_ID", "surface-golden")
             .env("FAKE_HERDR_LOG", &log)
             .env("FAKE_CMUX_LOG", &cmux_log)
             .env("HOME", temp.path())
