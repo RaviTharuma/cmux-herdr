@@ -274,7 +274,15 @@ pub fn build_parser() -> Command {
         Command::new("attach")
             .about("Attach the live apply host (tmux remote.tmux.attach analogue)"),
     )
-    .arg(bool_opt("no-activate"));
+    .arg(
+        Arg::new("no-activate")
+            .long("no-activate")
+            .visible_alias("no-focus")
+            .action(ArgAction::SetTrue)
+            .help(
+                "Do not activate the mirror workspace (alias: --no-focus, matches cmux ssh-tmux)",
+            ),
+    );
     let detach = lifecycle_args(
         Command::new("detach").about("Detach every live mirror; never stops the Herdr server"),
     );
@@ -519,7 +527,7 @@ pub fn build_parser() -> Command {
         .subcommands([update_install, update_uninstall, update_run, update_status]);
 
     Command::new("cmux-herdr")
-        .about("cmux plugin for Herdr — cmux is the official UI, with status pills, tab/pane mirroring, and inner-mux control.")
+        .about("cmux plugin for Herdr — project Herdr into cmux chrome the way cmux ssh-tmux projects remote tmux (status pills, tab/pane mirror, attach/detach/restore).")
         .version(VERSION.as_str()).subcommand_required(true).arg_required_else_help(true)
         .subcommands([status, doctor, lease, tree, sync, watch, mirror, attach_pane,
             focus_tab, focus_pane, focus_workspace, focus_agent, read_pane, read_agent,
@@ -568,7 +576,9 @@ fn ensure_herdr() -> Result<(), i32> {
     if bridge::herdr_available() {
         Ok(())
     } else {
-        Err(die("herdr not available (HERDR_ENV unset and socket/CLI unhealthy). Run inside a herdr pane or start herdr."))
+        Err(die(
+            "herdr was not found in this environment. cmux-herdr mirrors a live Herdr session the same way cmux ssh-tmux mirrors tmux.\nRun inside a Herdr pane nested in cmux, or start herdr and set HERDR_SOCKET_PATH.",
+        ))
     }
 }
 fn call_api(method: &str, params: Value) -> Result<ApiOutcome, ApiError> {
@@ -1530,7 +1540,9 @@ fn list_status_keys(workspace: &str) -> Vec<String> {
 }
 fn cmd_clear(m: &ArgMatches) -> i32 {
     let Some(ws) = resolve_workspace(s(m, "workspace")) else {
-        return die("no cmux workspace resolved; is cmux running?");
+        return die(
+            "no cmux workspace resolved; need CMUX_SURFACE_ID + HERDR_SOCKET_PATH (or --workspace). Is cmux running in this surface?",
+        );
     };
     let mut cleared = Vec::new();
     for key in list_status_keys(&ws) {
@@ -1558,7 +1570,9 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
         Err(error) => return die(error),
     };
     let Some(workspace) = resolve_workspace(s(m, "workspace")) else {
-        return die("could not resolve cmux workspace for status sync (need CMUX_SURFACE_ID + HERDR_SOCKET_PATH, or pass --workspace)");
+        return die(
+            "could not resolve cmux workspace for status sync. Need a complete host fingerprint (CMUX_SURFACE_ID + HERDR_SOCKET_PATH) so identify --surface can pin the caller workspace, or pass --workspace explicitly. cmux-herdr will not borrow bare focused workspace (same fail-closed rule as cmux ssh-tmux launch context).",
+        );
     };
     let fingerprint = state::collect_host_fingerprint(&SystemEnv);
     let fingerprint_key = state::parent_key(&fingerprint);
@@ -1573,6 +1587,7 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
         }
         return 0;
     }
+    crate::mirror::remember_parent_workspace(&SystemEnv, &workspace);
     let tabs: HashMap<String, crate::model::Tab> = snap
         .tabs
         .iter()

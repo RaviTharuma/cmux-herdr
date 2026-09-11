@@ -66,6 +66,7 @@ fn representative_dispatch_matches_python_goldens() {
             .args(argv)
             .env("PATH", &path)
             .env("HERDR_SOCKET_PATH", temp.path().join("missing.sock"))
+            .env("CMUX_SURFACE_ID", "surface-golden")
             .env("FAKE_HERDR_LOG", &log)
             .env("FAKE_CMUX_LOG", &cmux_log)
             .env("HOME", temp.path())
@@ -807,4 +808,122 @@ fn update_service_install_and_run_still_require_herdr() {
             String::from_utf8_lossy(&output.stderr)
         );
     }
+}
+
+#[test]
+fn sync_fails_closed_without_host_fingerprint() {
+    let temp = tempfile::tempdir().unwrap();
+    write_fake_herdr(&temp.path().join("herdr"));
+    write_fake_cmux(&temp.path().join("cmux"));
+    let inherited_path = std::env::var("PATH").unwrap_or_default();
+    let output = Command::new(env!("CARGO_BIN_EXE_cmux-herdr"))
+        .args(["sync", "--no-progress", "--no-log"])
+        .env(
+            "PATH",
+            format!("{}:{inherited_path}", temp.path().display()),
+        )
+        .env("HOME", temp.path())
+        .env("XDG_STATE_HOME", temp.path().join("state"))
+        .env("HERDR_ENV", "1")
+        .env("HERDR_SOCKET_PATH", temp.path().join("missing.sock"))
+        .env("CMUX_WORKSPACE_ID", "workspace:stale")
+        .env_remove("CMUX_SURFACE_ID")
+        .env("FAKE_HERDR_LOG", temp.path().join("herdr.log"))
+        .env("FAKE_CMUX_LOG", temp.path().join("cmux.log"))
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("could not resolve cmux workspace"),
+        "stderr={stderr}"
+    );
+    assert!(
+        stderr.contains("will not borrow bare focused workspace"),
+        "stderr={stderr}"
+    );
+    let cmux_log = fs::read_to_string(temp.path().join("cmux.log")).unwrap_or_default();
+    assert!(
+        !cmux_log.contains("identify"),
+        "must not probe cmux identify without fingerprint; log={cmux_log}"
+    );
+}
+
+#[test]
+fn sync_resolves_via_identify_surface_when_fingerprint_complete() {
+    let temp = tempfile::tempdir().unwrap();
+    write_fake_herdr(&temp.path().join("herdr"));
+    let cmux = temp.path().join("cmux");
+    let script = r#"#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_CMUX_LOG"
+if [ "$1" = "identify" ]; then
+  printf '%s\n' '{"caller":{"workspace_ref":"workspace:pinned"},"focused":{"workspace_ref":"workspace:other"}}'
+  exit 0
+fi
+if [ "$1" = "list-status" ]; then
+  printf '%s\n' 'herdr:p1=current'
+  exit 0
+fi
+if [ "$1" = "set-status" ] || [ "$1" = "clear-status" ] || [ "$1" = "log" ]; then
+  exit 0
+fi
+exit 0
+"#;
+    fs::write(&cmux, script).unwrap();
+    let mut permissions = fs::metadata(&cmux).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&cmux, permissions).unwrap();
+    let sock = temp.path().join("herdr.sock");
+    fs::write(&sock, "").unwrap();
+    let inherited_path = std::env::var("PATH").unwrap_or_default();
+    let output = Command::new(env!("CARGO_BIN_EXE_cmux-herdr"))
+        .args(["sync", "--no-progress", "--no-log"])
+        .env(
+            "PATH",
+            format!("{}:{inherited_path}", temp.path().display()),
+        )
+        .env("HOME", temp.path())
+        .env("XDG_STATE_HOME", temp.path().join("state"))
+        .env("HERDR_ENV", "1")
+        .env("HERDR_SOCKET_PATH", &sock)
+        .env("CMUX_SURFACE_ID", "surface-sync")
+        .env("CMUX_WORKSPACE_ID", "workspace:stale")
+        .env("FAKE_HERDR_LOG", temp.path().join("herdr.log"))
+        .env("FAKE_CMUX_LOG", temp.path().join("cmux.log"))
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("ws=workspace:pinned"), "stdout={stdout}");
+    let cmux_log = fs::read_to_string(temp.path().join("cmux.log")).unwrap();
+    assert!(
+        cmux_log.contains("identify --surface surface-sync"),
+        "cmux_log={cmux_log}"
+    );
+    assert!(
+        !cmux_log.contains("--workspace workspace:stale"),
+        "must not write pills to stale env workspace; cmux_log={cmux_log}"
+    );
+    let state_dir = temp.path().join("state/cmux-herdr");
+    let parents: Vec<_> = fs::read_dir(&state_dir)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_name().to_string_lossy().starts_with("parent-"))
+        .collect();
+    assert_eq!(
+        parents.len(),
+        1,
+        "plugin writer should persist parent binding"
+    );
+    let body = fs::read_to_string(parents[0].path()).unwrap();
+    assert!(
+        body.contains("workspace:pinned"),
+        "parent binding body={body}"
+    );
 }

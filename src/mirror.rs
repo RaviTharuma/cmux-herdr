@@ -1119,7 +1119,12 @@ fn extract_cmux_id(payload: &Value, keys: &[&str]) -> Option<String> {
             return Some(text.to_string());
         }
     }
-    for key in ["result", "payload", "surface", "pane", "terminal"] {
+    // Prefer caller / focused (cmux identify --json) before generic nests so a
+    // nested shell never borrows unrelated global focus the way ssh-tmux /
+    // TmuxCompatLaunchContext refuse to.
+    for key in [
+        "caller", "focused", "result", "payload", "surface", "pane", "terminal",
+    ] {
         if let Some(found) = object
             .get(key)
             .and_then(|value| extract_cmux_id(value, keys))
@@ -1128,6 +1133,97 @@ fn extract_cmux_id(payload: &Value, keys: &[&str]) -> Option<String> {
         }
     }
     None
+}
+
+/// Workspace ref from `cmux identify --json`, preferring caller then focused.
+fn extract_identify_workspace(payload: &Value) -> Option<String> {
+    const KEYS: &[&str] = &["workspace_ref", "workspace_id", "workspace"];
+    let object = payload.as_object()?;
+    for nest in ["caller", "focused"] {
+        if let Some(found) = object
+            .get(nest)
+            .and_then(|value| extract_cmux_id(value, KEYS))
+        {
+            return Some(found);
+        }
+    }
+    extract_cmux_id(payload, KEYS)
+}
+
+/// Resolve outer cmux workspace the way PLUGIN_DESIGN / AGENTS.md require:
+/// explicit override → complete host fingerprint → parent binding →
+/// `cmux identify --surface <CMUX_SURFACE_ID> --json` → validated env id.
+/// Never probes bare focused workspace / random host when fingerprint pieces
+/// are missing (matches cmux ssh-tmux launch-context fail-closed).
+///
+/// Does not persist bindings; callers that actually write as the plugin should
+/// call [`remember_parent_workspace`] after the writer lease is claimed.
+pub fn resolve_cmux_workspace_with<R: CmuxRunner>(
+    runner: &mut R,
+    env: &dyn state::HostEnv,
+    explicit: Option<&str>,
+) -> Option<String> {
+    if let Some(workspace) = explicit.filter(|value| !value.is_empty()) {
+        let fingerprint = state::collect_host_fingerprint(env);
+        if !state::fingerprint_missing_fields(&fingerprint).is_empty() {
+            eprintln!(
+                "cmux-herdr: warning: incomplete host fingerprint with --workspace {}; association keys may collide across hosts",
+                workspace
+            );
+        }
+        return Some(workspace.to_string());
+    }
+
+    let fingerprint = state::collect_host_fingerprint(env);
+    let missing = state::fingerprint_missing_fields(&fingerprint);
+    if !missing.is_empty() {
+        return None;
+    }
+
+    if let Some(workspace) = state::load_parent_binding(env, &fingerprint) {
+        return Some(workspace);
+    }
+
+    let association = state::load_association_map(env, &fingerprint);
+    if let Some(workspace) = association
+        .get("cmux_workspace")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+    {
+        return Some(workspace.to_string());
+    }
+
+    let surface = fingerprint.cmux_surface_id.as_deref()?;
+    for args in [
+        vec![
+            "identify".to_string(),
+            "--surface".into(),
+            surface.into(),
+            "--json".into(),
+        ],
+        vec!["identify".to_string(), "--surface".into(), surface.into()],
+    ] {
+        if let Ok(payload) = cmux_json_with(runner, &args, None) {
+            if let Some(workspace) = extract_identify_workspace(&payload) {
+                return Some(workspace);
+            }
+        }
+    }
+
+    // Validated env fallback: only after a complete fingerprint pins this host.
+    // Never used alone — that was the stale nested-shell thrash class.
+    env.var("CMUX_WORKSPACE_ID")
+        .filter(|value| !value.is_empty())
+}
+
+/// Persist the resolved outer workspace for this host fingerprint.
+pub fn remember_parent_workspace(env: &dyn state::HostEnv, workspace: &str) {
+    let fingerprint = state::collect_host_fingerprint(env);
+    if state::fingerprint_missing_fields(&fingerprint).is_empty() {
+        if let Err(error) = state::save_parent_binding(env, workspace, &fingerprint) {
+            eprintln!("cmux-herdr: warning: could not persist parent binding: {error}");
+        }
+    }
 }
 
 fn create_terminal_with<R: CmuxRunner>(
@@ -1872,34 +1968,7 @@ fn fingerprint_json() -> Value {
 }
 
 pub fn resolve_cmux_workspace(explicit: Option<&str>) -> Option<String> {
-    if let Some(workspace) = explicit.filter(|value| !value.is_empty()) {
-        return Some(workspace.to_string());
-    }
-    if let Some(workspace) = env::var("CMUX_WORKSPACE_ID")
-        .ok()
-        .filter(|value| !value.is_empty())
-    {
-        return Some(workspace);
-    }
-    let fingerprint = state::collect_host_fingerprint(&SystemEnv);
-    let association = state::load_association_map(&SystemEnv, &fingerprint);
-    if let Some(workspace) = association
-        .get("cmux_workspace")
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
-    {
-        return Some(workspace.to_string());
-    }
-    for args in [vec!["identify".to_string()], vec!["focused".to_string()]] {
-        if let Ok(payload) = cmux_json(&args, None) {
-            if let Some(workspace) =
-                extract_cmux_id(&payload, &["workspace_id", "workspace_ref", "workspace"])
-            {
-                return Some(workspace);
-            }
-        }
-    }
-    None
+    resolve_cmux_workspace_with(&mut SystemCmuxRunner, &SystemEnv, explicit)
 }
 
 fn focused_surface_with<R: CmuxRunner>(runner: &mut R, workspace: Option<&str>) -> Option<String> {
@@ -2185,8 +2254,13 @@ pub fn mirror_to_cmux_with_snapshot(
     };
     if !dry_run && resolved_workspace.is_none() {
         return Err(MirrorError(
-            "could not resolve cmux workspace for mirror".to_string(),
+            "could not resolve cmux workspace for mirror. Need CMUX_SURFACE_ID + HERDR_SOCKET_PATH (or --workspace); will not borrow bare focused workspace".to_string(),
         ));
+    }
+    if let Some(workspace) = resolved_workspace.as_deref() {
+        if !dry_run {
+            remember_parent_workspace(&SystemEnv, workspace);
+        }
     }
     let existing = load_mirrors();
     let mut engine = reconcile_engine_for_desired(snapshot, &desired, &existing);
@@ -3100,5 +3174,139 @@ mod tests {
         let result = reconcile_engine_for_desired(&snapshot, &desired, &json!({}));
         assert_eq!(result.protected_pane_ids, vec!["p1", "p2"]);
         assert_eq!(result.created_pane_ids, vec!["p1", "p2"]);
+    }
+
+    struct ResolveEnv {
+        vars: std::collections::HashMap<String, String>,
+    }
+
+    impl ResolveEnv {
+        fn new(xdg: &std::path::Path) -> Self {
+            let mut vars = std::collections::HashMap::new();
+            vars.insert("XDG_STATE_HOME".into(), xdg.to_string_lossy().into_owned());
+            vars.insert("HOME".into(), xdg.to_string_lossy().into_owned());
+            Self { vars }
+        }
+
+        fn with(mut self, key: &str, value: &str) -> Self {
+            self.vars.insert(key.into(), value.into());
+            self
+        }
+    }
+
+    impl state::HostEnv for ResolveEnv {
+        fn var(&self, name: &str) -> Option<String> {
+            self.vars.get(name).cloned()
+        }
+        fn now(&self) -> f64 {
+            1.0
+        }
+        fn read_file(&self, path: &str) -> Option<String> {
+            std::fs::read_to_string(path).ok()
+        }
+    }
+
+    #[test]
+    fn extract_identify_workspace_prefers_caller_over_focused() {
+        let payload = json!({
+            "caller": {"workspace_ref": "workspace:caller"},
+            "focused": {"workspace_ref": "workspace:focused"},
+            "workspace_ref": "workspace:top"
+        });
+        assert_eq!(
+            extract_identify_workspace(&payload).as_deref(),
+            Some("workspace:caller")
+        );
+    }
+
+    #[test]
+    fn resolve_workspace_fails_closed_without_fingerprint() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = ResolveEnv::new(temp.path()).with("CMUX_WORKSPACE_ID", "workspace:stale");
+        let mut runner = FakeCmuxRunner::default();
+        runner.replies.push_back(Ok(command_output(
+            0,
+            "{\"focused\":{\"workspace_ref\":\"workspace:focus\"}}\n",
+            "",
+        )));
+        assert_eq!(
+            resolve_cmux_workspace_with(&mut runner, &env, None),
+            None,
+            "must not trust stale CMUX_WORKSPACE_ID or bare focus without fingerprint"
+        );
+        assert!(
+            runner.calls.is_empty(),
+            "must not probe cmux when fingerprint is incomplete"
+        );
+    }
+
+    #[test]
+    fn resolve_workspace_uses_identify_surface_without_persisting() {
+        let temp = tempfile::tempdir().unwrap();
+        let sock = temp.path().join("herdr.sock");
+        std::fs::write(&sock, "").unwrap();
+        let env = ResolveEnv::new(temp.path())
+            .with("CMUX_SURFACE_ID", "surface-1")
+            .with("HERDR_SOCKET_PATH", sock.to_str().unwrap())
+            .with("CMUX_WORKSPACE_ID", "workspace:stale");
+        let mut runner = FakeCmuxRunner::default();
+        runner.replies.push_back(Ok(command_output(
+            0,
+            "{\"caller\":{\"workspace_ref\":\"workspace:pinned\"},\"focused\":{\"workspace_ref\":\"workspace:other\"}}\n",
+            "",
+        )));
+        assert_eq!(
+            resolve_cmux_workspace_with(&mut runner, &env, None).as_deref(),
+            Some("workspace:pinned")
+        );
+        assert_eq!(
+            runner.calls[0],
+            vec![
+                "identify".to_string(),
+                "--surface".into(),
+                "surface-1".into(),
+                "--json".into()
+            ]
+        );
+        let fingerprint = state::collect_host_fingerprint(&env);
+        assert!(
+            state::load_parent_binding(&env, &fingerprint).is_none(),
+            "resolve must not persist until the plugin writer claims the host"
+        );
+        remember_parent_workspace(&env, "workspace:pinned");
+        assert_eq!(
+            state::load_parent_binding(&env, &fingerprint).as_deref(),
+            Some("workspace:pinned")
+        );
+    }
+
+    #[test]
+    fn resolve_workspace_reuses_parent_binding_without_cmux_probe() {
+        let temp = tempfile::tempdir().unwrap();
+        let sock = temp.path().join("herdr.sock");
+        std::fs::write(&sock, "").unwrap();
+        let env = ResolveEnv::new(temp.path())
+            .with("CMUX_SURFACE_ID", "surface-2")
+            .with("HERDR_SOCKET_PATH", sock.to_str().unwrap());
+        let fingerprint = state::collect_host_fingerprint(&env);
+        state::save_parent_binding(&env, "workspace:bound", &fingerprint).unwrap();
+        let mut runner = FakeCmuxRunner::default();
+        assert_eq!(
+            resolve_cmux_workspace_with(&mut runner, &env, None).as_deref(),
+            Some("workspace:bound")
+        );
+        assert!(runner.calls.is_empty());
+    }
+
+    #[test]
+    fn resolve_workspace_explicit_override_wins() {
+        let temp = tempfile::tempdir().unwrap();
+        let env = ResolveEnv::new(temp.path()).with("CMUX_WORKSPACE_ID", "workspace:env");
+        let mut runner = FakeCmuxRunner::default();
+        assert_eq!(
+            resolve_cmux_workspace_with(&mut runner, &env, Some("workspace:explicit")).as_deref(),
+            Some("workspace:explicit")
+        );
+        assert!(runner.calls.is_empty());
     }
 }
