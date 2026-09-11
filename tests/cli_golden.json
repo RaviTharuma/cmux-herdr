@@ -9,7 +9,7 @@
     "neighbor", "new-tab", "new-workspace", "notify", "observe",
     "process-info", "read-agent", "read-pane", "release-agent", "rename-agent",
     "rename-pane", "rename-tab", "rename-workspace", "resize-pane", "restore",
-    "send", "send-key", "set-ratio", "split", "start-agent", "status",
+    "send", "send-key", "sessions", "set-ratio", "split", "start-agent", "status",
     "swap-pane", "sync", "tree", "unlock-title", "wait-output", "watch",
     "window-title", "workspace-move", "worktree", "zoom-pane"
   ],

@@ -16,7 +16,7 @@ case "$*" in
   "status") printf '%s\n' '{"status":"ok"}' ;;
   "pane list") printf '%s\n' '{"result":{"panes":[{"pane_id":"p1","tab_id":"t1","workspace_id":"w1","agent":"pi","agent_status":"working","label":"Bot"}]}}' ;;
   "tab list") printf '%s\n' '{"result":{"tabs":[]}}' ;;
-  "workspace list") printf '%s\n' '{"result":{"workspaces":[]}}' ;;
+  "workspace list") printf '%s\n' '{"result":{"workspaces":[{"workspace_id":"ws-a","label":"Alpha","tab_count":3},{"workspace_id":"ws-b","tab_count":1}]}}' ;;
   "api snapshot") printf '%s\n' '{"result":{"layouts":[]}}' ;;
   *) printf 'unexpected command: %s\n' "$*" >&2; exit 9 ;;
 esac
@@ -926,4 +926,56 @@ exit 0
         body.contains("workspace:pinned"),
         "parent binding body={body}"
     );
+}
+
+#[test]
+fn sessions_json_mirrors_remote_tmux_sessions_shape() {
+    let temp = tempfile::tempdir().unwrap();
+    let herdr = temp.path().join("herdr");
+    write_fake_herdr(&herdr);
+    let log = temp.path().join("herdr.log");
+    let sock = temp.path().join("herdr.sock");
+    fs::write(&sock, "").unwrap();
+    let inherited_path = std::env::var("PATH").unwrap_or_default();
+    let output = Command::new(env!("CARGO_BIN_EXE_cmux-herdr"))
+        .args(["sessions", "--json", "--socket"])
+        .arg(&sock)
+        .env(
+            "PATH",
+            format!("{}:{inherited_path}", temp.path().display()),
+        )
+        .env("HOME", temp.path())
+        .env("XDG_STATE_HOME", temp.path().join("state"))
+        .env("HERDR_SOCKET_PATH", &sock)
+        .env("CMUX_SURFACE_ID", "surface-sessions")
+        .env("FAKE_HERDR_LOG", &log)
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let payload: Value = serde_json::from_str(stdout.trim()).unwrap_or_else(|error| {
+        panic!("sessions JSON parse failed: {error}; stdout={stdout}");
+    });
+    assert_eq!(payload["ok"], true);
+    assert_eq!(payload["method"], "remote.herdr.sessions");
+    assert_eq!(payload["socket"].as_str(), Some(sock.to_str().unwrap()));
+    let sessions = payload["sessions"].as_array().expect("sessions array");
+    assert_eq!(sessions.len(), 2, "{payload}");
+    assert_eq!(sessions[0]["id"], "ws-a");
+    assert_eq!(sessions[0]["name"], "Alpha");
+    assert_eq!(sessions[0]["windows"], 3);
+    assert_eq!(sessions[0]["attached"], false);
+    assert_eq!(sessions[1]["id"], "ws-b");
+    assert_eq!(sessions[1]["name"], "ws-b");
+    assert_eq!(sessions[1]["windows"], 1);
+    assert_eq!(sessions[1]["attached"], false);
+    for key in ["id", "name", "windows", "attached"] {
+        assert!(sessions[0].get(key).is_some(), "missing {key}");
+    }
 }

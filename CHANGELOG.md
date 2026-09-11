@@ -7,6 +7,20 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- `cmux-herdr sessions` lists Herdr sessions in the `remote.tmux.sessions` JSON
+  fashion (`ok`, `method: remote.herdr.sessions`, `socket`, and
+  `sessions[{id,name,windows,attached}]`). Also available via
+  `observe --method remote.herdr.sessions`. This is CLI/control-plane surface
+  only — not left-sidebar chrome.
+
+### Changed
+
+- `doctor` human output follows cmux `ssh-tmux` help fashion: short product
+  framing, checklist, then `next:` / `fix:` guidance that points at
+  `sessions` / `watch` / `attach` (or install/fingerprint repair).
+
 ### Fixed
 
 - Workspace auto-resolve now matches the PLUGIN_DESIGN / cmux ssh-tmux launch-context
