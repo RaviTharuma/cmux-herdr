@@ -125,6 +125,8 @@ Prefer on the **right sidebar** (and CLI):
 - Richer Herdr actions/status, session listing, doctor guidance, attach/detach
   controls — first-party surfaces in the ssh-tmux fashion.
 
-`sessions` / `doctor` in this plugin are CLI/control-plane. Native left-nav
-nesting of Herdr workspaces under machines is the next sync/mirror follow-up.
+`sessions` / `doctor` remain CLI/control-plane. Left-nav nesting is implemented
+via cmux `workspace-group` + `workspace create` during `sync`/`mirror`/`watch`
+(fail closed when those verbs are missing). Right sidebar stays the home for
+richer Herdr UI/actions/status.
 

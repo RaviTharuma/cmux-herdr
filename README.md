@@ -128,8 +128,10 @@ chips without projecting tabs and panes.
   cmux already nests workspaces under machines.
 - **Right sidebar** is the home for richer Herdr UI/actions/status beyond
   navigation (ssh-tmux fashion).
-- Until native nested workspace sync lands, use the CLI (`sessions`, `doctor`,
-  `watch`, `attach`) and existing status/mirror surfaces.
+- `sync` / `mirror` / `watch` nest Herdr workspaces as ordinary cmux workspace
+  group members under the host connection (no Herdr-only left chrome). Use
+  `--no-nest-workspaces` to skip, or `--prune-nested-workspaces` to close stale
+  children. Prefer the right sidebar/CLI for richer Herdr actions and status.
 
 ## Commands
 

@@ -40,7 +40,7 @@
     },
     {
       "name": "sync writes current pill and clears only stale herdr keys",
-      "argv": ["sync", "--workspace", "workspace:1", "--no-progress", "--no-log"],
+      "argv": ["sync", "--workspace", "workspace:1", "--no-progress", "--no-log", "--no-nest-workspaces"],
       "status": 0,
       "stdout": "herdr sync: 1 panes → cmux ws=workspace:1 (working=1 idle=0 done=0 blocked=0 unknown=0)\ncleared stale: herdr:stale\n",
       "stderr": "",

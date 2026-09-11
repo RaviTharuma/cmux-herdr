@@ -9,6 +9,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- `sync` / `mirror` / `watch` nest Herdr workspaces as ordinary cmux
+  `workspace-group` members under the host workspace (left nav stays
+  workspaces/machines only). Persist bindings in associations; reuse on later
+  syncs. Flags: `--no-nest-workspaces`, `--prune-nested-workspaces`. Fail closed
+  when cmux lacks `workspace-group` + create verbs.
 - `cmux-herdr sessions` lists Herdr sessions in the `remote.tmux.sessions` JSON
   fashion (`ok`, `method: remote.herdr.sessions`, `socket`, and
   `sessions[{id,name,windows,attached}]`). Also available via

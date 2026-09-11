@@ -979,3 +979,265 @@ fn sessions_json_mirrors_remote_tmux_sessions_shape() {
         assert!(sessions[0].get(key).is_some(), "missing {key}");
     }
 }
+
+#[test]
+fn sync_nests_herdr_workspaces_as_cmux_workspace_group_members() {
+    let temp = tempfile::tempdir().unwrap();
+    write_fake_herdr(&temp.path().join("herdr"));
+    let cmux = temp.path().join("cmux");
+    let script = r#"#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_CMUX_LOG"
+# Nest helpers pass --json first; identify keeps --json last.
+if [ "$1" = "--json" ]; then
+  shift
+fi
+case "$1" in
+  identify)
+    printf '%s\n' '{"caller":{"workspace_ref":"workspace:host"},"focused":{"workspace_ref":"workspace:other"}}'
+    exit 0
+    ;;
+  workspace-group)
+    if [ "$2" = "--help" ]; then
+      printf '%s\n' 'Usage: cmux workspace-group create|add|...'
+      exit 0
+    fi
+    if [ "$2" = "create" ]; then
+      printf '%s\n' '{"group":{"id":"group:herdr-1","name":"Herdr"}}'
+      exit 0
+    fi
+    if [ "$2" = "add" ]; then
+      exit 0
+    fi
+    ;;
+  workspace)
+    if [ "$2" = "create" ] && [ "$3" = "--help" ]; then
+      printf '%s\n' 'Usage: cmux workspace create --name <title> --group <id>'
+      exit 0
+    fi
+    if [ "$2" = "create" ]; then
+      name="workspace"
+      prev=""
+      for arg in "$@"; do
+        if [ "$prev" = "--name" ]; then name="$arg"; fi
+        prev="$arg"
+      done
+      printf '%s\n' "{\"workspace\":{\"id\":\"workspace:nested-$name\",\"name\":\"$name\"}}"
+      exit 0
+    fi
+    if [ "$2" = "rename" ] || [ "$2" = "close" ]; then
+      exit 0
+    fi
+    ;;
+  new-workspace)
+    if [ "$2" = "--help" ]; then
+      printf '%s\n' 'Usage: cmux new-workspace --name <title>'
+      exit 0
+    fi
+    ;;
+  set-status|clear-status|list-status|log|set-progress)
+    exit 0
+    ;;
+esac
+exit 0
+"#;
+    fs::write(&cmux, script).unwrap();
+    let mut permissions = fs::metadata(&cmux).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&cmux, permissions).unwrap();
+    let sock = temp.path().join("herdr.sock");
+    fs::write(&sock, "").unwrap();
+    let inherited_path = std::env::var("PATH").unwrap_or_default();
+    let run = |clear_log: bool| {
+        if clear_log {
+            let _ = fs::write(temp.path().join("cmux.log"), "");
+        }
+        Command::new(env!("CARGO_BIN_EXE_cmux-herdr"))
+            .args(["sync", "--no-progress", "--no-log", "--json"])
+            .env(
+                "PATH",
+                format!("{}:{inherited_path}", temp.path().display()),
+            )
+            .env("HOME", temp.path())
+            .env("XDG_STATE_HOME", temp.path().join("state"))
+            .env("HERDR_ENV", "1")
+            .env("HERDR_SOCKET_PATH", &sock)
+            .env("CMUX_SURFACE_ID", "surface-nest")
+            .env("FAKE_HERDR_LOG", temp.path().join("herdr.log"))
+            .env("FAKE_CMUX_LOG", temp.path().join("cmux.log"))
+            .output()
+            .unwrap()
+    };
+    let output = run(false);
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json_start = stdout.find('{').expect("json payload");
+    let payload: Value = serde_json::from_str(&stdout[json_start..]).unwrap_or_else(|error| {
+        panic!("nest sync JSON parse failed: {error}; stdout={stdout}");
+    });
+    assert_eq!(payload["nest"]["ok"], true, "{payload}");
+    assert!(payload["nest"]["skipped_reason"].is_null(), "{payload}");
+    assert_eq!(payload["nest"]["group_id"], "group:herdr-1");
+    let created = payload["nest"]["created"].as_array().unwrap();
+    assert_eq!(created.len(), 2, "{payload}");
+    assert!(created.iter().any(|value| value == "ws-a"), "{payload}");
+    assert!(created.iter().any(|value| value == "ws-b"), "{payload}");
+
+    let cmux_log = fs::read_to_string(temp.path().join("cmux.log")).unwrap();
+    assert!(
+        cmux_log.contains("workspace-group create"),
+        "cmux_log={cmux_log}"
+    );
+    assert!(cmux_log.contains("workspace create"), "cmux_log={cmux_log}");
+    assert!(
+        cmux_log.contains("--group group:herdr-1"),
+        "cmux_log={cmux_log}"
+    );
+
+    let state_dir = temp.path().join("state/cmux-herdr");
+    let associations: Vec<_> = fs::read_dir(&state_dir)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with("associations-")
+        })
+        .collect();
+    assert_eq!(associations.len(), 1, "expected associations file");
+    let body: Value =
+        serde_json::from_str(&fs::read_to_string(associations[0].path()).unwrap()).unwrap();
+    assert_eq!(body["workspace_group_id"], "group:herdr-1");
+    assert_eq!(body["workspace_group_name"], "Herdr");
+    assert_eq!(
+        body["workspace_bindings"]["ws-a"]["cmux_workspace_id"],
+        "workspace:nested-Alpha"
+    );
+    assert_eq!(
+        body["workspace_bindings"]["ws-b"]["cmux_workspace_id"],
+        "workspace:nested-ws-b"
+    );
+
+    let output = run(true);
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json_start = stdout.find('{').unwrap();
+    let payload: Value = serde_json::from_str(&stdout[json_start..]).unwrap();
+    assert_eq!(
+        payload["nest"]["created"].as_array().unwrap().len(),
+        0,
+        "{payload}"
+    );
+    assert_eq!(
+        payload["nest"]["reused"].as_array().unwrap().len(),
+        2,
+        "{payload}"
+    );
+    let cmux_log = fs::read_to_string(temp.path().join("cmux.log")).unwrap();
+    assert!(
+        !cmux_log.contains("workspace-group create"),
+        "second sync must reuse group id; cmux_log={cmux_log}"
+    );
+}
+
+#[test]
+fn sync_skips_nest_when_disabled_or_cmux_lacks_workspace_group() {
+    let temp = tempfile::tempdir().unwrap();
+    write_fake_herdr(&temp.path().join("herdr"));
+    let cmux = temp.path().join("cmux");
+    let script = r#"#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_CMUX_LOG"
+if [ "$1" = "identify" ]; then
+  printf '%s\n' '{"caller":{"workspace_ref":"workspace:host"},"focused":{"workspace_ref":"workspace:other"}}'
+  exit 0
+fi
+if [ "$1" = "set-status" ] || [ "$1" = "clear-status" ] || [ "$1" = "log" ] || [ "$1" = "list-status" ]; then
+  exit 0
+fi
+# No workspace-group / workspace create support → nest fail closed.
+exit 0
+"#;
+    fs::write(&cmux, script).unwrap();
+    let mut permissions = fs::metadata(&cmux).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&cmux, permissions).unwrap();
+    let sock = temp.path().join("herdr.sock");
+    fs::write(&sock, "").unwrap();
+    let inherited_path = std::env::var("PATH").unwrap_or_default();
+    let output = Command::new(env!("CARGO_BIN_EXE_cmux-herdr"))
+        .args(["sync", "--no-progress", "--no-log", "--json"])
+        .env(
+            "PATH",
+            format!("{}:{inherited_path}", temp.path().display()),
+        )
+        .env("HOME", temp.path())
+        .env("XDG_STATE_HOME", temp.path().join("state"))
+        .env("HERDR_ENV", "1")
+        .env("HERDR_SOCKET_PATH", &sock)
+        .env("CMUX_SURFACE_ID", "surface-nest-skip")
+        .env("FAKE_HERDR_LOG", temp.path().join("herdr.log"))
+        .env("FAKE_CMUX_LOG", temp.path().join("cmux.log"))
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json_start = stdout.find('{').unwrap();
+    let payload: Value = serde_json::from_str(&stdout[json_start..]).unwrap();
+    assert_eq!(payload["nest"]["ok"], true, "{payload}");
+    let reason = payload["nest"]["skipped_reason"].as_str().unwrap_or("");
+    assert!(
+        reason.contains("unavailable") || reason.contains("fail closed"),
+        "{payload}"
+    );
+
+    let output = Command::new(env!("CARGO_BIN_EXE_cmux-herdr"))
+        .args([
+            "sync",
+            "--no-progress",
+            "--no-log",
+            "--no-nest-workspaces",
+            "--json",
+        ])
+        .env(
+            "PATH",
+            format!("{}:{inherited_path}", temp.path().display()),
+        )
+        .env("HOME", temp.path())
+        .env("XDG_STATE_HOME", temp.path().join("state"))
+        .env("HERDR_ENV", "1")
+        .env("HERDR_SOCKET_PATH", &sock)
+        .env("CMUX_SURFACE_ID", "surface-nest-skip")
+        .env("FAKE_HERDR_LOG", temp.path().join("herdr.log"))
+        .env("FAKE_CMUX_LOG", temp.path().join("cmux.log"))
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json_start = stdout.find('{').unwrap();
+    let payload: Value = serde_json::from_str(&stdout[json_start..]).unwrap();
+    assert!(
+        payload["nest"]["skipped_reason"]
+            .as_str()
+            .unwrap_or("")
+            .contains("disabled"),
+        "{payload}"
+    );
+}

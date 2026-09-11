@@ -17,6 +17,7 @@ pub mod lifecycle;
 pub mod live;
 pub mod mirror;
 pub mod model;
+pub mod nest;
 pub mod pump;
 pub mod session;
 pub mod sidebar;

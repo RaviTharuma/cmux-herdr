@@ -134,6 +134,8 @@ fn sync_args(command: Command) -> Command {
         .arg(bool_opt("no-clear-stale"))
         .arg(bool_opt("no-progress"))
         .arg(bool_opt("no-log"))
+        .arg(bool_opt("no-nest-workspaces"))
+        .arg(bool_opt("prune-nested-workspaces"))
         .arg(json_flag())
 }
 fn mirror_args(command: Command) -> Command {
@@ -173,7 +175,7 @@ pub fn build_parser() -> Command {
         .about("Pretty-print herdr workspaces/tabs/panes/agents")
         .arg(json_flag());
     let sync =
-        sync_args(Command::new("sync").about("One-shot mirror herdr agents → cmux set-status"));
+        sync_args(Command::new("sync").about("One-shot mirror herdr agents → cmux set-status; nest Herdr workspaces under host as cmux workspace-group members"));
     let watch = mirror_args(sync_args(
         Command::new("watch").about("Live Herdr session as real cmux tabs/panes (default)"),
     ))
@@ -1565,6 +1567,53 @@ fn cmd_clear(m: &ArgMatches) -> i32 {
     0
 }
 
+fn nest_workspaces_for_command(
+    m: &ArgMatches,
+    fingerprint: &state::Fingerprint,
+    workspace: &str,
+    snap: &crate::model::Snapshot,
+) -> crate::nest::NestReport {
+    if b(m, "no-nest-workspaces") {
+        return crate::nest::NestReport::skipped("disabled by --no-nest-workspaces");
+    }
+    crate::nest::reconcile_nested_workspaces(
+        &SystemEnv,
+        fingerprint,
+        workspace,
+        snap,
+        b(m, "prune-nested-workspaces"),
+    )
+}
+
+fn emit_nest_report(report: &crate::nest::NestReport) {
+    // Keep capability skips silent so routine sync on hosts without
+    // workspace-group support stays golden-quiet; JSON still carries the report.
+    if report.skipped_reason.is_some() {
+        return;
+    }
+    if report.ok {
+        if report.created.is_empty()
+            && report.reused.is_empty()
+            && report.renamed.is_empty()
+            && report.pruned.is_empty()
+        {
+            return;
+        }
+        eprintln!(
+            "nest: group={} created={} reused={} renamed={} pruned={}",
+            report.group_id.as_deref().unwrap_or("-"),
+            report.created.len(),
+            report.reused.len(),
+            report.renamed.len(),
+            report.pruned.len(),
+        );
+        return;
+    }
+    for error in &report.errors {
+        eprintln!("nest error: {error}");
+    }
+}
+
 fn cmd_sync(m: &ArgMatches) -> i32 {
     if let Err(code) = ensure_herdr() {
         return code;
@@ -1719,16 +1768,19 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
     if !b(m, "no-log") {
         let _ = bridge::cmux_cmd(&["log", &summary], Some(&workspace));
     }
-    let associations = match state::update_association_map(
+    if let Err(error) = state::update_association_map(
         &SystemEnv,
         &snap,
         Some(&workspace),
         Some(&Value::Object(write_meta)),
     ) {
-        Ok(value) => value,
-        Err(error) => return die(error),
-    };
-    let result = json!({"workspace":workspace,"applied":applied,"skipped_unchanged":skipped,"stale_cleared":stale,"counts":counts,"progress":progress,"errors":errors,"summary":summary,"pane_count":snap.panes.len(),"agent_count":panes.len(),"associations":associations,"host_fingerprint_key":fingerprint_key,"writer":"plugin","native_live":false});
+        return die(error);
+    }
+    let nest_report = nest_workspaces_for_command(m, &fingerprint, &workspace, &snap);
+    emit_nest_report(&nest_report);
+    let associations = state::load_association_map(&SystemEnv, &fingerprint);
+
+    let result = json!({"workspace":workspace,"applied":applied,"skipped_unchanged":skipped,"stale_cleared":stale,"counts":counts,"progress":progress,"errors":errors,"summary":summary,"pane_count":snap.panes.len(),"agent_count":panes.len(),"associations":associations,"host_fingerprint_key":fingerprint_key,"writer":"plugin","native_live":false,"nest":nest_report.to_json()});
     println!("{}", result["summary"].as_str().unwrap());
     if !result["skipped_unchanged"].as_array().unwrap().is_empty() {
         println!(
@@ -2586,6 +2638,37 @@ fn cmd_mirror(m: &ArgMatches) -> i32 {
         Ok(value) => value,
         Err(error) => return die(error),
     };
+
+    let nest_report = {
+        let workspace = result
+            .get("workspace")
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+            .or_else(|| s(m, "workspace").map(str::to_string));
+        if b(m, "dry-run") {
+            crate::nest::NestReport::skipped("dry-run")
+        } else if let Some(workspace) = workspace {
+            let fingerprint = state::collect_host_fingerprint(&SystemEnv);
+            match fetch_snapshot() {
+                Ok(snap) => nest_workspaces_for_command(m, &fingerprint, &workspace, &snap),
+                Err(error) => {
+                    let mut report =
+                        crate::nest::NestReport::skipped(format!("snapshot for nest: {error}"));
+                    report.ok = false;
+                    report
+                }
+            }
+        } else {
+            crate::nest::NestReport::skipped("missing host workspace for nest")
+        }
+    };
+    emit_nest_report(&nest_report);
+    let mut result = result;
+    if let Some(object) = result.as_object_mut() {
+        object.insert("nest".into(), nest_report.to_json());
+    }
+
     println!("{}", crate::mirror::format_mirror_plan(&result));
     if b(m, "json") {
         pretty(&result)
