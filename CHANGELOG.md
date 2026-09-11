@@ -7,6 +7,21 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- Workspace auto-resolve now matches the PLUGIN_DESIGN / cmux ssh-tmux launch-context
+  contract: require a complete host fingerprint, reuse `parent-<fingerprint>.json`,
+  then `cmux identify --surface <CMUX_SURFACE_ID> --json` (caller/focused
+  `workspace_ref`), and only then a fingerprint-pinned `CMUX_WORKSPACE_ID`. Incomplete
+  fingerprints fail closed instead of trusting stale nested-shell env or bare focused
+  workspace.
+
+### Changed
+
+- `attach --no-focus` is a visible alias of `--no-activate` (cmux `ssh-tmux` naming).
+- Missing-herdr / unresolved-workspace errors name the fingerprint contract and the
+  ssh-tmux analogue so the CLI reads first-party rather than bolted-on.
+
 ## [0.7.0] - 2026-09-04
 
 ### Changed
