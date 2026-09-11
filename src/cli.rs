@@ -271,9 +271,8 @@ pub fn build_parser() -> Command {
         .arg(opt("session").default_value("main"))
         .arg(json_flag());
     let sessions = lifecycle_args(
-        Command::new("sessions").about(
-            "List Herdr sessions (remote.tmux.sessions analogue: id/name/windows/attached)",
-        ),
+        Command::new("sessions")
+            .about("List Herdr sessions (remote.tmux.sessions analogue: id/name/windows/attached)"),
     );
     let attach = lifecycle_args(
         Command::new("attach")
@@ -3258,7 +3257,7 @@ mod tests {
             .iter()
             .map(|v| v.as_str().unwrap().to_string())
             .collect();
-        assert_eq!(expected.len(), 61);
+        assert_eq!(expected.len(), 62);
         let extras = ["sidebar", "update-service"];
         let mut actual: Vec<String> = build_parser()
             .get_subcommands()

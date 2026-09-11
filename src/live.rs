@@ -1016,9 +1016,7 @@ pub fn sessions_list_payload(snapshot: &Snapshot, socket_path: &str) -> Value {
     let sessions: Vec<Value> = sessions_from_snapshot(snapshot)
         .into_iter()
         .map(|mut session| {
-            if attached_ids.contains(&session.session_id)
-                || attached_ids.contains(&session.name)
-            {
+            if attached_ids.contains(&session.session_id) || attached_ids.contains(&session.name) {
                 session.attached = true;
             }
             session_payload(&session)

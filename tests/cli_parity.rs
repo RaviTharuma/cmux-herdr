@@ -964,10 +964,7 @@ fn sessions_json_mirrors_remote_tmux_sessions_shape() {
     });
     assert_eq!(payload["ok"], true);
     assert_eq!(payload["method"], "remote.herdr.sessions");
-    assert_eq!(
-        payload["socket"].as_str(),
-        Some(sock.to_str().unwrap())
-    );
+    assert_eq!(payload["socket"].as_str(), Some(sock.to_str().unwrap()));
     let sessions = payload["sessions"].as_array().expect("sessions array");
     assert_eq!(sessions.len(), 2, "{payload}");
     assert_eq!(sessions[0]["id"], "ws-a");
