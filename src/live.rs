@@ -23,8 +23,8 @@ use crate::host::{host_actions, FakeBonsplitHost, HostAction};
 use crate::impose::{begin_divider_drag, end_divider_drag, resolve_divider_hold, DividerDragHold};
 use crate::io::{CwdUpdate, PaneIORouter};
 use crate::lifecycle::{
-    dispatch, pane_grid_payload, AttachWindowTarget, DiscoveredSession, LifecycleController,
-    RestoreRecord, POST_APPLY_CLIENT_SIZE, POST_RESEED,
+    dispatch, pane_grid_payload, session_payload, AttachWindowTarget, DiscoveredSession,
+    LifecycleController, RestoreRecord, POST_APPLY_CLIENT_SIZE, POST_RESEED,
 };
 use crate::model::Snapshot;
 use crate::session::{FakeSessionHost, SessionAction};
@@ -999,6 +999,39 @@ pub fn sessions_from_snapshot(snapshot: &Snapshot) -> Vec<DiscoveredSession> {
     )]
 }
 
+/// `remote.tmux.sessions`-shaped listing for a Herdr socket endpoint.
+///
+/// Mirrors cmux `remote.tmux.sessions` (`host` + `sessions[{id,name,windows,attached}]`),
+/// with `socket` as the local Herdr endpoint identity (there is no SSH destination).
+pub fn sessions_list_payload(snapshot: &Snapshot, socket_path: &str) -> Value {
+    let attached_ids = handoff::read_shared_restore(&endpoint_hash(socket_path))
+        .and_then(|payload| payload.get("session_ids").cloned())
+        .and_then(|value| value.as_array().cloned())
+        .map(|ids| {
+            ids.into_iter()
+                .filter_map(|value| value.as_str().map(str::to_string))
+                .collect::<std::collections::BTreeSet<_>>()
+        })
+        .unwrap_or_default();
+    let sessions: Vec<Value> = sessions_from_snapshot(snapshot)
+        .into_iter()
+        .map(|mut session| {
+            if attached_ids.contains(&session.session_id)
+                || attached_ids.contains(&session.name)
+            {
+                session.attached = true;
+            }
+            session_payload(&session)
+        })
+        .collect();
+    json!({
+        "ok": true,
+        "method": "remote.herdr.sessions",
+        "socket": socket_path,
+        "sessions": sessions,
+    })
+}
+
 pub fn persist_host_restore(host: &LiveApplyHost) -> Option<String> {
     let record = host.lifecycle.persist.as_ref()?;
     handoff::write_shared_restore(host.writer_lease.as_ref()?, &record.to_value()).ok()
@@ -1152,6 +1185,14 @@ pub fn observe_live(
     (Some(host), observed)
 }
 
+/// List Herdr sessions in the `remote.tmux.sessions` JSON fashion.
+pub fn list_sessions_live(snapshot: &Snapshot, socket_path: &str) -> Value {
+    if let Some(yielded) = foreign_payload("observe", Some("remote.herdr.sessions")) {
+        return yielded;
+    }
+    sessions_list_payload(snapshot, socket_path)
+}
+
 pub fn detach_live(windows: &[HerdrWindow], socket_path: &str) -> Value {
     if let Some(mut yielded) = foreign_payload("detach", None) {
         let object = yielded.as_object_mut().unwrap();
@@ -1260,5 +1301,72 @@ mod tests {
         assert!(called);
         assert!(host.native_live);
         assert_eq!(host.log.last().map(String::as_str), Some("native_live"));
+    }
+
+    #[test]
+    fn sessions_list_payload_mirrors_remote_tmux_sessions_shape() {
+        use crate::model::Workspace;
+        use std::fs;
+
+        let snapshot = Snapshot {
+            panes: vec![],
+            tabs: vec![],
+            workspaces: vec![
+                Workspace {
+                    workspace_id: "ws-a".into(),
+                    label: Some("Alpha".into()),
+                    number: Some(1),
+                    agent_status: "idle".into(),
+                    focused: true,
+                    pane_count: 2,
+                    tab_count: 3,
+                    raw: json!({}),
+                },
+                Workspace {
+                    workspace_id: "ws-b".into(),
+                    label: None,
+                    number: None,
+                    agent_status: "unknown".into(),
+                    focused: false,
+                    pane_count: 1,
+                    tab_count: 1,
+                    raw: json!({}),
+                },
+            ],
+            layouts: json!({}),
+        };
+
+        let _guard = handoff::HANDOFF_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let temp = tempfile::tempdir().unwrap();
+        std::env::set_var("XDG_STATE_HOME", temp.path());
+        std::env::set_var("HOME", temp.path().join("home"));
+        std::env::remove_var(handoff::NATIVE_STATE_ENV);
+
+        let socket = "/tmp/cmux-herdr-sessions-test.sock";
+        let restore_dir = temp.path().join("cmux-herdr");
+        fs::create_dir_all(&restore_dir).unwrap();
+        fs::write(
+            restore_dir.join(format!("restore-{}.json", endpoint_hash(socket))),
+            json!({"session_ids": ["ws-a"]}).to_string(),
+        )
+        .unwrap();
+
+        let payload = sessions_list_payload(&snapshot, socket);
+        assert_eq!(payload["ok"], true);
+        assert_eq!(payload["method"], "remote.herdr.sessions");
+        assert_eq!(payload["socket"], socket);
+        assert_eq!(
+            payload["sessions"],
+            json!([
+                {"id": "ws-a", "name": "Alpha", "windows": 3, "attached": true},
+                {"id": "ws-b", "name": "ws-b", "windows": 1, "attached": false},
+            ])
+        );
+
+        for name in ["XDG_STATE_HOME", "HOME", handoff::NATIVE_STATE_ENV] {
+            std::env::remove_var(name);
+        }
     }
 }

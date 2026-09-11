@@ -164,7 +164,7 @@ pub fn build_parser() -> Command {
         .about("Show dual cmux+herdr context")
         .arg(json_flag());
     let doctor = Command::new("doctor")
-        .about("Diagnose plugin install (herdr, socket, fingerprint, LaunchAgent, sidebar)")
+        .about("Diagnose install like cmux ssh-tmux help: herdr, socket, fingerprint, LaunchAgent, CLI/right-rail")
         .arg(json_flag());
     let lease = Command::new("lease")
         .about("Show plugin↔native writer lease for this host fingerprint")
@@ -265,11 +265,16 @@ pub fn build_parser() -> Command {
         .arg(str_arg("pane_id").required(true))
         .arg(str_arg("key").required(true));
     let observe = Command::new("observe")
-        .about("remote.herdr.* observability (pane_surfaces / pane_grids / state)")
+        .about("remote.herdr.* observability (pane_surfaces / pane_grids / state / sessions)")
         .arg(opt("method").default_value("remote.herdr.pane_surfaces"))
         .arg(opt("socket"))
         .arg(opt("session").default_value("main"))
         .arg(json_flag());
+    let sessions = lifecycle_args(
+        Command::new("sessions").about(
+            "List Herdr sessions (remote.tmux.sessions analogue: id/name/windows/attached)",
+        ),
+    );
     let attach = lifecycle_args(
         Command::new("attach")
             .about("Attach the live apply host (tmux remote.tmux.attach analogue)"),
@@ -527,12 +532,12 @@ pub fn build_parser() -> Command {
         .subcommands([update_install, update_uninstall, update_run, update_status]);
 
     Command::new("cmux-herdr")
-        .about("cmux plugin for Herdr — project Herdr into cmux chrome the way cmux ssh-tmux projects remote tmux (status pills, tab/pane mirror, attach/detach/restore).")
+        .about("cmux plugin for Herdr — project Herdr into cmux chrome the way cmux ssh-tmux projects remote tmux (status pills, tab/pane mirror, sessions/attach/detach/restore).")
         .version(VERSION.as_str()).subcommand_required(true).arg_required_else_help(true)
         .subcommands([status, doctor, lease, tree, sync, watch, mirror, attach_pane,
             focus_tab, focus_pane, focus_workspace, focus_agent, read_pane, read_agent,
             split, agents, associations, lock_title, unlock_title, clear, json_dump,
-            send_key, observe, attach, detach, restore, api, new_tab, close_tab,
+            send_key, observe, sessions, attach, detach, restore, api, new_tab, close_tab,
             rename_tab, new_workspace, close_workspace, rename_workspace, close_pane,
             zoom_pane, resize_pane, swap_pane, send, neighbor, layout, set_ratio,
             move_pane, focus_dir, move_tab, rename_pane, rename_agent, start_agent,
@@ -779,7 +784,7 @@ fn dispatch(name: &str, m: &ArgMatches) -> i32 {
         "mirror" => cmd_mirror(m),
         "watch" => cmd_watch(m),
         "attach-pane" => cmd_attach_pane(m),
-        "attach" | "detach" | "restore" | "observe" => cmd_live(name, m),
+        "attach" | "detach" | "restore" | "observe" | "sessions" => cmd_live(name, m),
         "sidebar" => {
             let args = if b(m, "once") {
                 vec!["--once".into()]
@@ -2420,7 +2425,16 @@ fn diagnose_install() -> Value {
 
 fn cmd_doctor(m: &ArgMatches) -> i32 {
     let report = diagnose_install();
-    println!("cmux-herdr doctor\n─────────────────");
+    println!("cmux-herdr doctor");
+    println!("─────────────────");
+    println!(
+        "Projects a nested Herdr session into cmux chrome the way `cmux ssh-tmux` projects remote tmux:"
+    );
+    println!("status pills, tab/pane mirror, and sessions/attach/detach/restore.");
+    println!(
+        "Run from a Herdr pane inside cmux so CMUX_SURFACE_ID + HERDR_SOCKET_PATH pin the outer workspace."
+    );
+    println!();
     if let Some(checks) = report["checks"].as_array() {
         for check in checks {
             let mark = if check["ok"].as_bool() == Some(true) {
@@ -2445,6 +2459,20 @@ fn cmd_doctor(m: &ArgMatches) -> i32 {
         println!("hard failures:");
         for failure in failures {
             println!("  - {}", failure.as_str().unwrap_or("unknown hard failure"));
+        }
+    }
+    if !b(m, "json") {
+        println!();
+        if report["ok"].as_bool() == Some(true) {
+            println!("next:");
+            println!("  cmux-herdr sessions --json");
+            println!("  cmux-herdr watch");
+            println!("  cmux-herdr attach");
+        } else {
+            println!("fix:");
+            println!("  install herdr on PATH and open a Herdr pane inside cmux");
+            println!("  export CMUX_SURFACE_ID + HERDR_SOCKET_PATH (or pass --workspace)");
+            println!("  re-run: cmux-herdr doctor");
         }
     }
     if b(m, "json") {
@@ -2993,6 +3021,7 @@ fn cmd_live(name: &str, m: &ArgMatches) -> i32 {
             let (_, payload) = crate::live::restore_live(&windows, &sessions, &socket);
             payload
         }
+        "sessions" => crate::live::list_sessions_live(&snap, &socket),
         "observe" => {
             let raw = s(m, "method").unwrap();
             let method = if raw.starts_with("remote.herdr.") {
@@ -3000,13 +3029,17 @@ fn cmd_live(name: &str, m: &ArgMatches) -> i32 {
             } else {
                 format!("remote.herdr.{raw}")
             };
-            let (_, payload) = crate::live::observe_live(
-                &windows,
-                &socket,
-                &method,
-                s(m, "session").unwrap_or("main"),
-            );
-            payload
+            if method == "remote.herdr.sessions" {
+                crate::live::list_sessions_live(&snap, &socket)
+            } else {
+                let (_, payload) = crate::live::observe_live(
+                    &windows,
+                    &socket,
+                    &method,
+                    s(m, "session").unwrap_or("main"),
+                );
+                payload
+            }
         }
         _ => unreachable!(),
     };
@@ -3056,8 +3089,33 @@ fn cmd_live(name: &str, m: &ArgMatches) -> i32 {
                     )
                 }
             }
+            "sessions" => {
+                println!("socket: {}", plain(&payload["socket"]));
+                let sessions = payload["sessions"].as_array();
+                if sessions.map(|items| items.is_empty()).unwrap_or(true) {
+                    println!("sessions: (none)");
+                } else {
+                    println!("sessions:");
+                    for session in sessions.unwrap() {
+                        println!(
+                            "  {}  name={}  windows={}  attached={}",
+                            plain(&session["id"]),
+                            plain(&session["name"]),
+                            plain(&session["windows"]),
+                            plain(&session["attached"])
+                        );
+                    }
+                }
+            }
             _ => println!("{}", payload),
         }
+    }
+    if name == "sessions" {
+        return if payload["ok"].as_bool().unwrap_or(true) {
+            0
+        } else {
+            2
+        };
     }
     if payload["ok"].as_bool().unwrap_or(false) {
         0

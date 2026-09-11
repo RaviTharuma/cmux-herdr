@@ -108,3 +108,23 @@ wiring is still required in the cmux app. This plugin stays the fallback
 (`watch`) when native attachment is not live.
 
 Until then, `cmux-herdr watch` is the supported live deep mirror.
+
+## Sidebar placement (non-negotiable)
+
+cmux tradition keeps the **left sidebar** for workspaces and machines only.
+
+Allowed on the left:
+
+- Syncing Herdr workspaces into the normal workspaces/machines tree as
+  **nested workspace entries under the connected machine** (same nesting
+  fashion cmux already uses for workspaces under machines). No foreign
+  Herdr-only chrome, session browsers, or doctor panels on the left.
+
+Prefer on the **right sidebar** (and CLI):
+
+- Richer Herdr actions/status, session listing, doctor guidance, attach/detach
+  controls — first-party surfaces in the ssh-tmux fashion.
+
+`sessions` / `doctor` in this plugin are CLI/control-plane. Native left-nav
+nesting of Herdr workspaces under machines is the next sync/mirror follow-up.
+

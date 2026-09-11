@@ -189,3 +189,42 @@ fn doctor_rejects_missing_cmux_contract_and_incomplete_fingerprint() {
     let stdout = String::from_utf8_lossy(&incomplete.stdout);
     assert!(stdout.contains("\nhard failures:\n  - incomplete host fingerprint"));
 }
+
+#[test]
+fn doctor_human_copy_follows_ssh_tmux_help_fashion() {
+    let temp = tempfile::tempdir().unwrap();
+    let empty_bin = temp.path().join("empty-bin");
+    fs::create_dir(&empty_bin).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_cmux-herdr"))
+        .arg("doctor")
+        .env_clear()
+        .env("HOME", temp.path().join("home"))
+        .env("XDG_STATE_HOME", temp.path().join("state"))
+        .env("PATH", &empty_bin)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("cmux-herdr doctor"), "stdout={stdout}");
+    assert!(
+        stdout.contains("cmux ssh-tmux"),
+        "expected ssh-tmux help fashion; stdout={stdout}"
+    );
+    assert!(
+        stdout.contains("status pills, tab/pane mirror, and sessions/attach/detach/restore."),
+        "stdout={stdout}"
+    );
+    assert!(
+        stdout.contains("CMUX_SURFACE_ID + HERDR_SOCKET_PATH"),
+        "stdout={stdout}"
+    );
+    assert!(stdout.contains("\nfix:\n"), "stdout={stdout}");
+    assert!(
+        stdout.contains("re-run: cmux-herdr doctor"),
+        "stdout={stdout}"
+    );
+    assert!(
+        !stdout.to_lowercase().contains("moshi"),
+        "doctor must stay cmux-native"
+    );
+}

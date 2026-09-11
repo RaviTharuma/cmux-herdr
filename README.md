@@ -119,6 +119,18 @@ cmux-herdr watch
 `watch` is enough. You live in cmux chrome. `--pills-only` writes status
 chips without projecting tabs and panes.
 
+
+## Sidebar philosophy (cmux-native)
+
+- **Left sidebar** stays workspaces/machines navigation. Do not invent
+  Herdr-only chrome there. The intended nesting is: Herdr workspaces appear as
+  ordinary sub-workspaces under the relevant machine connection — the same way
+  cmux already nests workspaces under machines.
+- **Right sidebar** is the home for richer Herdr UI/actions/status beyond
+  navigation (ssh-tmux fashion).
+- Until native nested workspace sync lands, use the CLI (`sessions`, `doctor`,
+  `watch`, `attach`) and existing status/mirror surfaces.
+
 ## Commands
 
 | Command | What it does |
@@ -143,7 +155,8 @@ chips without projecting tabs and panes.
 | `start-agent` / `agent-explain` / `agent-view` / `process-info` | Agent extras |
 | `worktree` / `manifests` / `notify` / `window-title` | Herdr-only surface |
 | `api` | Allowlisted Herdr RPC (`--list`; never `server.stop`) |
-| `observe` | Subscribe to a Herdr method (for example `pane_surfaces`) |
+| `sessions` | List Herdr sessions (`remote.tmux.sessions` JSON shape) |
+| `observe` | Subscribe to a Herdr method (for example `pane_surfaces` / `sessions`) |
 | `json-dump` | Full snapshot for debugging (redact personal paths before sharing) |
 
 `cmux-herdr --help` lists flags for every subcommand. Herdr-only verbs with no
