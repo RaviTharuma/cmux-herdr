@@ -9,6 +9,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
+- Right-rail projection: `cmux-herdr rail` (+ `agents --rail`) writes
+  `rail-<fingerprint>.json` for cmux `sessions`/`feed`/`dock` without
+  duplicating `herdr:<pane_id>` status pills. Docs: `docs/RIGHT_RAIL.md`.
 - `cmux-herdr sessions` lists Herdr sessions in the `remote.tmux.sessions` JSON
   fashion (`ok`, `method: remote.herdr.sessions`, `socket`, and
   `sessions[{id,name,windows,attached}]`). Also available via
@@ -19,7 +22,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - `doctor` human output follows cmux `ssh-tmux` help fashion: short product
   framing, checklist, then `next:` / `fix:` guidance that points at
-  `sessions` / `watch` / `attach` (or install/fingerprint repair).
+  `sessions` / `rail` / `watch` / `attach` (or install/fingerprint repair).
 
 ### Fixed
 

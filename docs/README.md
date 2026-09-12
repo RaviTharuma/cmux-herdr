@@ -8,6 +8,7 @@ Product docs for **cmux-herdr**, the cmux plugin for Herdr.
 | [de/README.md](de/README.md) | Deutsch | Produktüberblick |
 | [de/GITHUB.md](de/GITHUB.md) | Deutsch | Issues, PRs, Releases, Secrets |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Contributors | Rust layout, distribution, macOS vs Linux |
+| [RIGHT_RAIL.md](RIGHT_RAIL.md) | Contributors | Right-rail Agents/sessions/feed/dock (Moshi keep/discard) |
 | [PLUGIN_DESIGN.md](PLUGIN_DESIGN.md) | Contributors | How the plugin talks to cmux and Herdr |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributors | How to test and open a PR |
 | [MAINTAINING.md](MAINTAINING.md) | Repo owner | GitHub open-source checklist |

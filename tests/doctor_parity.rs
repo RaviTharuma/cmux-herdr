@@ -211,8 +211,14 @@ fn doctor_human_copy_follows_ssh_tmux_help_fashion() {
         "expected ssh-tmux help fashion; stdout={stdout}"
     );
     assert!(
-        stdout.contains("status pills, tab/pane mirror, and sessions/attach/detach/restore."),
+        stdout.contains(
+            "status pills, tab/pane mirror, right-rail sessions/feed/dock projection, and sessions/attach/detach/restore."
+        ),
         "stdout={stdout}"
+    );
+    assert!(
+        stdout.contains("right_rail:"),
+        "doctor should report right_rail check; stdout={stdout}"
     );
     assert!(
         stdout.contains("CMUX_SURFACE_ID + HERDR_SOCKET_PATH"),

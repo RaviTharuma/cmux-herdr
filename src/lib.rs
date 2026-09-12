@@ -18,6 +18,7 @@ pub mod live;
 pub mod mirror;
 pub mod model;
 pub mod pump;
+pub mod rail;
 pub mod session;
 pub mod sidebar;
 pub mod socket;
