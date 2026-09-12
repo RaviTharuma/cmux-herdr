@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Documentation
+
+- Document the opt-in `update-service` CLI in the README command table and a
+  short install/status/run/uninstall section (LaunchAgent / systemd user timer,
+  marker-owned Herdr `[update]` block, explicit `--manifest-url`).
+
 ### Added
 
 - Right-rail projection: `cmux-herdr rail` (+ `agents --rail`) writes

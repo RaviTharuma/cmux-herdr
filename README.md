@@ -162,9 +162,38 @@ chips without projecting tabs and panes.
 | `sessions` | List Herdr sessions (`remote.tmux.sessions` JSON shape) |
 | `observe` | Subscribe to a Herdr method (for example `pane_surfaces` / `sessions`) |
 | `json-dump` | Full snapshot for debugging (redact personal paths before sharing) |
+| `update-service` | Opt-in Herdr auto-update (LaunchAgent / systemd user timer); off by default |
 
 `cmux-herdr --help` lists flags for every subcommand. Herdr-only verbs with no
 tmux analogue: [docs/upstream/HERDR_BEYOND_TMUX.md](docs/upstream/HERDR_BEYOND_TMUX.md).
+
+### Optional Herdr auto-update
+
+`update-service` is **opt-in**. It is not installed by the plugin manager. When
+enabled, it registers a LaunchAgent (macOS) or systemd user timer (Linux),
+writes only a marker-owned block under `[update]` in Herdr's config, checks
+about every six hours, runs `herdr update --handoff`, and restores the previous
+binary if the update fails after replacing it. You pass the release manifest
+yourself — the plugin does not pin a third-party Herdr fork.
+
+```bash
+cmux-herdr update-service install \
+  --manifest-url https://example.com/herdr-preview.json \
+  --channel preview
+# plist  → ~/Library/LaunchAgents/com.cmux-herdr.herdr-auto-update.plist
+# logs   → ~/Library/Logs/cmux-herdr-herdr-auto-update.{out,err}.log
+# timer  → ~/.config/systemd/user/com.cmux-herdr.herdr-auto-update.timer
+# logs   → journalctl --user -u com.cmux-herdr.herdr-auto-update.service
+
+cmux-herdr update-service status
+cmux-herdr update-service run       # one-shot check (same path the timer uses)
+cmux-herdr update-service uninstall
+```
+
+Install refuses to overwrite a different active channel or manifest URL. Uninstall
+removes only the managed marker block and the service units this command
+registered. Backups of prior Herdr binaries are kept under the plugin state dir
+(bounded retention).
 
 ## Requirements
 
