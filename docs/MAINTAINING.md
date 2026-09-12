@@ -36,7 +36,7 @@ Keep these at the repo root (GitHub surfaces several of them automatically):
 | `LICENSE` | MIT |
 | `CODE_OF_CONDUCT.md` | Community standards |
 | `CONTRIBUTING.md` | How to develop and open a PR |
-| `SUPPORT.md` | Issue reporting / where to file what |
+| `ISSUE_REPORTING.md` | Agent-complete bug reports (no support desk) |
 | `SECURITY.md` | Private vulnerability reports |
 | `DISCLAIMER.md` | Independence, warranty, scope limits |
 | `PRIVACY.md` | Local-only data handling |

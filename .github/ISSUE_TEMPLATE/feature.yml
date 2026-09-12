@@ -10,7 +10,8 @@ body:
         [manaflow-ai/cmux](https://github.com/manaflow-ai/cmux).
         Scope limits: [DISCLAIMER.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/DISCLAIMER.md)
         and [OPEN.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/OPEN.md).
-        Issue guide: [SUPPORT.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/SUPPORT.md).
+        Issue guide: [ISSUE_REPORTING.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/ISSUE_REPORTING.md).
+        Enhancements still need a concrete problem, proposal, and area.
   - type: textarea
     id: problem
     attributes:
@@ -22,7 +23,17 @@ body:
     id: proposal
     attributes:
       label: Proposal
-      description: What should cmux-herdr do instead?
+      description: What should cmux-herdr do instead? Be concrete enough for an agent to implement.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How an agent knows the work is done (commands, tests, or observable behavior).
+      value: |
+        - [ ]
+        - [ ]
     validations:
       required: true
   - type: dropdown
@@ -39,3 +50,8 @@ body:
         - Other
     validations:
       required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals / out of scope
+      description: What this request is not asking for (helps agents avoid scope creep).

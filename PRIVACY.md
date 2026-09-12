@@ -20,7 +20,7 @@ behavior; this document only covers **cmux-herdr**.
 
 When filing issues or PRs, redact personal paths, hostnames, employer or
 client workspace names, tokens, and live session dumps. See
-[SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
+[ISSUE_REPORTING.md](ISSUE_REPORTING.md) and [SECURITY.md](SECURITY.md).
 
 ## Third parties
 

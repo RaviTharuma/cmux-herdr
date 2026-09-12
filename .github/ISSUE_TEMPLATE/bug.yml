@@ -6,39 +6,58 @@ body:
   - type: markdown
     attributes:
       value: |
-        This tracker is for **this plugin** (`cmux-herdr`).
-        Please do not paste API keys, `.env` files, or a live `cmux tree` from a personal session.
-        Full guide: [SUPPORT.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/SUPPORT.md).
+        This tracker is for **this plugin** (`cmux-herdr`) only.
+        There is no support desk. Fill every required field so an agent can
+        reproduce and fix without follow-ups.
+        Guide: [ISSUE_REPORTING.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/ISSUE_REPORTING.md).
         Security bugs: [SECURITY.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/SECURITY.md) (private advisory).
+        Do **not** paste API keys, `.env` files, or unredacted live session dumps.
   - type: textarea
     id: what
     attributes:
       label: What happened
-      description: One or two sentences. What did you run, and what went wrong?
+      description: Exact command(s) you ran (copy-paste) and what went wrong. Include stderr/stdout.
+      placeholder: |
+        $ cmux-herdr watch --pills-only
+        error: …
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
       label: What you expected
+      description: Concrete expected behavior (not “it should work”).
     validations:
       required: true
   - type: textarea
     id: repro
     attributes:
       label: Steps to reproduce
-      description: Prefer `cmux-herdr doctor` output with personal paths redacted.
+      description: Numbered steps from a clean starting point. Another agent must be able to follow these alone.
       value: |
-        1.
-        2.
-        3.
+        1. Install path (plugin-manager / scripts/install.sh / cargo):
+        2. Context (nested Herdr pane in cmux? yes/no):
+        3. Commands:
+        4.
     validations:
       required: true
-  - type: input
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Redacted cmux-herdr doctor output
+      description: Paste full `cmux-herdr doctor` output with personal paths/hostnames redacted. Required for live CLI bugs.
+      render: text
+    validations:
+      required: true
+  - type: textarea
     id: versions
     attributes:
       label: Versions
-      description: Output of `cmux-herdr --version`, plus herdr/cmux if you have them (`herdr --version`, `cmux --version`).
+      description: Paste command outputs. Use “not on PATH” if missing.
+      value: |
+        cmux-herdr --version:
+        herdr --version:
+        cmux --version:
     validations:
       required: true
   - type: dropdown
@@ -51,3 +70,69 @@ body:
         - Other
     validations:
       required: true
+  - type: input
+    id: macos_version
+    attributes:
+      label: macOS version (if applicable)
+      description: e.g. 15.4. Leave blank on Linux.
+  - type: checkboxes
+    id: fingerprint
+    attributes:
+      label: Host fingerprint / env (presence only)
+      description: Check what was set. Do not paste raw values.
+      options:
+        - label: CMUX_SURFACE_ID was set
+        - label: HERDR_SOCKET_PATH was set (and the path existed)
+        - label: HERDR_SERVER_PID or socket-adjacent pid file was available
+        - label: HERDR_WORKSPACE_ID was set
+        - label: HERDR_ENV=1 (or otherwise nested in Herdr)
+        - label: Passed --workspace explicitly
+  - type: dropdown
+    id: install_path
+    attributes:
+      label: Install path
+      options:
+        - cmux sidebar plugin install (plugin manager)
+        - Contributor ./scripts/install.sh symlink
+        - cargo build / local release binary
+        - GitHub Release binary fetched manually
+        - Unknown / other
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Suspected area
+      options:
+        - doctor / status
+        - watch / sync / pills
+        - mirror / attach-pane / layout
+        - sessions / observe / api
+        - attach / detach / restore / lease
+        - install / fetch / LaunchAgent
+        - sidebar / agent-skill
+        - tests / CI / fakes
+        - docs
+        - Unknown
+    validations:
+      required: true
+  - type: dropdown
+    id: fake_repro
+    attributes:
+      label: Reproducible with hermetic fakes / ./scripts/test.sh?
+      options:
+        - Yes (describe how in Extra context)
+        - No — needs live macOS herdr+cmux
+        - Unknown / not tried
+    validations:
+      required: true
+  - type: input
+    id: regression
+    attributes:
+      label: Last known good (optional)
+      description: Tag or commit where it still worked, if you know.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context for agents
+      description: Suspected src/*.rs module, related issue/PR, redacted logs, or fake-repro notes. Keep it actionable.
