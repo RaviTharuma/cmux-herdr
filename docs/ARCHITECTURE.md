@@ -53,6 +53,7 @@ Runtime modules live in `src/*.rs`; `bin/*` only resolves and execs the binary.
 | Module | Job |
 |---|---|
 | `src/model.rs`, `src/bridge.rs` | Snapshot and topology models, status pills, fingerprints |
+| `src/rail.rs` | Right-rail projection (`rail-<fp>.json`, Agents/sessions/feed/dock) |
 | `src/mirror.rs`, `src/layout.rs`, `src/impose.rs` | Tab/pane mirror and split planning |
 | `src/engine.rs`, `src/live.rs`, `src/host.rs`, `src/io.rs` | Reconcile and pane I/O |
 | `src/session.rs`, `src/control.rs`, `src/lifecycle.rs` | Session, focus, attach/detach/restore |
@@ -77,6 +78,7 @@ do not overwrite each other.
 | `parent-<fp>.json` | Which outer cmux workspace this host writes to |
 | `associations-<fp>.json` | Pane → status / mirror / title-lock map |
 | `writer-<fp>.json` | One-writer lease (`owner`, `pid`, heartbeat) |
+| `rail-<fingerprint>.json` | Right-rail agent snapshot for sessions/feed/dock |
 | `restore-<hash>.json` | Last attach, `mode: reattach` only |
 
 Never commit these files. They can contain local pane ids and titles.

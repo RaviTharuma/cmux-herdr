@@ -244,8 +244,37 @@ pub fn build_parser() -> Command {
             .value_parser(["right", "down"]),
     );
     let agents = Command::new("agents")
-        .about("List herdr agents compactly")
-        .arg(json_flag());
+        .about("List herdr agents compactly (one row per herdr:<pane_id>; --rail emits right-rail JSON)")
+        .arg(json_flag())
+        .arg(
+            Arg::new("rail")
+                .long("rail")
+                .action(ArgAction::SetTrue)
+                .help("Emit cmux-native right-rail payload (Agents/sessions/feed/dock) instead of the compact list"),
+        );
+    let rail = Command::new("rail")
+        .about("Project Herdr agents into cmux right-rail JSON (sessions/feed/dock); writes rail-<fingerprint>.json")
+        .arg(json_flag())
+        .arg(
+            Arg::new("write")
+                .long("write")
+                .action(ArgAction::SetTrue)
+                .help("Persist snapshot under XDG state (default on)"),
+        )
+        .arg(
+            Arg::new("no-write")
+                .long("no-write")
+                .action(ArgAction::SetTrue)
+                .help("Print only; do not write rail-<fingerprint>.json"),
+        )
+        .arg(
+            Arg::new("read")
+                .long("read")
+                .action(ArgAction::SetTrue)
+                .help("Print the last persisted rail snapshot for this fingerprint"),
+        )
+        .arg(opt("workspace"))
+        .arg(opt("socket"));
     let associations = Command::new("associations")
         .about("Show hybrid pane/session association cache (parent map + status keys)")
         .arg(json_flag());
@@ -536,7 +565,7 @@ pub fn build_parser() -> Command {
         .subcommands([status, doctor, lease, tree, sync, watch, mirror, attach_pane,
             focus_tab, focus_pane, focus_workspace, focus_agent, read_pane, read_agent,
             split, agents, associations, lock_title, unlock_title, clear, json_dump,
-            send_key, observe, sessions, attach, detach, restore, api, new_tab, close_tab,
+            send_key, observe, sessions, rail, attach, detach, restore, api, new_tab, close_tab,
             rename_tab, new_workspace, close_workspace, rename_workspace, close_pane,
             zoom_pane, resize_pane, swap_pane, send, neighbor, layout, set_ratio,
             move_pane, focus_dir, move_tab, rename_pane, rename_agent, start_agent,
@@ -769,6 +798,7 @@ fn dispatch(name: &str, m: &ArgMatches) -> i32 {
         "read-agent" => cmd_read(m, true),
         "split" => cmd_split(m),
         "agents" => cmd_agents(m),
+        "rail" => cmd_rail(m),
         "tree" => cmd_tree(m),
         "json-dump" => cmd_json_dump(),
         "associations" => cmd_associations(m),
@@ -1316,6 +1346,9 @@ fn fetch_snapshot() -> Result<crate::model::Snapshot, BridgeError> {
 }
 
 fn cmd_agents(m: &ArgMatches) -> i32 {
+    if b(m, "rail") {
+        return cmd_rail(m);
+    }
     if let Err(code) = ensure_herdr() {
         return code;
     }
@@ -1352,6 +1385,108 @@ fn cmd_agents(m: &ArgMatches) -> i32 {
             a.agent_status,
             tail
         );
+    }
+    0
+}
+
+fn rail_socket_path(explicit: Option<&str>) -> String {
+    explicit
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .or_else(|| {
+            std::env::var("HERDR_SOCKET_PATH")
+                .ok()
+                .filter(|s| !s.is_empty())
+        })
+        .unwrap_or_else(|| default_herdr_socket_path().to_string_lossy().into_owned())
+}
+
+fn persist_rail_snapshot(snap: &crate::model::Snapshot, workspace: Option<&str>) -> Value {
+    let fingerprint = state::collect_host_fingerprint(&SystemEnv);
+    let socket = rail_socket_path(None);
+    let payload =
+        crate::rail::project_and_persist(&SystemEnv, snap, &fingerprint, &socket, workspace);
+    crate::rail::soft_publish_feed_events(workspace, &payload);
+    payload
+}
+
+fn cmd_rail(m: &ArgMatches) -> i32 {
+    let fingerprint = state::collect_host_fingerprint(&SystemEnv);
+    let flag = |key: &str| {
+        m.try_get_one::<bool>(key)
+            .ok()
+            .flatten()
+            .copied()
+            .unwrap_or(false)
+    };
+    if flag("read") {
+        match crate::rail::load_rail_snapshot(&SystemEnv, &fingerprint) {
+            Some(payload) => {
+                pretty(&payload);
+                return 0;
+            }
+            None => {
+                return die(format!(
+                    "no rail snapshot at {}",
+                    crate::rail::rail_path(&SystemEnv, &fingerprint).display()
+                ));
+            }
+        }
+    }
+    if let Err(code) = ensure_herdr() {
+        return code;
+    }
+    let snap = match fetch_snapshot() {
+        Ok(v) => v,
+        Err(e) => return die(e),
+    };
+    let workspace = resolve_workspace(s(m, "workspace"));
+    let socket = rail_socket_path(s(m, "socket"));
+    let payload = if flag("no-write") {
+        crate::rail::build_rail_payload(
+            &snap,
+            &fingerprint,
+            &socket,
+            crate::rail::load_rail_snapshot(&SystemEnv, &fingerprint).as_ref(),
+            workspace.as_deref(),
+        )
+    } else {
+        let payload = crate::rail::project_and_persist(
+            &SystemEnv,
+            &snap,
+            &fingerprint,
+            &socket,
+            workspace.as_deref(),
+        );
+        crate::rail::soft_publish_feed_events(workspace.as_deref(), &payload);
+        payload
+    };
+    if b(m, "json") || flag("rail") {
+        // agents --rail and rail --json both emit the payload body.
+        pretty(&payload);
+    } else {
+        let count = payload["agent_count"].as_u64().unwrap_or(0);
+        let path = crate::rail::rail_path(&SystemEnv, &fingerprint);
+        println!(
+            "herdr rail: {count} agents → {} (dedupe herdr:<pane_id>; modes sessions/feed/dock)",
+            path.display()
+        );
+        if let Some(agents) = payload["agents"].as_array() {
+            for agent in agents {
+                let mark = if agent["focused"].as_bool() == Some(true) {
+                    "▶"
+                } else {
+                    " "
+                };
+                println!(
+                    "{mark} {:18}  {:10}  {:8}  {}",
+                    agent["status_key"].as_str().unwrap_or("-"),
+                    agent["agent"].as_str().unwrap_or("-"),
+                    agent["agent_status"].as_str().unwrap_or("-"),
+                    agent["display_name"].as_str().unwrap_or("-"),
+                );
+            }
+        }
     }
     0
 }
@@ -1728,7 +1863,8 @@ fn cmd_sync(m: &ArgMatches) -> i32 {
         Ok(value) => value,
         Err(error) => return die(error),
     };
-    let result = json!({"workspace":workspace,"applied":applied,"skipped_unchanged":skipped,"stale_cleared":stale,"counts":counts,"progress":progress,"errors":errors,"summary":summary,"pane_count":snap.panes.len(),"agent_count":panes.len(),"associations":associations,"host_fingerprint_key":fingerprint_key,"writer":"plugin","native_live":false});
+    let rail = persist_rail_snapshot(&snap, Some(&workspace));
+    let result = json!({"workspace":workspace,"applied":applied,"skipped_unchanged":skipped,"stale_cleared":stale,"counts":counts,"progress":progress,"errors":errors,"summary":summary,"pane_count":snap.panes.len(),"agent_count":panes.len(),"associations":associations,"rail":{"agent_count":rail["agent_count"].clone(),"path":crate::rail::rail_path(&SystemEnv,&fingerprint).to_string_lossy(),"schema_version":rail["schema_version"].clone()},"host_fingerprint_key":fingerprint_key,"writer":"plugin","native_live":false});
     println!("{}", result["summary"].as_str().unwrap());
     if !result["skipped_unchanged"].as_array().unwrap().is_empty() {
         println!(
@@ -2412,6 +2548,59 @@ fn diagnose_install() -> Value {
         "detail": dry_sync_detail,
     }));
 
+    let rail_path = fingerprint_complete.then(|| crate::rail::rail_path(&SystemEnv, &fingerprint));
+    let rail_exists = rail_path.as_deref().is_some_and(Path::is_file);
+    let rail_loaded = fingerprint_complete
+        .then(|| crate::rail::load_rail_snapshot(&SystemEnv, &fingerprint))
+        .flatten();
+    let cmux_notify = bridge::which("cmux").is_some_and(|cmux| {
+        bridge::run_cmd(&[&cmux, "notify", "--help"], Duration::from_secs(2), None)
+            .map(|out| {
+                out.returncode == 0
+                    || out.stdout.to_lowercase().contains("notify")
+                    || out.stderr.to_lowercase().contains("notify")
+            })
+            .unwrap_or(false)
+    });
+    let rail_detail = if let Some(payload) = rail_loaded.as_ref() {
+        format!(
+            "rail snapshot ok agents={} path={}",
+            payload["agent_count"].as_u64().unwrap_or(0),
+            rail_path
+                .as_ref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_else(|| "-".into())
+        )
+    } else if rail_exists {
+        format!(
+            "rail file present but schema invalid: {}",
+            rail_path
+                .as_ref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_else(|| "-".into())
+        )
+    } else {
+        format!(
+            "no rail snapshot yet (run cmux-herdr sync|watch|rail); cmux notify={}",
+            if cmux_notify {
+                "available"
+            } else {
+                "absent (use cmux-herdr notify)"
+            }
+        )
+    };
+    checks.push(json!({
+        "name": "right_rail",
+        "ok": true,
+        "hard": false,
+        "rail_path": rail_path.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        "rail_exists": rail_exists,
+        "rail_schema_ok": rail_loaded.is_some(),
+        "modes": crate::rail::RAIL_MODES,
+        "cmux_notify": cmux_notify,
+        "detail": rail_detail,
+    }));
+
     json!({
         "ok": hard_failures.is_empty(),
         "hard_failures": hard_failures,
@@ -2429,7 +2618,7 @@ fn cmd_doctor(m: &ArgMatches) -> i32 {
     println!(
         "Projects a nested Herdr session into cmux chrome the way `cmux ssh-tmux` projects remote tmux:"
     );
-    println!("status pills, tab/pane mirror, and sessions/attach/detach/restore.");
+    println!("status pills, tab/pane mirror, right-rail sessions/feed/dock projection, and sessions/attach/detach/restore.");
     println!(
         "Run from a Herdr pane inside cmux so CMUX_SURFACE_ID + HERDR_SOCKET_PATH pin the outer workspace."
     );
@@ -2465,6 +2654,8 @@ fn cmd_doctor(m: &ArgMatches) -> i32 {
         if report["ok"].as_bool() == Some(true) {
             println!("next:");
             println!("  cmux-herdr sessions --json");
+            println!("  cmux-herdr rail --json");
+            println!("  cmux right-sidebar set sessions   # closed-enum; Agents-adjacent");
             println!("  cmux-herdr watch");
             println!("  cmux-herdr attach");
         } else {
@@ -3258,7 +3449,7 @@ mod tests {
             .map(|v| v.as_str().unwrap().to_string())
             .collect();
         assert_eq!(expected.len(), 62);
-        let extras = ["sidebar", "update-service"];
+        let extras = ["sidebar", "update-service", "rail"];
         let mut actual: Vec<String> = build_parser()
             .get_subcommands()
             .map(|c| c.get_name().to_string())

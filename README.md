@@ -127,9 +127,12 @@ chips without projecting tabs and panes.
   ordinary sub-workspaces under the relevant machine connection — the same way
   cmux already nests workspaces under machines.
 - **Right sidebar** is the home for richer Herdr UI/actions/status beyond
-  navigation (ssh-tmux fashion).
+  navigation (ssh-tmux fashion): Agents/sessions, Feeds, and Dock — not a
+  foreign Herdr panel. Project with `cmux-herdr rail` / `agents --rail`; see
+  [docs/RIGHT_RAIL.md](docs/RIGHT_RAIL.md).
 - Until native nested workspace sync lands, use the CLI (`sessions`, `doctor`,
-  `watch`, `attach`) and existing status/mirror surfaces.
+  `watch`, `rail`, `attach`) and existing status/mirror surfaces. Do not
+  duplicate the same agent in pills, sessions, and a custom list.
 
 ## Commands
 
@@ -137,7 +140,8 @@ chips without projecting tabs and panes.
 |---|---|
 | `doctor` | Diagnose plugin install, host fingerprint, LaunchAgent |
 | `status` | Show nested cmux + Herdr context |
-| `tree` / `agents` | Inner topology, compact agent list |
+| `tree` / `agents` | Inner topology, compact agent list (`agents --rail` → right-rail JSON) |
+| `rail` | Project deduped agents into cmux right-rail JSON + `rail-<fp>.json` |
 | `watch` | Live pills + real cmux tabs/panes (`--pills-only` skips projection) |
 | `sync` | One-shot status pills |
 | `mirror` | Project Herdr tabs/panes into cmux tabs/splits (`--all`, `--prune`, `--dry-run`) |
