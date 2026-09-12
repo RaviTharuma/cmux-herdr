@@ -392,7 +392,6 @@ pub fn soft_publish_feed_events(workspace: Option<&str>, payload: &Value) {
 mod tests {
     use super::*;
     use crate::model::pane_from_raw;
-    use crate::state::SystemEnv;
 
     fn pane(id: &str, agent: &str, status: &str) -> Pane {
         pane_from_raw(&json!({
@@ -486,13 +485,38 @@ mod tests {
         assert_eq!(events[0]["mode"], "feed");
     }
 
+    /// Isolated HostEnv so parallel tests do not thrash process XDG_STATE_HOME.
+    struct RailTestEnv {
+        xdg: std::path::PathBuf,
+        files: std::cell::RefCell<std::collections::HashMap<String, String>>,
+    }
+
+    impl HostEnv for RailTestEnv {
+        fn var(&self, name: &str) -> Option<String> {
+            if name == "XDG_STATE_HOME" {
+                return Some(self.xdg.to_string_lossy().into_owned());
+            }
+            None
+        }
+        fn now(&self) -> f64 {
+            1_700_000_000.0
+        }
+        fn read_file(&self, path: &str) -> Option<String> {
+            if let Some(text) = self.files.borrow().get(path).cloned() {
+                return Some(text);
+            }
+            std::fs::read_to_string(path).ok()
+        }
+    }
+
     #[test]
     fn rail_snapshot_roundtrip_under_xdg() {
         let tmp = tempfile::tempdir().unwrap();
-        let xdg = tmp.path().join("xdg");
-        std::fs::create_dir_all(&xdg).unwrap();
-        let prev = std::env::var_os("XDG_STATE_HOME");
-        std::env::set_var("XDG_STATE_HOME", &xdg);
+        let env = RailTestEnv {
+            xdg: tmp.path().join("xdg"),
+            files: std::cell::RefCell::new(std::collections::HashMap::new()),
+        };
+        std::fs::create_dir_all(&env.xdg).unwrap();
         let snapshot = Snapshot {
             panes: vec![
                 pane("p1", "pi", "working"),
@@ -509,23 +533,19 @@ mod tests {
             herdr_server_pid: None,
             herdr_workspace_id: None,
         };
-        let payload = project_and_persist(&SystemEnv, &snapshot, &fp, "/tmp/herdr-rail.sock", None);
+        let payload = project_and_persist(&env, &snapshot, &fp, "/tmp/herdr-rail.sock", None);
         assert_eq!(payload["agent_count"], 2);
         assert_eq!(payload["agents"][0]["status_key"], "herdr:p1");
-        let loaded = load_rail_snapshot(&SystemEnv, &fp).expect("persisted rail");
+        let loaded = load_rail_snapshot(&env, &fp).expect("persisted rail");
         assert_eq!(loaded["method"], "cmux.herdr.rail");
         assert_eq!(loaded["schema_version"], RAIL_SCHEMA_VERSION);
         assert_eq!(loaded["agents"].as_array().unwrap().len(), 2);
-        let path = rail_path(&SystemEnv, &fp);
+        let path = rail_path(&env, &fp);
         assert!(path.exists());
         assert!(path
             .file_name()
             .unwrap()
             .to_string_lossy()
             .starts_with("rail-"));
-        match prev {
-            Some(v) => std::env::set_var("XDG_STATE_HOME", v),
-            None => std::env::remove_var("XDG_STATE_HOME"),
-        }
     }
 }
