@@ -11,6 +11,11 @@ Product docs for **cmux-herdr**, the cmux plugin for Herdr.
 | [RIGHT_RAIL.md](RIGHT_RAIL.md) | Contributors | Right-rail Agents/sessions/feed/dock (Moshi keep/discard) |
 | [PLUGIN_DESIGN.md](PLUGIN_DESIGN.md) | Contributors | How the plugin talks to cmux and Herdr |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributors | How to test and open a PR |
+| [../SUPPORT.md](../SUPPORT.md) | Everyone | Issue reporting and help routing |
+| [../DISCLAIMER.md](../DISCLAIMER.md) | Everyone | Independence, warranty, scope |
+| [../PRIVACY.md](../PRIVACY.md) | Everyone | Local-only data handling |
+| [../GOVERNANCE.md](../GOVERNANCE.md) | Contributors | Maintainer decision model |
+| [../SECURITY.md](../SECURITY.md) | Everyone | Private vulnerability reports |
 | [MAINTAINING.md](MAINTAINING.md) | Repo owner | GitHub open-source checklist |
 | [../mapping/concept-map.md](../mapping/concept-map.md) | Contributors | cmux ↔ Herdr ↔ tmux vocabulary |
 | [../OPEN.md](../OPEN.md) | Contributors | What the plugin does not claim |

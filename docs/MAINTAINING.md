@@ -26,6 +26,24 @@ Public GitHub.com repos still get secret scanning from GitHub itself.
 Default issue labels (`bug`, `enhancement`, `documentation`, …) are already
 present.
 
+## Community health files
+
+Keep these at the repo root (GitHub surfaces several of them automatically):
+
+| File | Purpose |
+|---|---|
+| `README.md` | Landing page |
+| `LICENSE` | MIT |
+| `CODE_OF_CONDUCT.md` | Community standards |
+| `CONTRIBUTING.md` | How to develop and open a PR |
+| `SUPPORT.md` | Issue reporting / where to file what |
+| `SECURITY.md` | Private vulnerability reports |
+| `DISCLAIMER.md` | Independence, warranty, scope limits |
+| `PRIVACY.md` | Local-only data handling |
+| `GOVERNANCE.md` | Maintainer decision model |
+| `.github/ISSUE_TEMPLATE/` | Bug / enhancement / docs forms |
+| `.github/PULL_REQUEST_TEMPLATE.md` | PR checklist |
+
 ## What each GitHub object is
 
 | Object | Purpose |
