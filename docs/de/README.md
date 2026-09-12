@@ -33,6 +33,9 @@ macht cmux zur Herdr-Oberfläche:
 - Herdr-Tabs und -Panes → echte cmux-Tabs und Splits (`watch`)
 - Eine CLI (`cmux-herdr`), um die Engine zu steuern
 - Agent-Skill, LaunchAgent, Status-Pills und `watch`
+- Optionaler `update-service` (LaunchAgent / systemd): Herdr-Updates mit
+  Backup/Rollback — nur wenn du ihn bewusst installierst; Manifest-URL musst
+  du selbst angeben
 
 Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
 Der Plugin-Manager lädt eine checksum-verifizierte Rust-Binärdatei; Nutzer
