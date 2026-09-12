@@ -347,15 +347,16 @@ Index: [docs/README.md](docs/README.md).
 
 ## Contributing
 
-Bug reports and PRs are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md)
-and the [Code of Conduct](CODE_OF_CONDUCT.md). How to file issues:
-[SUPPORT.md](SUPPORT.md). Security issues go through [SECURITY.md](SECURITY.md)
-(private advisory), not a public issue.
+PRs are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md). There is no support desk; if you file a
+bug, make it agent-complete per [ISSUE_REPORTING.md](ISSUE_REPORTING.md).
+Security issues go through [SECURITY.md](SECURITY.md) (private advisory), not
+a public issue.
 
 | Doc | Purpose |
 |---|---|
 | [DISCLAIMER.md](DISCLAIMER.md) | Independence, no warranty, what this is not |
-| [SUPPORT.md](SUPPORT.md) | Issue reporting guidelines |
+| [ISSUE_REPORTING.md](ISSUE_REPORTING.md) | Agent-complete bug report checklist |
 | [PRIVACY.md](PRIVACY.md) | Local-only data handling |
 | [GOVERNANCE.md](GOVERNANCE.md) | Maintainer decision model |
 | [SECURITY.md](SECURITY.md) | Private vulnerability reports |

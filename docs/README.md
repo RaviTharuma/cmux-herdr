@@ -10,7 +10,7 @@ Product docs for **cmux-herdr**, the cmux plugin for Herdr.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Contributors | Rust layout, distribution, macOS vs Linux |
 | [PLUGIN_DESIGN.md](PLUGIN_DESIGN.md) | Contributors | How the plugin talks to cmux and Herdr |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributors | How to test and open a PR |
-| [../SUPPORT.md](../SUPPORT.md) | Everyone | Issue reporting and help routing |
+| [../ISSUE_REPORTING.md](../ISSUE_REPORTING.md) | Everyone | Agent-complete bug report checklist |
 | [../DISCLAIMER.md](../DISCLAIMER.md) | Everyone | Independence, warranty, scope |
 | [../PRIVACY.md](../PRIVACY.md) | Everyone | Local-only data handling |
 | [../GOVERNANCE.md](../GOVERNANCE.md) | Contributors | Maintainer decision model |

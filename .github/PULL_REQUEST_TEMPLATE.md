@@ -20,4 +20,4 @@
 - [ ] No secrets, tokens, `.env` files, or live `cmux`/`herdr` session dumps
 - [ ] No new pip/npm/pytest dependencies
 - [ ] Docs updated when behavior or install steps changed
-- [ ] I read [CONTRIBUTING.md](../CONTRIBUTING.md) (and [SUPPORT.md](../SUPPORT.md) if this touches issue routing)
+- [ ] I read [CONTRIBUTING.md](../CONTRIBUTING.md) (and [ISSUE_REPORTING.md](../ISSUE_REPORTING.md) if this touches issue routing)

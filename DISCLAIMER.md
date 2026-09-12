@@ -41,4 +41,4 @@ endorsement, partnership, or affiliation.
 ## Upstream bugs
 
 Bugs in cmux or Herdr themselves belong on those projects' trackers. See
-[SUPPORT.md](SUPPORT.md) for where to file what.
+[ISSUE_REPORTING.md](ISSUE_REPORTING.md) for where to file what.

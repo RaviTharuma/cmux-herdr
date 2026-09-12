@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Issue reporting guide
-    url: https://github.com/RaviTharuma/cmux-herdr/blob/main/SUPPORT.md
-    about: Read this before opening an issue (where to file, what to include).
+  - name: Agent-complete issue guide
+    url: https://github.com/RaviTharuma/cmux-herdr/blob/main/ISSUE_REPORTING.md
+    about: No support desk. Read this so a bug report is fixable without follow-ups.
   - name: Disclaimer and scope
     url: https://github.com/RaviTharuma/cmux-herdr/blob/main/DISCLAIMER.md
     about: What this plugin is and is not; no warranty; independence.

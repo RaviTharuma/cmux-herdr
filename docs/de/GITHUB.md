@@ -76,7 +76,7 @@ data from a repository“.
 | `LICENSE` | MIT |
 | `CODE_OF_CONDUCT.md` | Umgangsregeln |
 | `CONTRIBUTING.md` | Wie man mitmacht |
-| `SUPPORT.md` | Issue-Leitfaden / wohin melden |
+| `ISSUE_REPORTING.md` | Agent-taugliche Bug-Reports (kein Support-Desk) |
 | `SECURITY.md` | Wie man Sicherheitslücken *privat* meldet |
 | `DISCLAIMER.md` | Unabhängigkeit, Haftung, Grenzen |
 | `PRIVACY.md` | Lokale Daten, kein Cloud-Backend |

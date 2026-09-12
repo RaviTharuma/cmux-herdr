@@ -3,16 +3,39 @@ description: A mistake, gap, or translation issue in the cmux-herdr plugin docs
 title: "[Docs] "
 labels: ["documentation"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Point an agent at the exact file and the exact change.
+        Guide: [ISSUE_REPORTING.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/ISSUE_REPORTING.md).
   - type: textarea
     id: where
     attributes:
       label: Where
-      description: File or URL (for example `README.md`, `docs/de/README.md`).
+      description: File path or URL (for example `README.md`, `docs/de/README.md`, `ISSUE_REPORTING.md`).
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current text / problem
+      description: Quote the wrong or missing bit, or describe the gap.
     validations:
       required: true
   - type: textarea
     id: what
     attributes:
-      label: What should change
+      label: Proposed change
+      description: Exact replacement text or a clear edit an agent can apply.
+    validations:
+      required: true
+  - type: dropdown
+    id: lang
+    attributes:
+      label: Language
+      options:
+        - English
+        - Deutsch
+        - Both / cross-link
     validations:
       required: true
