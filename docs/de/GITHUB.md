@@ -78,7 +78,7 @@ data from a repository“.
 | `CONTRIBUTING.md` | Wie man mitmacht |
 | `ISSUE_REPORTING.md` | Agent-taugliche Bug-Reports (kein Support-Desk) |
 | `SECURITY.md` | Wie man Sicherheitslücken *privat* meldet |
-| `DISCLAIMER.md` | Unabhängigkeit, Haftung, Grenzen |
+| `DISCLAIMER.md` | Keine Gewähr/Haftung (Supply-Chain, Credits, böse PRs) |
 | `PRIVACY.md` | Lokale Daten, kein Cloud-Backend |
 | `GOVERNANCE.md` | Wer entscheidet |
 | `.github/ISSUE_TEMPLATE/` | Formulare für Bugs / Features / Docs |

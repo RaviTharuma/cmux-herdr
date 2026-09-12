@@ -40,6 +40,13 @@ You should get an acknowledgement. Fixes ship as a patch release when possible.
 
 Do **not** open a public issue for an exploitable bug until a fix is tagged.
 
+## Supply chain and contributor risk
+
+This is free MIT software. Maintainers do **not** warrant that dependencies,
+Actions, release artifacts, or merged PRs are free of compromise or malice.
+Users must verify checksums, pin what they run, and isolate secrets. Liability
+and risk allocation: [DISCLAIMER.md](DISCLAIMER.md).
+
 ## Maintainer notes (history)
 
 `docs/live-env-snapshot.txt` was a local `cmux`/`herdr` dump committed early

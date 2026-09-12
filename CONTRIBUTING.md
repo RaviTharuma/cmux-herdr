@@ -111,7 +111,16 @@ test when they are user-visible.
 | [SECURITY.md](SECURITY.md) | Private vulnerability reports |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 
-## License
+## License and risk
 
 By contributing, you agree that your contribution is licensed under the
-[MIT License](LICENSE) already used by this repository.
+[MIT License](LICENSE) already used by this repository, **as is**, with no
+extra warranty, and that you have the right to submit it.
+
+Publishing, reviewing, or merging a change does **not** create a support
+obligation, indemnity, supply-chain guarantee, or liability for maintainers
+or contributors — including if a contribution is later found malicious,
+negligent, or credit-burning. CI and review are best-effort filters only.
+
+Read [DISCLAIMER.md](DISCLAIMER.md) before you rely on this software anywhere
+failure, compromise, or unexpected third-party spend would hurt.

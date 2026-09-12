@@ -65,6 +65,7 @@ area. Docs issues need file path + current text + proposed change. Vague
 
 ## After you file
 
-No SLA and no promise of a human reply. A complete report is what lets an
-automated agent open a PR. Scope limits: [DISCLAIMER.md](DISCLAIMER.md),
-[OPEN.md](OPEN.md).
+No SLA and no promise of a human reply. Filing an issue does **not** create
+a duty to fix anything or any liability for free MIT-licensed code. A
+complete report is what lets an automated agent open a PR. Scope and risk:
+[DISCLAIMER.md](DISCLAIMER.md), [OPEN.md](OPEN.md).

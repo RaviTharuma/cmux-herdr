@@ -38,7 +38,7 @@ Keep these at the repo root (GitHub surfaces several of them automatically):
 | `CONTRIBUTING.md` | How to develop and open a PR |
 | `ISSUE_REPORTING.md` | Agent-complete bug reports (no support desk) |
 | `SECURITY.md` | Private vulnerability reports |
-| `DISCLAIMER.md` | Independence, warranty, scope limits |
+| `DISCLAIMER.md` | No warranty/liability (supply chain, credits, bad PRs) |
 | `PRIVACY.md` | Local-only data handling |
 | `GOVERNANCE.md` | Maintainer decision model |
 | `.github/ISSUE_TEMPLATE/` | Bug / enhancement / docs forms |

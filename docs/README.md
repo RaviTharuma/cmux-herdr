@@ -11,7 +11,7 @@ Product docs for **cmux-herdr**, the cmux plugin for Herdr.
 | [PLUGIN_DESIGN.md](PLUGIN_DESIGN.md) | Contributors | How the plugin talks to cmux and Herdr |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributors | How to test and open a PR |
 | [../ISSUE_REPORTING.md](../ISSUE_REPORTING.md) | Everyone | Agent-complete bug report checklist |
-| [../DISCLAIMER.md](../DISCLAIMER.md) | Everyone | Independence, warranty, scope |
+| [../DISCLAIMER.md](../DISCLAIMER.md) | Everyone | No warranty/liability (supply chain, credits, PRs) |
 | [../PRIVACY.md](../PRIVACY.md) | Everyone | Local-only data handling |
 | [../GOVERNANCE.md](../GOVERNANCE.md) | Contributors | Maintainer decision model |
 | [../SECURITY.md](../SECURITY.md) | Everyone | Private vulnerability reports |

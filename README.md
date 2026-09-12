@@ -367,9 +367,14 @@ Maintainer notes: [docs/MAINTAINING.md](docs/MAINTAINING.md) (English) and
 
 ## Disclaimer
 
-This is an independent plugin, not an official cmux or Herdr product. Full
-text: [DISCLAIMER.md](DISCLAIMER.md).
+**Use at your own risk.** Free MIT software, **as is**, with **no warranty**
+and **no liability** to the maximum extent the law allows — including for
+supply-chain compromise, unexpected API/credit spend, and malicious or
+accidental contributor code that gets merged. Independent plugin (not
+official cmux/Herdr). No support desk or SLA. Full text:
+[DISCLAIMER.md](DISCLAIMER.md).
 
 ## License
 
-[MIT](LICENSE) © 2026 Ravi Tharuma.
+[MIT](LICENSE) © 2026 Ravi Tharuma. Provided **as is**, without warranty;
+see [DISCLAIMER.md](DISCLAIMER.md).
