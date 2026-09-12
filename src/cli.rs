@@ -256,12 +256,6 @@ pub fn build_parser() -> Command {
         .about("Project Herdr agents into cmux right-rail JSON (sessions/feed/dock); writes rail-<fingerprint>.json")
         .arg(json_flag())
         .arg(
-            Arg::new("write")
-                .long("write")
-                .action(ArgAction::SetTrue)
-                .help("Persist snapshot under XDG state (default on)"),
-        )
-        .arg(
             Arg::new("no-write")
                 .long("no-write")
                 .action(ArgAction::SetTrue)
