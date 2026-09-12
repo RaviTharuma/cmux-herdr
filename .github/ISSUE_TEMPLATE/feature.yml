@@ -8,6 +8,9 @@ body:
       value: |
         Use this for the **plugin**. Native cmux work belongs on
         [manaflow-ai/cmux](https://github.com/manaflow-ai/cmux).
+        Scope limits: [DISCLAIMER.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/DISCLAIMER.md)
+        and [OPEN.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/OPEN.md).
+        Issue guide: [SUPPORT.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/SUPPORT.md).
   - type: textarea
     id: problem
     attributes:

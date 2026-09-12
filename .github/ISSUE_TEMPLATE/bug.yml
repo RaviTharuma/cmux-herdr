@@ -8,6 +8,8 @@ body:
       value: |
         This tracker is for **this plugin** (`cmux-herdr`).
         Please do not paste API keys, `.env` files, or a live `cmux tree` from a personal session.
+        Full guide: [SUPPORT.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/SUPPORT.md).
+        Security bugs: [SECURITY.md](https://github.com/RaviTharuma/cmux-herdr/blob/main/SECURITY.md) (private advisory).
   - type: textarea
     id: what
     attributes:

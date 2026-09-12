@@ -32,6 +32,8 @@ Optional LaunchAgent (also dev): `./scripts/install-watch-service.sh`.
 2. You do **not** need macOS, `herdr`, or `cmux` to run the test suite.
    Those binaries are only required for live use.
 3. Read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+4. Skim [DISCLAIMER.md](DISCLAIMER.md) and [SUPPORT.md](SUPPORT.md) so bug
+   reports land in the right tracker.
 
 ## How to verify a change
 
@@ -62,14 +64,20 @@ integration tests if you add a CLI test.
 
 CI runs the same `./scripts/test.sh` on macOS and Linux.
 
-## Where to file bugs
+## Reporting issues
+
+Full guide: [SUPPORT.md](SUPPORT.md). Short version:
 
 | Kind of problem | Where |
 |---|---|
-| This plugin (`cmux-herdr` CLI, install scripts, docs) | [Issues here](https://github.com/RaviTharuma/cmux-herdr/issues) |
+| This plugin (`cmux-herdr` CLI, install scripts, docs) | [Issues here](https://github.com/RaviTharuma/cmux-herdr/issues/new/choose) |
+| Security / exploitable bug | [SECURITY.md](SECURITY.md) (private advisory) |
 | Herdr itself | [herdrdev/herdr](https://github.com/herdrdev/herdr) |
 | cmux itself | [manaflow-ai/cmux](https://github.com/manaflow-ai/cmux) |
 | Native nested topology inside cmux | [cmux#8737](https://github.com/manaflow-ai/cmux/issues/8737) and related PRs |
+
+Use an issue template. Include versions, OS, redacted `doctor` output, and
+steps to reproduce. Do not paste secrets or live personal session dumps.
 
 ## Code layout (short)
 
@@ -87,6 +95,17 @@ CI runs the same `./scripts/test.sh` on macOS and Linux.
 New runtime code belongs in the appropriate `src/*.rs` module with a focused
 Rust test. New CLI flags belong in the clap definitions plus an integration
 test when they are user-visible.
+
+## Community docs
+
+| Doc | Purpose |
+|---|---|
+| [SUPPORT.md](SUPPORT.md) | Issue reporting and help routing |
+| [DISCLAIMER.md](DISCLAIMER.md) | Independence, warranty, scope limits |
+| [PRIVACY.md](PRIVACY.md) | Local-only data handling |
+| [GOVERNANCE.md](GOVERNANCE.md) | Maintainer decision model |
+| [SECURITY.md](SECURITY.md) | Private vulnerability reports |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 
 ## License
 

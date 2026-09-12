@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Issue reporting guide
+    url: https://github.com/RaviTharuma/cmux-herdr/blob/main/SUPPORT.md
+    about: Read this before opening an issue (where to file, what to include).
+  - name: Disclaimer and scope
+    url: https://github.com/RaviTharuma/cmux-herdr/blob/main/DISCLAIMER.md
+    about: What this plugin is and is not; no warranty; independence.
   - name: Herdr (inner mux) issues
     url: https://github.com/herdrdev/herdr/issues
     about: Bugs in Herdr itself, not this plugin.
