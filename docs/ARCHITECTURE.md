@@ -19,6 +19,19 @@ plugin copies Herdr agent status into cmux sidebar pills and can create extra
 cmux tabs that *follow* Herdr panes. It cannot steal Herdr's real TTYs into
 Ghostty; that is native cmux work, tracked upstream.
 
+## Chrome placement (cmux-native)
+
+Stay inside existing cmux chrome. Do not invent a second multiplexer UI.
+
+| Surface | Rule |
+|---|---|
+| **Left sidebar** | Workspaces and machines only (nested Herdr workspaces under a machine when upstream allows). No custom `herdr` left sidebar. |
+| **Right rail** | Richer Herdr UI: Agents/sessions, feed events, dock actions via existing modes. See [RIGHT_RAIL.md](RIGHT_RAIL.md). |
+| **Status pills** | Agent chips on the containing workspace (same `herdr:<pane_id>` identity as rail rows). |
+| **Moshi** | Inspiration for concepts (dedupe, live watch, focus). Discard Moshi Chat View, APNs, and loopback web chrome. |
+
+Tech inventory: [STACK.md](../STACK.md).
+
 ## Build and distribution
 
 The plugin manager runs `bin/cmux-herdr-fetch`, which detects one of four

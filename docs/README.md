@@ -7,9 +7,11 @@ Product docs for **cmux-herdr**, the cmux plugin for Herdr.
 | [../README.md](../README.md) | Everyone | Plugin landing page: install, features, commands |
 | [de/README.md](de/README.md) | Deutsch | Produktüberblick |
 | [de/GITHUB.md](de/GITHUB.md) | Deutsch | Issues, PRs, Releases, Secrets |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Contributors | Rust layout, distribution, macOS vs Linux |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Contributors | Rust layout, chrome placement, macOS vs Linux |
 | [RIGHT_RAIL.md](RIGHT_RAIL.md) | Contributors | Right-rail Agents/sessions/feed/dock (Moshi keep/discard) |
 | [PLUGIN_DESIGN.md](PLUGIN_DESIGN.md) | Contributors | How the plugin talks to cmux and Herdr |
+| [../STACK.md](../STACK.md) | Everyone | Tech stack: Rust, Cargo, platforms, test gate |
+| [../LICENSE](../LICENSE) | Everyone | MIT |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contributors | How to test and open a PR |
 | [../ISSUE_REPORTING.md](../ISSUE_REPORTING.md) | Everyone | Agent-complete bug report checklist |
 | [../DISCLAIMER.md](../DISCLAIMER.md) | Everyone | No warranty/liability (supply chain, credits, PRs) |
@@ -22,6 +24,6 @@ Product docs for **cmux-herdr**, the cmux plugin for Herdr.
 | [../RELEASE.md](../RELEASE.md) | Maintainers | How to cut a tag |
 | [upstream/README.md](upstream/README.md) | Native-track readers | Design notes for **cmux**, not this plugin |
 
-Runtime is a checksum-verified Rust binary. `./scripts/test.sh` runs the exact
-Cargo checks: `cargo fmt --check`, `cargo clippy -- -D warnings`, and
-`cargo test`.
+Runtime is a checksum-verified Rust binary. `./scripts/test.sh` is the gate:
+packaging fixtures, then `cargo fmt --check`, `cargo clippy -- -D warnings`,
+and `cargo test --locked`.

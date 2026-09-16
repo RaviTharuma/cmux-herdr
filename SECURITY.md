@@ -4,12 +4,25 @@
 
 | Version | Supported |
 |---|---|
-| Latest tag on `main` (currently 0.3.x) | Yes |
+| Latest release tag on `main` (currently **0.7.x**) | Yes |
 | Older tags | Best-effort only |
 
-This plugin is a local CLI. It has **no cloud service, no accounts, and no
-API keys of its own**. Security issues are still welcome: a bug in socket
-handling, path handling, or subprocess quoting can matter on a shared Mac.
+This plugin is a **local** CLI/plugin. It has **no** cmux-herdr cloud service,
+accounts, or first-party API keys. Security reports are still welcome: bugs in
+socket handling, path handling, subprocess quoting, or release fetch/verify can
+matter on a shared Mac.
+
+Privacy posture: [PRIVACY.md](PRIVACY.md). Risk allocation:
+[DISCLAIMER.md](DISCLAIMER.md).
+
+## Trust boundary
+
+| Trusts | Does not trust / does not claim |
+|---|---|
+| Local `herdr` Unix socket + allowlisted RPC | Network services owned by this project |
+| Local `cmux` / `herdr` CLIs on `PATH` | That merged PRs or CI green are malware-free |
+| Checksum-verified GitHub Release assets | Unsigned third-party mirrors without verification |
+| Host fingerprint + one-writer lease | Guaranteed isolation from a compromised Mac user |
 
 ## What this project never needs
 
@@ -21,8 +34,16 @@ Do **not** put any of the following in issues, PRs, or the git tree:
 - Output of `cmux tree` / `herdr pane list` from a live personal session
 - Employer or client workspace names, home paths, or hostnames
 
-Association cache files under `$XDG_STATE_HOME/cmux-herdr/` stay on **your**
-disk. They are not uploaded anywhere.
+Association and rail cache files under `$XDG_STATE_HOME/cmux-herdr/` stay on
+**your** disk. They are not uploaded by this plugin.
+
+## Install integrity
+
+Official installs use `bin/cmux-herdr-fetch`: HTTPS download of a target binary
+plus `SHA256SUMS`, checksum verify, atomic install. Prefer that path over
+copying unsigned binaries. Source builds (`cargo build --release`) are a
+fallback for unusual architectures or offline work — you then own dependency
+and toolchain trust.
 
 ## Reporting a vulnerability
 

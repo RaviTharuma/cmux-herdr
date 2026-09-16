@@ -72,8 +72,8 @@ The canonical checks are:
 ```
 
 Runtime implementation is under `src/*.rs`; `bin/*` contains only thin POSIX-sh
-launchers. Layout of the repo: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-Index: [docs/README.md](docs/README.md).
+launchers. Layout: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Stack:
+[STACK.md](STACK.md). Index: [docs/README.md](docs/README.md).
 
 
 ### After install
@@ -248,6 +248,7 @@ write. This is a handoff, not Ghostty PTY theft.
 
 Full design: [docs/PLUGIN_DESIGN.md](docs/PLUGIN_DESIGN.md) ·
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
+[STACK.md](STACK.md) ·
 [mapping/concept-map.md](mapping/concept-map.md).
 
 ## Status mapping
@@ -376,7 +377,18 @@ The canonical checks are:
 
 Runtime implementation is under `src/*.rs`; `bin/*` contains only thin POSIX-sh
 launchers. Layout of the repo: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-Index: [docs/README.md](docs/README.md).
+Stack: [STACK.md](STACK.md). Index: [docs/README.md](docs/README.md).
+
+## Project docs
+
+| Doc | Purpose |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Runtime layout, chrome placement, platforms |
+| [STACK.md](STACK.md) | Rust / Cargo / cmux–Herdr bridge / test gate |
+| [DISCLAIMER.md](DISCLAIMER.md) | As-is, no warranty, supply chain, credits |
+| [SECURITY.md](SECURITY.md) | Private vulnerability reports |
+| [LICENSE](LICENSE) | MIT |
+| [docs/README.md](docs/README.md) | Full documentation index |
 
 ## Contributing
 
@@ -393,6 +405,7 @@ a public issue.
 | [PRIVACY.md](PRIVACY.md) | Local-only data handling |
 | [GOVERNANCE.md](GOVERNANCE.md) | Maintainer decision model |
 | [SECURITY.md](SECURITY.md) | Private vulnerability reports |
+| [STACK.md](STACK.md) | Tech stack and verification gate |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, tests, PRs |
 
 Maintainer notes: [docs/MAINTAINING.md](docs/MAINTAINING.md) (English) and
