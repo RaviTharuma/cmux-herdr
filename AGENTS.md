@@ -1,5 +1,17 @@
 # AGENTS.md
 
+
+## Testing (HARD)
+Sources: https://x.com/anshnanda/status/2101627891721371971 · https://x.com/nimsbh_ai/status/2102083469362790401 · https://x.com/imrobertjames/status/2100787901701456057
+
+- NEVER write unit tests after you write code.
+- Highly prefer E2E tests as the sole testing mechanism. Use them to verify complex features work. At the end of E2E tests, produce a verifiable and repeatable artifact.
+- If you must test a system in isolation, FIRST write down all the ways it could fail, THEN write the code.
+- When writing E2E tests, do not pick the simplest possible scenario to prove it works — pick a medium-to-hard scenario (models love to cheat).
+- Tautological tests considered harmful.
+- Change-detector tests considered harmful.
+- Do not create regression tests for bug fixes without a genuine gap in behavior testing.
+
 ## Cursor Cloud specific instructions
 
 `cmux-herdr` is a **cmux plugin for Herdr** implemented in Rust. Runtime source
