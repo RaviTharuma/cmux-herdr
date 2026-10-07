@@ -7,6 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
+use std::fmt::Write as _;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -43,7 +44,11 @@ pub const POST_APPLY_CLIENT_SIZE: &str = "apply_client_size";
 /// Stable short endpoint identifier. Callers can log this instead of the path.
 pub fn endpoint_hash(socket_path: &str) -> String {
     let digest = Sha256::digest(socket_path.as_bytes());
-    format!("{digest:x}")[..16].to_string()
+    let mut hex = String::with_capacity(16);
+    for byte in digest.iter().take(8) {
+        write!(hex, "{byte:02x}").expect("writing to a String cannot fail");
+    }
+    hex
 }
 
 /// Reject C0, DEL, and C1 control characters at the socket trust boundary.
