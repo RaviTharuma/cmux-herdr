@@ -6,7 +6,7 @@
 
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::fmt;
+use std::fmt::{self, Write as _};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::os::unix::fs::PermissionsExt;
@@ -682,7 +682,11 @@ fn sha256(path: &Path) -> Result<String> {
         }
         digest.update(&buffer[..count]);
     }
-    Ok(format!("{:x}", digest.finalize()))
+    let mut hex = String::with_capacity(64);
+    for byte in digest.finalize() {
+        write!(hex, "{byte:02x}").expect("writing to a String cannot fail");
+    }
+    Ok(hex)
 }
 
 fn restore_binary(backup: &Path, binary: &Path) -> Result<()> {

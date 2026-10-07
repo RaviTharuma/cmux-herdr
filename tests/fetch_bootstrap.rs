@@ -1,5 +1,6 @@
 //! Behavioral tests for the plugin-manager release-binary bootstrap.
 
+use std::fmt::Write as _;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -10,6 +11,14 @@ use sha2::{Digest, Sha256};
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const TARGET: &str = "x86_64-unknown-linux-gnu";
 const PAYLOAD: &[u8] = b"verified cmux-herdr binary\n";
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let mut hex = String::with_capacity(64);
+    for byte in Sha256::digest(bytes) {
+        write!(hex, "{byte:02x}").expect("writing to a String cannot fail");
+    }
+    hex
+}
 
 fn write_executable(path: &Path, body: &str) {
     fs::write(path, body).unwrap();
@@ -90,7 +99,7 @@ fn run_fetch(fetch: &Path, fake_bin: &Path) -> std::process::Output {
 #[test]
 fn installs_verified_asset_atomically_and_executable() {
     let (tmp, fetch, fake_bin) = fixture();
-    let hash = format!("{:x}", Sha256::digest(PAYLOAD));
+    let hash = sha256_hex(PAYLOAD);
     write_executable(&fake_bin.join("curl"), &curl_script(&hash));
 
     let output = run_fetch(&fetch, &fake_bin);
@@ -115,7 +124,7 @@ fn maps_all_release_platforms_to_expected_assets() {
         ("Darwin", "x86_64", "x86_64-apple-darwin"),
         ("Darwin", "arm64", "aarch64-apple-darwin"),
     ];
-    let hash = format!("{:x}", Sha256::digest(PAYLOAD));
+    let hash = sha256_hex(PAYLOAD);
     for (os, arch, target) in cases {
         let (tmp, fetch, fake_bin) = fixture_for(os, arch);
         write_executable(&fake_bin.join("curl"), &curl_script_for(&hash, target));
@@ -223,7 +232,7 @@ fn refuses_symlinked_install_directory() {
     let (tmp, fetch, fake_bin) = fixture();
     let redirected = tempfile::tempdir().unwrap();
     std::os::unix::fs::symlink(redirected.path(), tmp.path().join(".cmux-herdr")).unwrap();
-    let hash = format!("{:x}", Sha256::digest(PAYLOAD));
+    let hash = sha256_hex(PAYLOAD);
     write_executable(&fake_bin.join("curl"), &curl_script(&hash));
 
     let output = run_fetch(&fetch, &fake_bin);
@@ -261,7 +270,7 @@ fn bootstraps_real_binary_and_executes_help_and_version_offline() {
     let binary = std::env::var("CMUX_HERDR_SMOKE_BINARY")
         .unwrap_or_else(|_| env!("CARGO_BIN_EXE_cmux-herdr").to_string());
     let payload = fs::read(&binary).unwrap();
-    let hash = format!("{:x}", Sha256::digest(&payload));
+    let hash = sha256_hex(&payload);
     fs::write(tmp.path().join("payload"), payload).unwrap();
     fs::write(
         tmp.path().join("SHA256SUMS"),
