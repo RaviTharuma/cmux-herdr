@@ -116,7 +116,7 @@ pub fn run_cmd(
         }
         if std::time::Instant::now() >= deadline {
             let _ =
-                rustix::process::kill_process_group(process_group, rustix::process::Signal::Kill);
+                rustix::process::kill_process_group(process_group, rustix::process::Signal::KILL);
             let _ = child.wait();
             let _ = stdout_reader.join();
             let _ = stderr_reader.join();
