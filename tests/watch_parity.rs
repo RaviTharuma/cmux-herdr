@@ -234,7 +234,7 @@ impl ChildGuard {
     fn terminate(mut self) -> Output {
         let child = self.0.take().unwrap();
         let pid = rustix::process::Pid::from_raw(child.id() as i32).unwrap();
-        rustix::process::kill_process(pid, rustix::process::Signal::Term).unwrap();
+        rustix::process::kill_process(pid, rustix::process::Signal::TERM).unwrap();
         child.wait_with_output().unwrap()
     }
 }
