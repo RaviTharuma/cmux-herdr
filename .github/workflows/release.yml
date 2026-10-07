@@ -69,7 +69,7 @@ jobs:
           chmod +x "$asset"
           test "$(./"$asset" --version)" = "cmux-herdr ${version}"
           ./"$asset" --help > /dev/null
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cmux-herdr-${{ matrix.target }}
           path: cmux-herdr-*-${{ matrix.target }}
