@@ -9,8 +9,8 @@ binary, including the port of the optional Herdr auto-update service.
 The former Python runtime has been replaced by one Rust Cargo binary. The
 release package includes the CLI, sidebar, socket client, state/handoff,
 watch/mirror engine, and opt-in `update-service`. Users install a prebuilt,
-checksum-verified binary through `cmux sidebar plugin install`; no Python or
-Rust toolchain is required at runtime.
+checksum-verified binary through `cmux-tui sidebar plugin install`; no Python
+or Rust toolchain is required at runtime.
 
 Historical baseline (for parity rationale): the deleted `bridge/*.py` modules
 and Python launchers implemented these responsibilities. Current runtime code
@@ -30,7 +30,7 @@ Out of scope (stays as-is, by design):
 - Agent skill (`agent-skill/SKILL.md`), docs, license, issue templates.
 
 Non-negotiable: the plugin keeps installing through the official
-`cmux sidebar plugin install` path defined by `cmux-plugin.toml`.
+`cmux-tui sidebar plugin install` path defined by `cmux-plugin.toml`.
 ## 2. Compatibility invariants (must not regress)
 
 The rewrite is a behavioral port, not a redesign. These contracts are locked
@@ -244,7 +244,7 @@ not ported verbatim; new docs describe the Rust command.
 
 ## 6. Packaging & release
 
-Default user path unchanged: `cmux sidebar plugin install`.
+Default user path unchanged: `cmux-tui sidebar plugin install`.
 
 The former packaging gap is resolved: the manifest now invokes the committed
 `bin/cmux-herdr-fetch` bootstrap, and release automation builds and publishes

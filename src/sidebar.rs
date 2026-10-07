@@ -645,7 +645,7 @@ pub fn main(args: &[String]) -> i32 {
     if matches!(args, [arg] if arg == "--help" || arg == "-h") {
         print!(
             "cmux-herdr-sidebar — cmux sidebar plugin TUI\n\
-             Hosted by: cmux sidebar plugin use cmux-herdr\n\
+             Hosted by: cmux-tui sidebar plugin use cmux-herdr\n\
              Socket: CMUX_TUI_SOCKET (legacy CMUX_MUX_SOCKET)\n\
              Keys: j/k or arrows move, enter selects, Ctrl-C exits.\n\
              Esc is ignored (cmux owns the sidebar escape chord).\n"
