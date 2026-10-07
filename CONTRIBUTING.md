@@ -17,7 +17,7 @@ End users install with the official cmux plugin manager (see the README).
 this clone go live. It does **not** copy `sidebars/herdr.js` / `herdr.swift`
 (those are experimental leftovers; uninstall removes leftover copies under
 `~/.config/cmux/sidebars/`). It is not the documented user path and it does
-not replace `cmux sidebar plugin install`.
+not replace `cmux-tui sidebar plugin install`.
 
 ```bash
 ./scripts/install.sh

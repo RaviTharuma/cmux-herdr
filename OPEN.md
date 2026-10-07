@@ -74,7 +74,7 @@ Cross-links: PR and issue reference each other; both point back here as the fall
    hierarchy remains [#8737](https://github.com/manaflow-ai/cmux/issues/8737).
 
 5. **Install is the official cmux plugin manager.**
-   Users run `cmux sidebar plugin install` / `use` / `update` / `remove`.
+   Users run `cmux-tui sidebar plugin install` / `use` / `update` / `remove`.
    `./scripts/install.sh` is contributor/dev only. There is no Homebrew
    formula or signed app bundle. See [RELEASE.md](./RELEASE.md).
 

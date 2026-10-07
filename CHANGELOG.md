@@ -7,11 +7,17 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-07
+
 ### Documentation
 
 - Document the opt-in `update-service` CLI in the README command table and a
   short install/status/run/uninstall section (LaunchAgent / systemd user timer,
   marker-owned Herdr `[update]` block, explicit `--manifest-url`).
+
+### Dependencies
+
+- Upgrade `sha2` from 0.10.9 to 0.11.0 and `rustix` from 0.38.44 to 1.1.4.
 
 ### Added
 
@@ -29,6 +35,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `doctor` human output follows cmux `ssh-tmux` help fashion: short product
   framing, checklist, then `next:` / `fix:` guidance that points at
   `sessions` / `rail` / `watch` / `attach` (or install/fingerprint repair).
+- Correct the official plugin-manager command for current Homebrew cmux builds:
+  use `cmux-tui sidebar plugin install|use|update|remove`; `cmux sidebar plugin`
+  is not available in the cask's `cmux` command.
+- `attach --no-focus` is a visible alias of `--no-activate` (cmux `ssh-tmux` naming).
+- Missing-herdr / unresolved-workspace errors name the fingerprint contract and the
+  ssh-tmux analogue so the CLI reads first-party rather than bolted-on.
 
 ### Fixed
 
@@ -38,12 +50,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   `workspace_ref`), and only then a fingerprint-pinned `CMUX_WORKSPACE_ID`. Incomplete
   fingerprints fail closed instead of trusting stale nested-shell env or bare focused
   workspace.
+- Prevent `cmux-herdr status` from panicking when counting the first agent in
+  each status category.
 
-### Changed
-
-- `attach --no-focus` is a visible alias of `--no-activate` (cmux `ssh-tmux` naming).
-- Missing-herdr / unresolved-workspace errors name the fingerprint contract and the
-  ssh-tmux analogue so the CLI reads first-party rather than bolted-on.
 
 ## [0.7.0] - 2026-09-04
 
@@ -81,7 +90,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Changed
 
 - Demote the custom `herdr` sidebar. Official install is
-  `cmux sidebar plugin install` plus the `cmux-herdr` CLI (`watch` /
+  `cmux-tui sidebar plugin install` plus the `cmux-herdr` CLI (`watch` /
   `doctor` / `status` / `mirror`). `install.sh` no longer copies
   `sidebars/herdr.js` or `herdr.swift` into `~/.config/cmux/sidebars/`.
   README and the German overview no longer document `cmux sidebar open herdr`
@@ -287,7 +296,8 @@ Works today without any cmux upstream merge.
 - Native nested topology ([#8737](https://github.com/manaflow-ai/cmux/issues/8737)) is
   intentionally out of scope for the plugin.
 
-[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/RaviTharuma/cmux-herdr/compare/v0.5.0...v0.6.0

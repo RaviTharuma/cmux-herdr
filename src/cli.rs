@@ -1899,8 +1899,8 @@ fn cmd_status(m: &ArgMatches) -> i32 {
                     let mut counts = Map::new();
                     for pane in snap.agent_panes() {
                         let status = pane.agent_status.to_lowercase();
-                        counts[&status] =
-                            json!(counts.get(&status).and_then(Value::as_i64).unwrap_or(0) + 1)
+                        let count = counts.get(&status).and_then(Value::as_i64).unwrap_or(0) + 1;
+                        counts.insert(status, json!(count));
                     }
                     herdr["status_counts"] = Value::Object(counts);
                 }

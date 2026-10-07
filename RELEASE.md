@@ -4,7 +4,7 @@ After a version PR is on `main`, **push an annotated tag**. GitHub Actions
 (`.github/workflows/release.yml`) runs the test suite and publishes the
 GitHub Release from `CHANGELOG.md`. You do not need the GitHub UI.
 
-Current version line: **v0.7.0** (tag after this merge). `VERSION` has no `v` prefix; the git tag does.
+Current version line: **v0.8.0** (tag after this merge). `VERSION` has no `v` prefix; the git tag does.
 
 ## Preconditions
 
@@ -54,8 +54,8 @@ Optional live smoke (macOS, Herdr nested in cmux):
 Official install is the plugin manager plus the CLI (not a custom-sidebar copy):
 
 ```bash
-cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
-cmux sidebar plugin use cmux-herdr
+cmux-tui sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
+cmux-tui sidebar plugin use cmux-herdr
 cmux-herdr --version
 cmux-herdr doctor
 cmux-herdr watch

@@ -196,6 +196,56 @@ fn status_requires_both_herdr_and_cmux_context_to_be_nested() {
 }
 
 #[test]
+fn status_aggregates_multiple_agent_states_without_panicking() {
+    let temp = tempfile::tempdir().unwrap();
+    let herdr = temp.path().join("herdr");
+    let log = temp.path().join("herdr.log");
+    fs::write(
+        &herdr,
+        r#"#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_HERDR_LOG"
+case "$*" in
+  "--version") printf 'herdr 0.8.0\n' ;;
+  "api snapshot") printf '%s\n' '{"workspaces":[{"workspace_id":"w1","label":"Mixed"}],"tabs":[{"tab_id":"t1","workspace_id":"w1","label":"Agents"}],"panes":[{"pane_id":"p1","tab_id":"t1","workspace_id":"w1","agent":"omp","agent_status":"working"},{"pane_id":"p2","tab_id":"t1","workspace_id":"w1","agent":"omp","agent_status":"working"},{"pane_id":"p3","tab_id":"t1","workspace_id":"w1","agent":"omo","agent_status":"done"}]}' ;;
+  "status") printf '%s\n' '{"status":"ok"}' ;;
+  *) exit 9 ;;
+esac
+"#,
+    )
+    .unwrap();
+    let mut permissions = fs::metadata(&herdr).unwrap().permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&herdr, permissions).unwrap();
+
+    let inherited_path = std::env::var("PATH").unwrap_or_default();
+    let output = Command::new(env!("CARGO_BIN_EXE_cmux-herdr"))
+        .args(["status", "--json"])
+        .env(
+            "PATH",
+            format!("{}:{inherited_path}", temp.path().display()),
+        )
+        .env("HOME", temp.path())
+        .env("XDG_STATE_HOME", temp.path().join("state"))
+        .env("HERDR_SOCKET_PATH", temp.path().join("missing.sock"))
+        .env("FAKE_HERDR_LOG", log)
+        .env_remove("HERDR_ENV")
+        .env_remove("CMUX_SOCKET_PATH")
+        .env_remove("CMUX_WORKSPACE_ID")
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains(r#""working":2"#), "stdout={stdout}");
+    assert!(stdout.contains(r#""done":1"#), "stdout={stdout}");
+}
+
+#[test]
 fn focus_tab_accepts_a_unique_case_insensitive_label_prefix() {
     let temp = tempfile::tempdir().unwrap();
     let herdr = temp.path().join("herdr");

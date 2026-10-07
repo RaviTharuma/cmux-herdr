@@ -7,7 +7,7 @@ Native cmux-Chrome — Maus, Reorderable, Tabs und Panes — kein
 eingerahmtes Herdr-Fenster.
 
 ```bash
-cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
+cmux-tui sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
 cmux-herdr doctor
 cmux-herdr watch
 ```
@@ -41,7 +41,7 @@ Es ist **kein** Bestandteil von `cmux.app`. Du installierst das Plugin selbst.
 Der Plugin-Manager lädt eine checksum-verifizierte Rust-Binärdatei; Nutzer
 brauchen weder Python noch eine Rust-Toolchain.
 
-Aktuelle Version: **v0.7.0**.
+Aktuelle Version: **v0.8.0**.
 
 ## Installation
 
@@ -50,10 +50,10 @@ Native Herdr-Chrome ist parent cmux (#8736 / #10045). Dieses Plugin kopiert
 keine Custom-Sidebar nach `~/.config/cmux/sidebars/`.
 
 ```bash
-cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
-cmux sidebar plugin use cmux-herdr
-cmux sidebar plugin update cmux-herdr
-cmux sidebar plugin remove cmux-herdr
+cmux-tui sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
+cmux-tui sidebar plugin use cmux-herdr
+cmux-tui sidebar plugin update cmux-herdr
+cmux-tui sidebar plugin remove cmux-herdr
 ```
 
 `./scripts/install.sh` ist nur für Mitwirkende (CLI-Symlink + Skill, siehe
@@ -71,8 +71,8 @@ cmux-herdr watch
 
 ## Was du zum Benutzen brauchst
 
-- macOS mit `cmux` und `herdr` im `PATH`
-- Eine cmux-Version mit `cmux sidebar plugin`
+- macOS mit `cmux`, `cmux-tui` und `herdr` im `PATH`
+- Eine `cmux-tui`-Version mit `sidebar plugin`
 - Herdr 0.8+
 - Einen funktionierenden Herdr-Socket
 

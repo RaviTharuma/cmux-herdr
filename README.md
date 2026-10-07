@@ -31,7 +31,7 @@ It does not transfer Herdr TTY ownership into Ghostty or implement cmux's
 builtin native tmux integration. Making cmux the native UI of Herdr is a
 roadmap, not a capability shipped by this plugin.
 
-The current source version is **v0.7.0**. This is a plugin for `cmux.app`, not
+The current source version is **v0.8.0**. This is a plugin for `cmux.app`, not
 a patch to it. The plugin manager downloads a checksum-verified Rust binary;
 users need neither Python nor a Rust toolchain.
 
@@ -42,14 +42,14 @@ Native Herdr chrome is roadmap work associated with upstream proposals
 [#8736](https://github.com/manaflow-ai/cmux/pull/8736) and
 [#10045](https://github.com/manaflow-ai/cmux/pull/10045), not present in the
 audited cmux commit `829c6af45478ef5c2196801824c35f5cb4dc5d69`.
-Native Sidebar issue #75 remains **blocked**, not fixed by v0.7.0.
+Native Sidebar issue #75 remains **blocked**, not fixed by v0.8.0.
 This plugin does not copy a custom `herdr` sidebar into `~/.config/cmux/sidebars/`.
 
 ```bash
-cmux sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
-cmux sidebar plugin use cmux-herdr
-cmux sidebar plugin update cmux-herdr
-cmux sidebar plugin remove cmux-herdr
+cmux-tui sidebar plugin install https://github.com/RaviTharuma/cmux-herdr.git
+cmux-tui sidebar plugin use cmux-herdr
+cmux-tui sidebar plugin update cmux-herdr
+cmux-tui sidebar plugin remove cmux-herdr
 ```
 
 That clones into `$XDG_DATA_HOME/cmux/mux-plugins/cmux-herdr` (or
@@ -197,7 +197,7 @@ registered. Backups of prior Herdr binaries are kept under the plugin state dir
 
 ## Requirements
 
-- macOS with `cmux` and `herdr` on `PATH`; a cmux build that includes `cmux sidebar plugin`
+- macOS with `cmux`, `cmux-tui`, and `herdr` on `PATH`; a `cmux-tui` build that includes `sidebar plugin`
 - A working Herdr socket (usual when `HERDR_ENV=1`)
 - Herdr **0.8+** (agent name may live under `agent_session.agent`)
 - `sync` / `watch` / `mirror` from a nested pane so both contexts exist; `tree` and `agents` still work without cmux
@@ -332,7 +332,7 @@ No. It is a user-installed cmux plugin. You keep it when you upgrade cmux.
 **How is this different from `herdr-plugin-cmux`?**
 [lachieh/herdr-plugin-cmux](https://github.com/lachieh/herdr-plugin-cmux) is a
 *Herdr* plugin (`herdr plugin install …`) that adds sidebar rows from the Herdr
-side. **cmux-herdr** is the *cmux* plugin: official `cmux sidebar plugin`
+side. **cmux-herdr** is the *cmux* plugin: official `cmux-tui sidebar plugin`
 install, `cmux-herdr` CLI, `watch` as the live GUI path, and agent skill.
 You can use one or both; they share the idea, not the install.
 
